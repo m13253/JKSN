@@ -34,7 +34,7 @@ Integers:
 
 An Integer is followed after `0x1b` `0x1c` `0x1d` `0x1e` `0x1f`.
 
-    0x1n (where 0<=n<=a): represents a integer that is n
+    0x1n (where 0<=n<=a): represents an integer that is n
     0x1b: a signed 32-bit integer is followed
     0x1c: a signed 16-bit integer is followed
     0x1d: a signed 8-bit integer is followed
@@ -76,6 +76,18 @@ Blob strings:
     0x5e: an unsigned 8-bit integer and a blob string containing that amount of bytes is followed
     0x5f: a positive variable length integer and a blob string containing that amount of bytes is followed
 
+Hashtable refresher:
+
+Hashtable refresher is an array of string that can be transferred before the value or inside arrays or objects. It does not produce any values but forces the build of a hashtable that can be used with `0x3c` `0x4c` `0x5c`.
+
+Normally hashtable referesher is not useful since the hashtable is built during the first occurence of a string, however it is useful if there is a persistent connection exchanging continuous JKSN stream.
+
+    0x70: clear the hashtable
+    0x7n (where 1<=n<=c): an array of string containing n strings is followed
+    0x7d: an unsigned 16-bit integer and an array of string containing that amount of strings is followed
+    0x7e: an unsigned 16-bit integer and an array of string containing that amount of strings is followed
+    0x7f: a positive variable length integer and an array of string containing that amount of strings is followed
+
 Arrays:
 
 Items are nested layers of control bytes and data bytes.
@@ -100,17 +112,17 @@ Row-col swapped array:
     0xae: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns is followed
     0xaf: a positive variable length integer and a row-col swapped array containing that amount of columns is followed
 
-Hashtable refresher:
+Delta encoded integers:
 
-Hashtable refresher is an array of string that can be transferred before the value or inside arrays or objects. It does not produce any values but forces the build of a hashtable that can be used with `0x3c` `0x4c` `0x5c`.
+An Integer is followed after `0xbb` `0xbc` `0xbd` `0xbe` `0xbf`, representing an integer that is larger than the previous occurred integer by x.
 
-Normally hashtable referesher is not useful since the hashtable is built during the first occurence of a string, however it is useful if there is a persistent connection exchanging continuous JKSN stream.
-
-    0xb0: clear the hashtable
-    0xbn (where 1<=n<=c): an array of string containing n strings is followed
-    0xbd: an unsigned 16-bit integer and an array of string containing that amount of strings is followed
-    0xbe: an unsigned 16-bit integer and an array of string containing that amount of strings is followed
-    0xbf: a positive variable length integer and an array of string containing that amount of strings is followed
+    0xb0: represents the same previous occurred integer
+    0xbn (where 1<=n<=a): represents an integer that is larger than the previous occurred integer by x
+    0xbb: a signed 32-bit integer is followed
+    0xbc: a signed 16-bit integer is followed
+    0xbd: a signed 8-bit integer is followed
+    0xbe: a negative variable length integer is followed
+    0xbf: a positive variable length integer is followed
 
 Checksums:
 

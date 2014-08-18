@@ -32,7 +32,9 @@ Special values:
 
 Integers:
 
-An Integer is followed after `0x1b` `0x1c` `0x1d` `0x1e` `0x1f`.
+An integer is followed after `0x1b` `0x1c` `0x1d` `0x1e` `0x1f`.
+
+All integers are big endian.
 
     0x1n (where 0<=n<=a): represents an integer that is n
     0x1b: a signed 32-bit integer is followed
@@ -43,22 +45,26 @@ An Integer is followed after `0x1b` `0x1c` `0x1d` `0x1e` `0x1f`.
 
 Float point numbers:
 
-A float point number is followed after `0x2b` `0x2c` `0x2d`.
+An IEEE 754 float point number is followed after `0x2b` `0x2c` `0x2d`.
+
+The most significant bit, that is the IEEE 754 sign bit, is transferred first.
 
     0x20: NaN
-    0x2b: an IEEE long double (128-bit) number is followed
-    0x2c: an IEEE double (64-bit) number is followed
-    0x2d: an IEEE float (32-bit) number is followed
+    0x2b: an IEEE 754 long double (128-bit) number is followed
+    0x2c: an IEEE 754 double (64-bit) number is followed
+    0x2d: an IEEE 754 float (32-bit) number is followed
     0x2e: -Infinity
     0x2f: Infinity
 
 UTF-16 strings:
 
-    0x3n (where 0<=n<=b): a little-endian UTF-16 string containing n byte pairs is followed
-    0x3c: an unsigned 8-bit integer is followed, representing the nearest previous little-endian UTF-16 string with this DJB Hash (one byte pair as a unit) value.
-    0x3d: an unsigned 16-bit integer and a little-endian UTF-16 string containing that amount of byte pairs is followed
-    0x3e: an unsigned 8-bit integer and a little-endian UTF-16 string containing that amount of byte pairs is followed
-    0x3f: a positive variable length integer and a little-endian UTF-16 string containing that amount of byte pairs is followed
+All UTF-16 strings are little endian, that is for ASCII characters, the second byte is zero.
+
+    0x3n (where 0<=n<=b): a UTF-16 string containing n byte pairs is followed
+    0x3c: an unsigned 8-bit integer is followed, representing the nearest previous UTF-16 string with this DJB Hash (one byte pair as a unit) value.
+    0x3d: an unsigned 16-bit integer and a UTF-16 string containing that amount of byte pairs is followed
+    0x3e: an unsigned 8-bit integer and a UTF-16 string containing that amount of byte pairs is followed
+    0x3f: a positive variable length integer and a UTF-16 string containing that amount of byte pairs is followed
 
 UTF-8 strings:
 
@@ -152,8 +158,6 @@ For example
 
         A        B        C        D
     1ddddddd 1ddddddd 1ddddddd 0ddddddd
-
-The number is read in big-endian.
 
 So that the result number will be `(A & 0x7f)<<21 | (B & 0x7F)<<14 | (C & 0x7F)<<7 | D`.
 

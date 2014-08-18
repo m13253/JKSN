@@ -82,6 +82,7 @@ Objects:
     0x9f: a positive variable length integer and an object containing that amount of string-item pairs are followed
 
 Row-col swapped array:
+
     0xa0: unspecified, used to skip columns that are not specified
     0xan (where 1<=n<=c): a row-col swapped array containing n columns are followed
     0xad: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns are followed
@@ -89,6 +90,7 @@ Row-col swapped array:
     0xae: a positive variable length integer and a row-col swapped array containing that amount of columns are followed
 
 Checksums:
+
     0xf0: a CRC32 checksum
     0xf1: an MD5 checksum
     0xf2: a SHA-1 checksum

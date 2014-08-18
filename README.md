@@ -86,7 +86,7 @@ Row-col swapped array:
     0xan (where 1<=n<=c): a row-col swapped array containing n columns are followed
     0xad: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns are followed
     0xae: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns are followed
-    0xae: a positive variable length integer and a row-col swapped array containing that amount of columns are followed
+    0xaf: a positive variable length integer and a row-col swapped array containing that amount of columns are followed
 
 Checksums:
 

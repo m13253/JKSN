@@ -52,11 +52,11 @@ A float point number is followed after `0x2b` `0x2c` `0x2d`.
 
 UTF-16 strings:
 
-    0x3n (where 0<=n<=b): a UTF-16 string containing n byte pairs is followed
-    0x3c: an unsigned 8-bit integer is followed, representing the nearest previous UTF-16 string with this BKDR Hash (seed=131) value.
-    0x3d: an unsigned 16-bit integer and a UTF-16 string containing that amount of byte pairs is followed
-    0x3e: an unsigned 8-bit integer and a UTF-16 string containing that amount of byte pairs is followed
-    0x3f: a positive variable length integer and a UTF-16 string containing that amount of byte pairs is followed
+    0x3n (where 0<=n<=b): a little-endian UTF-16 string containing n byte pairs is followed
+    0x3c: an unsigned 8-bit integer is followed, representing the nearest previous little-endian UTF-16 string with this BKDR Hash (seed=131, one byte pair as a unit) value.
+    0x3d: an unsigned 16-bit integer and a little-endian UTF-16 string containing that amount of byte pairs is followed
+    0x3e: an unsigned 8-bit integer and a little-endian UTF-16 string containing that amount of byte pairs is followed
+    0x3f: a positive variable length integer and a little-endian UTF-16 string containing that amount of byte pairs is followed
 
 UTF-8 strings:
 

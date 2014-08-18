@@ -196,10 +196,10 @@ Row-col swapped array can definitely be nested. However, nested row-col swapped 
 The algorithm of DJB Hash is listed below:
 
 ```python
-def BKDRHash(string):
+def DJBHash(string):
     hash = 0
     for i in string:
-        hash = (hash << 5) + hash + ord(i)
+        hash = hash + (hash << 5) + ord(i)
     return hash & 0xff
 ```
 

@@ -3,20 +3,20 @@ JKSN specification
 
 JKSN, prononced as "Jackson", is an abbreviation of Jackson Compressed Serialize Notation, aims to be a binary serialization format compatible with JSON.
 
-JKSN stream can be further compressed with GZIP to get better results.
+JKSN stream may be further compressed with GZIP to get better results.
 
 File formats
 ------------
 
     [magic header] [control byte] [checksum] [control byte] [data bytes] [control byte] [data bytes] ...
 
-One JSON stream can only produce one value. So once a complete value is parsed, the JKSN stream should be terminated.
+One JSON stream must only produce one value. So once a complete value is parsed, the JKSN stream must be terminated.
 
 MIME type `application/x-jksn` and filename extension `.jksn` are preferred.
 
 ### Magic header
 
-This part contains four bytes `jk!`, it is used for safe Internet transmission and data type recognition. If the network bandwidth is limited, magic header can be omitted.
+This part contains four bytes `jk!`, it is used for safe Internet transmission and data type recognition. If the network bandwidth is limited, magic header may be omitted.
 
 ### Control byte
 
@@ -143,7 +143,7 @@ An Integer is followed after `0xbb` `0xbc` `0xbd` `0xbe` `0xbf`, representing an
 
 #### Pragmas:
 
-Pragmas are blob strings that can be transferred before the value or inside arrays or objects. They are much like comments, which do not produce any values. They contain interpreter-specific directives. Interpreter that can not understand them can simply ignore them.
+Pragmas are blob strings that can be transferred before the value or inside arrays or objects. They are much like comments, which do not produce any values. They contain interpreter-specific directives. Interpreter that can not understand them may simply ignore them.
 
     0xfn (where 0<=n<=c): a pragma string containing n bytes are followed
     0xfd: an unsigned 16-bit integer and a pragma string containing that amount of bytes are followed
@@ -221,7 +221,7 @@ def DJBHash(string):
 
 ### Checksum
 
-Checksum is a optional part of JKSN stream. If the transmission media is reliable, or if you decided to GZIP the JKSN stream, checksum can be omitted.
+Checksum is a optional part of JKSN stream. If the transmission media is reliable, or if you decided to GZIP the JKSN stream, checksum may be omitted.
 
 Checksum indicates the checksum from the position immediately after the checksum to the very end of the JKSN stream.
 
@@ -233,7 +233,7 @@ A delayed checksum rearranges the form of JKSN, which puts the checksum to the e
 
 An JSON stream has multiple JKSN representation. The JKSN encoder should decide which method generates the smallest JKSN stream in reasonable time.
 
-Since implementing the full functionality of JKSN costs too much resources and does not suit all situation, the application can only implement a subset of JKSN specification. This requires the sender and receiver using features both supported.
+Since implementing the full functionality of JKSN costs too much resources and does not suit all situation, the application may only implement a subset of JKSN specification. This requires the sender and receiver using features both supported.
 
 ### Comparison
 

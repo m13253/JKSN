@@ -165,3 +165,26 @@ Checksum indicates the checksum from the position immediately after the checksum
 A delayed checksum rearranges the form of JKSN, which puts the checksum to the end of JKSN stream, as the following format:
 
     [magic header] [0xf8/0xf9/0xfa/0xfb] [control byte] [data bytes] ... [control byte] [data bytes] [checksum]
+
+### Representation decision
+
+An JSON stream has multiple JKSN representation. The JKSN encoder should decide which method generates the smallest JKSN stream.
+
+### License of this document
+
+This document, as well as JKSN specification, is licensed under BSD license.
+
+Copyright (c) 2014 StarBrilliant &lt;m13253@hotmail.com&gt;.
+All rights reserved.
+
+Redistribution and use in source and binary forms are permitted
+provided that the above copyright notice and this paragraph are
+duplicated in all such forms and that any documentation,
+advertising materials, and other materials related to such
+distribution and use acknowledge that the software was developed
+by the <organization>. The name of the
+<organization> may not be used to endorse or promote products derived
+from this software without specific prior written permission.
+THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
+IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.

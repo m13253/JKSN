@@ -192,6 +192,19 @@ If represented in row-col swapped JKSN, is:
 
 Row-col swapped array can definitely be nested. However, nested row-col swapped array might cost too much computing time. It is recommended to choose a balanced nesting depth.
 
+### BKDR Hash
+
+The algorithm of BKDR Hash is listed below:
+
+```python
+def BKDRHash(string):
+    seed = 131
+    hash = 0
+    for i in string:
+        hash = hash * seed + ord(i)
+    return hash & 0xff
+```
+
 ### Checksum
 
 Checksum is a optional part of JKSN stream. If the transmission media is reliable, or if you decided to GZIP the JKSN stream, checksum can be omitted.
@@ -210,7 +223,7 @@ Since implementing the full functionality of JKSN costs too much resources and d
 
 ### Comparison
 
-Take the example used in row-col swapping.
+Take the example used in row-col swapping section.
 
 | Compression method                 | Size      | Percent saved |
 | ---------------------------------- | --------- | ------------- |

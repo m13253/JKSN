@@ -92,7 +92,7 @@ Objects:
 
 Row-col swapped array:
 
-    0xa0: unspecified, used to skip columns that are not specified
+    0xa0: "unspecified", used to skip columns that are not specified
     0xan (where 1<=n<=c): a row-col swapped array containing n columns is followed
     0xad: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns is followed
     0xae: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns is followed

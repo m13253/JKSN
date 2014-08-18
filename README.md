@@ -40,7 +40,7 @@ An Integer is followed after `0x1b` `0x1c` `0x1d` `0x1e` `0x1f`.
 
 Float point numbers:
 
-An float point number is followed after `0x2b` `0x2c` `0x2d`.
+A float point number is followed after `0x2b` `0x2c` `0x2d`.
 
     0x20: NaN
     0x21: a string control byte and a string containing a plain text JSON literal are followed

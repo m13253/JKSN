@@ -22,7 +22,7 @@ This part contains four bytes `jk!`, it is used for safe Internet transmission a
 
 No data bytes are followed after `0x0n`.
 
-Special values:
+#### Special values:
 
     0x00: undefined
     0x01: null
@@ -30,7 +30,7 @@ Special values:
     0x03: true
     0x0f: a string control byte and a string containing a plain text JSON literal are followed
 
-Integers:
+#### Integers:
 
 An integer is followed after `0x1b` `0x1c` `0x1d` `0x1e` `0x1f`.
 
@@ -43,7 +43,7 @@ All integers are big endian.
     0x1e: a negative variable length integer is followed
     0x1f: a positive variable length integer is followed
 
-Float point numbers:
+#### Float point numbers:
 
 An IEEE 754 float point number is followed after `0x2b` `0x2c` `0x2d`.
 
@@ -56,7 +56,7 @@ The most significant bit, that is the IEEE 754 sign bit, is transferred first.
     0x2e: -Infinity
     0x2f: Infinity
 
-UTF-16 strings:
+#### UTF-16 strings:
 
 All UTF-16 strings are little endian, that is for ASCII characters, the second byte is zero.
 
@@ -66,7 +66,7 @@ All UTF-16 strings are little endian, that is for ASCII characters, the second b
     0x3e: an unsigned 8-bit integer and a UTF-16 string containing that amount of byte pairs is followed
     0x3f: a positive variable length integer and a UTF-16 string containing that amount of byte pairs is followed
 
-UTF-8 strings:
+#### UTF-8 strings:
 
     0x4n (where 0<=n<=b): a UTF-8 string containing n bytes is followed
     0x4c: an unsigned 8-bit integer is followed, representing the nearest previous UTF-8 string with this DJB Hash value.
@@ -74,7 +74,7 @@ UTF-8 strings:
     0x4e: an unsigned 8-bit integer and a UTF-8 string containing that amount of bytes is followed
     0x4f: a positive variable length integer and a UTF-8 string containing that amount of bytes is followed
 
-Blob strings:
+#### Blob strings:
 
     0x5n (where 0<=n<=b): a blob string containing n bytes is followed
     0x5c: an unsigned 8-bit integer is followed, representing the nearest previous blob string with this DJB Hash value.
@@ -82,7 +82,7 @@ Blob strings:
     0x5e: an unsigned 8-bit integer and a blob string containing that amount of bytes is followed
     0x5f: a positive variable length integer and a blob string containing that amount of bytes is followed
 
-Hashtable refresher:
+#### Hashtable refresher:
 
 Hashtable refresher is an array of string that can be transferred before the value or inside arrays or objects. It does not produce any values but forces the build of a hashtable that can be used with `0x3c` `0x4c` `0x5c`.
 
@@ -94,7 +94,7 @@ Normally hashtable referesher is not useful since the hashtable is built during 
     0x7e: an unsigned 16-bit integer and an array of string containing that amount of strings is followed
     0x7f: a positive variable length integer and an array of string containing that amount of strings is followed
 
-Arrays:
+#### Arrays:
 
 Items are nested layers of control bytes and data bytes.
 
@@ -103,14 +103,14 @@ Items are nested layers of control bytes and data bytes.
     0x8e: an unsigned 8-bit integer and an array containing that amount of items is followed
     0x8f: a positive variable length integer and an array containing that amount of items is followed
 
-Objects:
+#### Objects:
 
     0x9n (where 0<=n<=c): an object containing n string-item pairs is followed
     0x9d: an unsigned 16-bit integer and an object containing that amount of string-item pairs is followed
     0x9e: an unsigned 8-bit integer and an object containing that amount of string-item pairs is followed
     0x9f: a positive variable length integer and an object containing that amount of string-item pairs is followed
 
-Row-col swapped array:
+#### Row-col swapped array:
 
     0xa0: "unspecified", used to skip columns that are not specified
     0xan (where 1<=n<=c): a row-col swapped array containing n columns is followed
@@ -118,7 +118,7 @@ Row-col swapped array:
     0xae: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns is followed
     0xaf: a positive variable length integer and a row-col swapped array containing that amount of columns is followed
 
-Delta encoded integers:
+#### Delta encoded integers:
 
 An Integer is followed after `0xbb` `0xbc` `0xbd` `0xbe` `0xbf`, representing an integer that is larger than the previous occurred integer by x.
 
@@ -130,7 +130,7 @@ An Integer is followed after `0xbb` `0xbc` `0xbd` `0xbe` `0xbf`, representing an
     0xbe: a negative variable length integer is followed
     0xbf: a positive variable length integer is followed
 
-Checksums:
+#### Checksums:
 
     0xe0: a CRC32 checksum will be immediately followed
     0xe1: an MD5 checksum will be immediately followed
@@ -141,7 +141,7 @@ Checksums:
     0xea: a delayed SHA-1 checksum will be present at the end of the stream
     0xeb: a delayed SHA-2 checksum will be present at the end of the stream
 
-Pragmas:
+#### Pragmas:
 
 Pragmas are blob strings that can be transferred before the value or inside arrays or objects. They are much like comments, which do not produce any values. They contain interpreter-specific directives. Interpreter that can not understand them can simply ignore them.
 

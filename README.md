@@ -90,10 +90,10 @@ Row-col swapped array:
 
 Checksums:
 
-    0xf0: a CRC32 checksum
-    0xf1: an MD5 checksum
-    0xf2: a SHA-1 checksum
-    0xf3: a SHA-2 checksum
+    0xf0: a CRC32 checksum will be immediately followed
+    0xf1: an MD5 checksum will be immediately followed
+    0xf2: a SHA-1 checksum will be immediately followed
+    0xf3: a SHA-2 checksum will be immediately followed
     0xf8: a delayed CRC32 checksum will be present at the end of the stream
     0xf9: a delayed MD5 checksum will be present at the end of the stream
     0xfa: a delayed SHA-1 checksum will be present at the end of the stream

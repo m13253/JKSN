@@ -118,32 +118,41 @@ If the control byte indicates it should be a negative number, the result will be
 Imagine that you have an array like this:
 
 ```json
-    [
-        {"name": "Jason", "email": "jason@example.com", "phone": "777-777-7777"},
-        {"name": "Jackson", "age": 17, "email": "jackson@example.com", "phone": "888-888-8888"}
-    ]
+[
+    {"name": "Jason", "email": "jason@example.com", "phone": "777-777-7777"},
+    {"name": "Jackson", "age": 17, "email": "jackson@example.com", "phone": "888-888-8888"}
+]
 ```
 
 It is better to preprocess it before transfer:
 
 ```json
-    {
-        "name": ["Jason", "Jackson"],
-        "age": [unspecified, 17],
-        "email": ["jason@example.com", "jackson@example.com"],
-        "phone": ["777-777-7777", "888-888-8888"]
-    }
+{
+    "name": ["Jason", "Jackson"],
+    "age": [unspecified, 17],
+    "email": ["jason@example.com", "jackson@example.com"],
+    "phone": ["777-777-7777", "888-888-8888"]
+}
 ```
 
 This is a row-col swapped array. JKSN will transparently transform an array to a row-col swapped array if it takes less space, then transform it back after receiving.
 
-This example, represented in row-col swapped JKSN, is:
+This example, represented in JKSN without row-col swapping, is:
 
 ```c
-    "jk!" 0xa4 0x44 "name" 0x82 0x45 "Jason" 0x47 "Jackson"
-               0x43 "age" 0xa0 0x1d 0x11
-               0x45 "email" 0x4e 0x11 "jason@example.com" 0x4e 0x13 "jackson@example.com"
-               0x45 "phone" 0x4e 0x0c "777-777-7777" 0x4e 0x0c "888-888-8888"
+"jk!" 0x82 0x93 0x44 "name" 0x45 "Jason" 0x45 "email" 0x4e 0x11 "jason@example.com"
+                0x45 "phone" 0x4e 0x0c "777-777-7777"
+           0x94 0x4c 0x2f 0x47 "Jackson" 0x43 "age" 0x1d 0x11
+                0x4c 0x84 0x4e 0x13 "jackson@example.com" 0x4c 0xfe 0x4e 0x0c "888-888-8888"
+```
+
+If represented in row-col swapped JKSN, is:
+
+```c
+"jk!" 0xa4 0x44 "name" 0x82 0x45 "Jason" 0x47 "Jackson"
+           0x43 "age" 0xa0 0x1d 0x11
+           0x45 "email" 0x4e 0x11 "jason@example.com" 0x4e 0x13 "jackson@example.com"
+           0x45 "phone" 0x4e 0x0c "777-777-7777" 0x4e 0x0c "888-888-8888"
 ```
 
 ### Checksum

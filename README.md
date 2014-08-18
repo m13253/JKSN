@@ -176,6 +176,8 @@ An JSON stream has multiple JKSN representation. The JKSN encoder should decide 
 
 Take the example used in row-col swapping.
 
+| Compression method                 | Size      | Percent saved |
+| ---------------------------------- | --------- | ------------- |
 | JSON, not stripping whitespace     | 170 bytes | 13.3% larger  |
 | JSON, stripped whitespace          | 150 bytes | base          |
 | JSON, row-col swapped, stripped    | 143 bytes | 4.6% smaller  |

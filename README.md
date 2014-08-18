@@ -251,7 +251,7 @@ Take the example used in row-col swapping section.
 | JKSN, no swap, gzip -9             | 113 bytes | 24.7% smaller |
 | JKSN, transparent swapped, gzip -9 | 106 bytes | 29.3% smaller |
 
-A non gzipped JKSN does even better than JSON compressed in any method.
+A non gzipped JKSN does even better than JSON compressed in any method above.
 
 ### License of this document
 

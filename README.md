@@ -156,8 +156,6 @@ If represented in row-col swapped JKSN, is:
            0x45 "phone" 0x4e 0x0c "777-777-7777" 0x4e 0x0c "888-888-8888"
 ```
 
-114 bytes vs 108 bytes (without magic header), saving about 5.3%. Larger arrays may save more.
-
 Row-col swapped array can definitely be nested. However, nested row-col swapped array might cost too much computing time. It is recommended to choose a balanced nesting depth.
 
 ### Checksum
@@ -173,6 +171,20 @@ A delayed checksum rearranges the form of JKSN, which puts the checksum to the e
 ### Representation decision
 
 An JSON stream has multiple JKSN representation. The JKSN encoder should decide which method generates the smallest JKSN stream.
+
+### Comparison
+
+Take the example used in row-col swapping.
+
+| JSON, not stripping whitespace     | 170 bytes | 13.3% larger  |
+| JSON, stripped whitespace          | 150 bytes | base          |
+| JSON, row-col swapped, stripped    | 143 bytes | 4.6% smaller  |
+| JSON, stripped, gzip -9            | 112 bytes | 25.3% smaller |
+| JSON, swapped, stripped, gzip -9   | 127 bytes | 15.3% smaller |
+| JKSN, no swapping                  | 114 bytes | 24.0% smaller |
+| JKSN, transparent swapped          | 108 bytes | 28.0% smaller |
+| JKSN, no swap, gzip -9             | 113 bytes | 24.7% smaller |
+| JKSN, transparent swapped, gzip -9 | 106 bytes | 29.3% smaller |
 
 ### License of this document
 

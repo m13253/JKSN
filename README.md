@@ -28,7 +28,7 @@ Special values:
     0x01: null
     0x02: false
     0x03: true
-    0x21: a string control byte and a string containing a plain text JSON literal are followed
+    0x0f: a string control byte and a string containing a plain text JSON literal are followed
 
 Integers:
 

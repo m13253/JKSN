@@ -231,7 +231,7 @@ A delayed checksum rearranges the form of JKSN, which puts the checksum to the e
 
 ### Representation decision
 
-An JSON stream has multiple JKSN representation. The JKSN encoder should decide which method generates the smallest JKSN stream.
+An JSON stream has multiple JKSN representation. The JKSN encoder should decide which method generates the smallest JKSN stream in reasonable time.
 
 Since implementing the full functionality of JKSN costs too much resources and does not suit all situation, the application can only implement a subset of JKSN specification. This requires the sender and receiver using features both supported.
 

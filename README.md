@@ -28,6 +28,7 @@ Special values:
     0x01: null
     0x02: false
     0x03: true
+    0x21: a string control byte and a string containing a plain text JSON literal are followed
 
 Integers:
 
@@ -45,7 +46,6 @@ Float point numbers:
 A float point number is followed after `0x2b` `0x2c` `0x2d`.
 
     0x20: NaN
-    0x21: a string control byte and a string containing a plain text JSON literal are followed
     0x2b: an IEEE long double (128-bit) number is followed
     0x2c: an IEEE double (64-bit) number is followed
     0x2d: an IEEE float (32-bit) number is followed

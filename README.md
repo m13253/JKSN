@@ -55,7 +55,7 @@ A float point number is followed after `0x2b` `0x2c` `0x2d`.
 UTF-16 strings:
 
     0x3n (where 0<=n<=b): a little-endian UTF-16 string containing n byte pairs is followed
-    0x3c: an unsigned 8-bit integer is followed, representing the nearest previous little-endian UTF-16 string with this BKDR Hash (seed=131, one byte pair as a unit) value.
+    0x3c: an unsigned 8-bit integer is followed, representing the nearest previous little-endian UTF-16 string with this DJB Hash (one byte pair as a unit) value.
     0x3d: an unsigned 16-bit integer and a little-endian UTF-16 string containing that amount of byte pairs is followed
     0x3e: an unsigned 8-bit integer and a little-endian UTF-16 string containing that amount of byte pairs is followed
     0x3f: a positive variable length integer and a little-endian UTF-16 string containing that amount of byte pairs is followed
@@ -63,7 +63,7 @@ UTF-16 strings:
 UTF-8 strings:
 
     0x4n (where 0<=n<=b): a UTF-8 string containing n bytes is followed
-    0x4c: an unsigned 8-bit integer is followed, representing the nearest previous UTF-8 string with this BKDR Hash (seed=131) value.
+    0x4c: an unsigned 8-bit integer is followed, representing the nearest previous UTF-8 string with this DJB Hash value.
     0x4d: an unsigned 16-bit integer and a UTF-8 string containing that amount of bytes is followed
     0x4e: an unsigned 8-bit integer and a UTF-8 string containing that amount of bytes is followed
     0x4f: a positive variable length integer and a UTF-8 string containing that amount of bytes is followed
@@ -71,7 +71,7 @@ UTF-8 strings:
 Blob strings:
 
     0x5n (where 0<=n<=b): a blob string containing n bytes is followed
-    0x5c: an unsigned 8-bit integer is followed, representing the nearest previous blob string with this BKDR Hash (seed=131) value.
+    0x5c: an unsigned 8-bit integer is followed, representing the nearest previous blob string with this DJB Hash value.
     0x5d: an unsigned 16-bit integer and a blob string containing that amount of bytes is followed
     0x5e: an unsigned 8-bit integer and a blob string containing that amount of bytes is followed
     0x5f: a positive variable length integer and a blob string containing that amount of bytes is followed
@@ -125,10 +125,9 @@ Checksums:
 
 Pragmas:
 
-Pragmas are strings that can be transferred before the value or inside arrays or objects. They are much like comments, which do not produce any values. They contain interpreter-specific directives. Interpreter that can not understand them can simply ignore them.
+Pragmas are blob strings that can be transferred before the value or inside arrays or objects. They are much like comments, which do not produce any values. They contain interpreter-specific directives. Interpreter that can not understand them can simply ignore them.
 
-    0xfn (where 0<=n<=b): a pragma string containing n bytes are followed
-    0xfc: an unsigned 8-bit integer is followed, representing the nearest previous pragma string with this BKDR Hash (seed=131) value.
+    0xfn (where 0<=n<=c): a pragma string containing n bytes are followed
     0xfd: an unsigned 16-bit integer and a pragma string containing that amount of bytes are followed
     0xfe: an unsigned 8-bit integer and a pragma string containing that amount of bytes are followed
     0xff: a positive variable length integer and a pragma string containing that amount of bytes are followed
@@ -192,16 +191,15 @@ If represented in row-col swapped JKSN, is:
 
 Row-col swapped array can definitely be nested. However, nested row-col swapped array might cost too much computing time. It is recommended to choose a balanced nesting depth.
 
-### BKDR Hash
+### DJB Hash
 
-The algorithm of BKDR Hash is listed below:
+The algorithm of DJB Hash is listed below:
 
 ```python
 def BKDRHash(string):
-    seed = 131
     hash = 0
     for i in string:
-        hash = hash * seed + ord(i)
+        hash = (hash << 5) + hash + ord(i)
     return hash & 0xff
 ```
 

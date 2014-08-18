@@ -100,7 +100,9 @@ Row-col swapped array:
 
 Hashtable refresher:
 
-Hashtable refresher is an array of string that can be transferred before the value or inside arrays or objects. It does not produce any values but forces the build of a hashtable that can be used with 0x3c and 0x4c. Normally hashtable referesher is not useful since the hashtable is built during the first occurence of a string, however it is useful if there is a persistent connection exchanging continuous JKSN stream.
+Hashtable refresher is an array of string that can be transferred before the value or inside arrays or objects. It does not produce any values but forces the build of a hashtable that can be used with 0x3c and 0x4c.
+
+Normally hashtable referesher is not useful since the hashtable is built during the first occurence of a string, however it is useful if there is a persistent connection exchanging continuous JKSN stream.
 
     0xb0: clear the hashtable
     0xbn (where 1<=n<=c): an array of string containing n strings is followed

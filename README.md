@@ -18,7 +18,7 @@ This part contains four bytes `jk!`, it is used for safe Internet transmission a
 
 ### Control byte
 
-No data bytes are followed after 0x0n.
+No data bytes are followed after `0x0n`.
 
 Special values:
 
@@ -29,7 +29,7 @@ Special values:
 
 Integers:
 
-An Integer is followed after 0x1b 0x1c 0x1d 0x1e 0x1f.
+An Integer is followed after `0x1b` `0x1c` `0x1d` `0x1e` `0x1f`.
 
     0x1n (where 0<=n<=a): represents a integer that is n
     0x1b: a signed 32-bit integer is followed
@@ -40,7 +40,7 @@ An Integer is followed after 0x1b 0x1c 0x1d 0x1e 0x1f.
 
 Float point numbers:
 
-An float point number is followed after 0x2b 0x2c 0x2d.
+An float point number is followed after `0x2b` `0x2c` `0x2d`.
 
     0x20: NaN
     0x21: a string control byte and a string containing a plain text JSON literal are followed
@@ -100,7 +100,7 @@ Row-col swapped array:
 
 Hashtable refresher:
 
-Hashtable refresher is an array of string that can be transferred before the value or inside arrays or objects. It does not produce any values but forces the build of a hashtable that can be used with 0x3c and 0x4c.
+Hashtable refresher is an array of string that can be transferred before the value or inside arrays or objects. It does not produce any values but forces the build of a hashtable that can be used with `0x3c` `0x4c` `0x5c`.
 
 Normally hashtable referesher is not useful since the hashtable is built during the first occurence of a string, however it is useful if there is a persistent connection exchanging continuous JKSN stream.
 

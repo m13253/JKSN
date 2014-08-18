@@ -12,6 +12,8 @@ File formats
 
 One JSON stream can only produce one value. So once a complete value is parsed, the JKSN stream should be terminated.
 
+MIME type `application/x-jksn` and filename extension `.jksn` are preferred.
+
 ### Magic header
 
 This part contains four bytes `jk!`, it is used for safe Internet transmission and data type recognition. If the network bandwidth is limited, magic header can be omitted.
@@ -203,6 +205,8 @@ A delayed checksum rearranges the form of JKSN, which puts the checksum to the e
 ### Representation decision
 
 An JSON stream has multiple JKSN representation. The JKSN encoder should decide which method generates the smallest JKSN stream.
+
+Since implementing the full functionality of JKSN costs too much resources and does not suit all situation, the application can only implement a subset of JKSN specification. This requires the sender and receiver uses features both supported.
 
 ### Comparison
 

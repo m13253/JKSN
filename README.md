@@ -10,6 +10,8 @@ File formats
 
     [magic header] [control byte] [checksum] [control byte] [data bytes] [control byte] [data bytes] ...
 
+One JSON stream can only produce one value. So once a complete value is parsed, the JKSN stream should be terminated.
+
 ### Magic header
 
 This part contains four bytes `jk!`, it is used for safe Internet transmission and data type recognition. If the network bandwidth is limited, magic header can be omitted.
@@ -50,54 +52,82 @@ An float point number is followed after 0x2b 0x2c 0x2d.
 
 UTF-16 strings:
 
-    0x3n (where 0<=n<=b): a UTF-16 string containing n byte pairs are followed
+    0x3n (where 0<=n<=b): a UTF-16 string containing n byte pairs is followed
     0x3c: an unsigned 8-bit integer is followed, representing the nearest previous UTF-16 string with this BKDR Hash (seed=131) value.
-    0x3d: an unsigned 16-bit integer and a UTF-16 string containing that amount of byte pairs are followed
-    0x3e: an unsigned 8-bit integer and a UTF-16 string containing that amount of byte pairs are followed
-    0x3f: a positive variable length integer and a UTF-16 string containing that amount of byte pairs are followed
+    0x3d: an unsigned 16-bit integer and a UTF-16 string containing that amount of byte pairs is followed
+    0x3e: an unsigned 8-bit integer and a UTF-16 string containing that amount of byte pairs is followed
+    0x3f: a positive variable length integer and a UTF-16 string containing that amount of byte pairs is followed
 
 UTF-8 strings:
 
-    0x4n (where 0<=n<=b): a UTF-8 string containing n bytes are followed
+    0x4n (where 0<=n<=b): a UTF-8 string containing n bytes is followed
     0x4c: an unsigned 8-bit integer is followed, representing the nearest previous UTF-8 string with this BKDR Hash (seed=131) value.
-    0x4d: an unsigned 16-bit integer and a UTF-8 string containing that amount of bytes are followed
-    0x4e: an unsigned 8-bit integer and a UTF-8 string containing that amount of bytes are followed
-    0x4f: a positive variable length integer and a UTF-8 string containing that amount of bytes are followed
+    0x4d: an unsigned 16-bit integer and a UTF-8 string containing that amount of bytes is followed
+    0x4e: an unsigned 8-bit integer and a UTF-8 string containing that amount of bytes is followed
+    0x4f: a positive variable length integer and a UTF-8 string containing that amount of bytes is followed
+
+Blob strings:
+
+    0x5n (where 0<=n<=b): a blob string containing n bytes is followed
+    0x5c: an unsigned 8-bit integer is followed, representing the nearest previous blob string with this BKDR Hash (seed=131) value.
+    0x5d: an unsigned 16-bit integer and a blob string containing that amount of bytes is followed
+    0x5e: an unsigned 8-bit integer and a blob string containing that amount of bytes is followed
+    0x5f: a positive variable length integer and a blob string containing that amount of bytes is followed
 
 Arrays:
 
 Items are nested layers of control bytes and data bytes.
 
-    0x8n (where 0<=n<=c): an array containing n items are followed
-    0x8d: an unsigned 16-bit integer and an array containing that amount of items are followed
-    0x8e: an unsigned 8-bit integer and an array containing that amount of items are followed
-    0x8f: a positive variable length integer and an array containing that amount of items are followed
+    0x8n (where 0<=n<=c): an array containing n items is followed
+    0x8d: an unsigned 16-bit integer and an array containing that amount of items is followed
+    0x8e: an unsigned 8-bit integer and an array containing that amount of items is followed
+    0x8f: a positive variable length integer and an array containing that amount of items is followed
 
 Objects:
 
-    0x9n (where 0<=n<=c): an object containing n string-item pairs are followed
-    0x9d: an unsigned 16-bit integer and an object containing that amount of string-item pairs are followed
-    0x9e: an unsigned 8-bit integer and an object containing that amount of string-item pairs are followed
-    0x9f: a positive variable length integer and an object containing that amount of string-item pairs are followed
+    0x9n (where 0<=n<=c): an object containing n string-item pairs is followed
+    0x9d: an unsigned 16-bit integer and an object containing that amount of string-item pairs is followed
+    0x9e: an unsigned 8-bit integer and an object containing that amount of string-item pairs is followed
+    0x9f: a positive variable length integer and an object containing that amount of string-item pairs is followed
 
 Row-col swapped array:
 
     0xa0: unspecified, used to skip columns that are not specified
-    0xan (where 1<=n<=c): a row-col swapped array containing n columns are followed
-    0xad: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns are followed
-    0xae: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns are followed
-    0xaf: a positive variable length integer and a row-col swapped array containing that amount of columns are followed
+    0xan (where 1<=n<=c): a row-col swapped array containing n columns is followed
+    0xad: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns is followed
+    0xae: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns is followed
+    0xaf: a positive variable length integer and a row-col swapped array containing that amount of columns is followed
+
+Hashtable refresher:
+
+Hashtable refresher is an array of string that can be transferred before the value or inside arrays or objects. It does not produce any values but forces the build of a hashtable that can be used with 0x3c and 0x4c. Normally hashtable referesher is not useful since the hashtable is built during the first occurence of a string, however it is useful if there is a persistent connection exchanging continuous JKSN stream.
+
+    0xb0: clear the hashtable
+    0xbn (where 1<=n<=c): an array of string containing n strings is followed
+    0xbd: an unsigned 16-bit integer and an array of string containing that amount of strings is followed
+    0xbe: an unsigned 16-bit integer and an array of string containing that amount of strings is followed
+    0xbf: a positive variable length integer and an array of string containing that amount of strings is followed
 
 Checksums:
 
-    0xf0: a CRC32 checksum will be immediately followed
-    0xf1: an MD5 checksum will be immediately followed
-    0xf2: a SHA-1 checksum will be immediately followed
-    0xf3: a SHA-2 checksum will be immediately followed
-    0xf8: a delayed CRC32 checksum will be present at the end of the stream
-    0xf9: a delayed MD5 checksum will be present at the end of the stream
-    0xfa: a delayed SHA-1 checksum will be present at the end of the stream
-    0xfb: a delayed SHA-2 checksum will be present at the end of the stream
+    0xe0: a CRC32 checksum will be immediately followed
+    0xe1: an MD5 checksum will be immediately followed
+    0xe2: a SHA-1 checksum will be immediately followed
+    0xe3: a SHA-2 checksum will be immediately followed
+    0xe8: a delayed CRC32 checksum will be present at the end of the stream
+    0xe9: a delayed MD5 checksum will be present at the end of the stream
+    0xea: a delayed SHA-1 checksum will be present at the end of the stream
+    0xeb: a delayed SHA-2 checksum will be present at the end of the stream
+
+Pragmas:
+
+Pragmas are strings that can be transferred before the value or inside arrays or objects. They are much like comments, which do not produce any values. They contain interpreter-specific directives. Interpreter that can not understand them can simply ignore them.
+
+    0xfn (where 0<=n<=b): a pragma string containing n bytes are followed
+    0xfc: an unsigned 8-bit integer is followed, representing the nearest previous pragma string with this BKDR Hash (seed=131) value.
+    0xfd: an unsigned 16-bit integer and a pragma string containing that amount of bytes are followed
+    0xfe: an unsigned 8-bit integer and a pragma string containing that amount of bytes are followed
+    0xff: a positive variable length integer and a pragma string containing that amount of bytes are followed
 
 ### Variable length integer
 
@@ -166,7 +196,7 @@ Checksum indicates the checksum from the position immediately after the checksum
 
 A delayed checksum rearranges the form of JKSN, which puts the checksum to the end of JKSN stream, as the following format:
 
-    [magic header] [0xf8/0xf9/0xfa/0xfb] [control byte] [data bytes] ... [control byte] [data bytes] [checksum]
+    [magic header] [0xe8/0xe9/0xea/0xeb] [control byte] [data bytes] ... [control byte] [data bytes] [checksum]
 
 ### Representation decision
 

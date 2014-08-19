@@ -11,6 +11,10 @@ def dumps(obj, header=True):
     return JKSNEncoder().dumps(obj, header=header)
 
 
+def dump(obj, fp, header=True):
+    return JKSNEncoder().dumps(obj, fp, header=header)
+
+
 class JKSNValue:
     def __init__(self, control, datalen=b'', data=b'', extra=None):
         assert isinstance(control, int) and 0 <= control <= 255
@@ -38,10 +42,15 @@ class JKSNValue:
 class JKSNEncoder:
     def dumps(self, obj, header=True):
         result = self.dumpobj(obj).__bytes__()
-        if(header):
+        if header:
             return b'jk!'+result
         else:
             return result
+
+    def dump(self, obj, fp, header=True):
+        if header:
+            fp.write(b'jk!')
+        fp.write(self.dumpobj(obj).__bytes__())
 
     def dumpobj(self, obj):
         if obj is None:

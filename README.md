@@ -28,7 +28,7 @@ No data bytes are followed after `0x0n`.
     0x01: null
     0x02: false
     0x03: true
-    0x0f: a string control byte and a string containing a plain text JSON literal are followed
+    0x0f: a representation (a control byte and data bytes) of a string containing a plain text JSON literal is followed
 
 #### Integers:
 
@@ -61,15 +61,14 @@ The most significant bit, that is the IEEE 754 sign bit, is transferred first.
 All UTF-16 strings are little endian, that is for ASCII characters, the second byte is zero.
 
     0x3n (where 0<=n<=b): a UTF-16 string containing n byte pairs is followed
-    0x3c: an unsigned 8-bit integer is followed, representing the nearest previous UTF-16 string with this DJB Hash (one byte pair as a unit) value.
+    0x3c: an unsigned 8-bit integer is followed, representing the nearest previous UTF-16 or UTF-8 string with this DJB Hash value.
     0x3d: an unsigned 16-bit integer and a UTF-16 string containing that amount of byte pairs is followed
     0x3e: an unsigned 8-bit integer and a UTF-16 string containing that amount of byte pairs is followed
     0x3f: a positive variable length integer and a UTF-16 string containing that amount of byte pairs is followed
 
 #### UTF-8 strings:
 
-    0x4n (where 0<=n<=b): a UTF-8 string containing n bytes is followed
-    0x4c: an unsigned 8-bit integer is followed, representing the nearest previous UTF-8 string with this DJB Hash value.
+    0x4n (where 0<=n<=c): a UTF-8 string containing n bytes is followed
     0x4d: an unsigned 16-bit integer and a UTF-8 string containing that amount of bytes is followed
     0x4e: an unsigned 8-bit integer and a UTF-8 string containing that amount of bytes is followed
     0x4f: a positive variable length integer and a UTF-8 string containing that amount of bytes is followed
@@ -84,9 +83,11 @@ All UTF-16 strings are little endian, that is for ASCII characters, the second b
 
 #### Hashtable refresher:
 
-Hashtable refresher is an array of string that can be transferred before the value or inside arrays or objects. It does not produce any values but forces the build of a hashtable that can be used with `0x3c` `0x4c` `0x5c`.
+Hashtable refresher is an array of string that can be transferred before the value or inside arrays or objects. It does not produce any values but forces the build of a hashtable that can be used with `0x3c` or `0x5c`.
 
 Normally hashtable referesher is not useful since the hashtable is built during the first occurence of a string, however it is useful if there is a persistent connection exchanging continuous JKSN stream.
+
+There are two hashtables with size 256, one for text strings (UTF-16, UTF-8), the other for blob strings.
 
     0x70: clear the hashtable
     0x7n (where 1<=n<=c): an array of string containing n strings is followed
@@ -132,23 +133,20 @@ An Integer is followed after `0xbb` `0xbc` `0xbd` `0xbe` `0xbf`, representing an
 
 #### Checksums:
 
-    0xe0: a CRC32 checksum will be immediately followed
-    0xe1: an MD5 checksum will be immediately followed
-    0xe2: a SHA-1 checksum will be immediately followed
-    0xe3: a SHA-2 checksum will be immediately followed
-    0xe8: a delayed CRC32 checksum will be present at the end of the stream
-    0xe9: a delayed MD5 checksum will be present at the end of the stream
-    0xea: a delayed SHA-1 checksum will be present at the end of the stream
-    0xeb: a delayed SHA-2 checksum will be present at the end of the stream
+    0xf0: a CRC32 checksum will be immediately followed
+    0xf1: an MD5 checksum will be immediately followed
+    0xf2: a SHA-1 checksum will be immediately followed
+    0xf3: a SHA-2 checksum will be immediately followed
+    0xf8: a delayed CRC32 checksum will be present at the end of the stream
+    0xf9: a delayed MD5 checksum will be present at the end of the stream
+    0xfa: a delayed SHA-1 checksum will be present at the end of the stream
+    0xfb: a delayed SHA-2 checksum will be present at the end of the stream
 
 #### Pragmas:
 
-Pragmas are blob strings that can be transferred before the value or inside arrays or objects. They are much like comments, which do not produce any values. They contain interpreter-specific directives. Interpreter that can not understand them may simply ignore them.
+Pragmas are interpreter-specific directives. They are stored in the form of values, transferred before the real value or inside objects or arrays, but do not produce values. Interpreter that can not understand them may simply ignore them.
 
-    0xfn (where 0<=n<=c): a pragma string containing n bytes are followed
-    0xfd: an unsigned 16-bit integer and a pragma string containing that amount of bytes are followed
-    0xfe: an unsigned 8-bit integer and a pragma string containing that amount of bytes are followed
-    0xff: a positive variable length integer and a pragma string containing that amount of bytes are followed
+    0xff: a representation (a control byte and data bytes) of a value (usually a string) is followed
 
 ### Variable length integer
 
@@ -191,9 +189,9 @@ This example, represented in JKSN without row-col swapping, is:
 
 ```c
 "jk!" 0x82 0x93 0x44 "name" 0x45 "Jason" 0x45 "email" 0x4e 0x11 "jason@example.com"
-                0x45 "phone" 0x4e 0x0c "777-777-7777"
-           0x94 0x4c 0xc1 0x47 "Jackson" 0x43 "age" 0x1d 0x11
-                0x4c 0xc8 0x4e 0x13 "jackson@example.com" 0x4c 0x9a 0x4e 0x0c "888-888-8888"
+                0x45 "phone" 0x4c "777-777-7777"
+           0x94 0x3c 0xc1 0x47 "Jackson" 0x43 "age" 0x1d 0x11
+                0x3c 0xc8 0x4e 0x13 "jackson@example.com" 0x3c 0x9a 0x4c "888-888-8888"
 ```
 
 If represented in row-col swapped JKSN, is:
@@ -202,7 +200,7 @@ If represented in row-col swapped JKSN, is:
 "jk!" 0xa4 0x44 "name" 0x82 0x45 "Jason" 0x47 "Jackson"
            0x43 "age" 0xa0 0x1d 0x11
            0x45 "email" 0x4e 0x11 "jason@example.com" 0x4e 0x13 "jackson@example.com"
-           0x45 "phone" 0x4e 0x0c "777-777-7777" 0x4e 0x0c "888-888-8888"
+           0x45 "phone" 0x4c "777-777-7777" 0x4c "888-888-8888"
 ```
 
 Row-col swapped array can definitely be nested. However, nested row-col swapped array might cost too much computing time. It is recommended to choose a balanced nesting depth.
@@ -219,6 +217,8 @@ def DJBHash(string):
     return hash & 0xff
 ```
 
+When hashing UTF-16 strings, the hash function processes every byte instead of every byte pair.
+
 ### Checksum
 
 Checksum is a optional part of JKSN stream. If the transmission media is reliable, or if you decided to GZIP the JKSN stream, checksum may be omitted.
@@ -227,7 +227,7 @@ Checksum indicates the checksum from the position immediately after the checksum
 
 A delayed checksum rearranges the form of JKSN, which puts the checksum to the end of JKSN stream, as the following format:
 
-    [magic header] [0xe8/0xe9/0xea/0xeb] [control byte] [data bytes] ... [control byte] [data bytes] [checksum]
+    [magic header] [0xf8/0xf9/0xfa/0xfb] [control byte] [data bytes] ... [control byte] [data bytes] [checksum]
 
 ### Representation decision
 
@@ -246,10 +246,10 @@ Take the example used in row-col swapping section.
 | JSON, row-col swapped, stripped    | 143 bytes | 4.6% smaller  |
 | JSON, stripped, gzip -9            | 112 bytes | 25.3% smaller |
 | JSON, swapped, stripped, gzip -9   | 127 bytes | 15.3% smaller |
-| JKSN, no swapping                  | 114 bytes | 24.0% smaller |
-| JKSN, transparent swapped          | 108 bytes | 28.0% smaller |
-| JKSN, no swap, gzip -9             | 113 bytes | 24.7% smaller |
-| JKSN, transparent swapped, gzip -9 | 106 bytes | 29.3% smaller |
+| JKSN, no swapping                  | 112 bytes | 25.3% smaller |
+| JKSN, transparent swapped          | 106 bytes | 29.3% smaller |
+| JKSN, no swap, gzip -9             | 111 bytes | 26.0% smaller |
+| JKSN, transparent swapped, gzip -9 | 104 bytes | 30.7% smaller |
 
 A non gzipped JKSN does even better than JSON compressed in any method above.
 

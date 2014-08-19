@@ -8,12 +8,7 @@ import struct
 
 
 def dumps(obj, header=True):
-    dumper = JKSNDumper()
-    result = dumper.dump(obj).__bytes__()
-    if(header):
-        return b'jk!'+result
-    else:
-        return result
+    return JKSNEncoder().dumps(obj, header=header)
 
 
 class JKSNValue:
@@ -40,8 +35,15 @@ class JKSNValue:
         return recursive
 
 
-class JKSNDumper:
-    def dump(self, obj):
+class JKSNEncoder:
+    def dumps(self, obj, header=True):
+        result = self.dumpobj(obj).__bytes__()
+        if(header):
+            return b'jk!'+result
+        else:
+            return result
+
+    def dumpobj(self, obj):
         if obj is None:
             return self.dump_none()
         elif isinstance(obj, bool):
@@ -76,16 +78,16 @@ class JKSNDumper:
             return JKSNValue(0x1e, encode_int(-obj, 0))
 
 
-def encode_int(number, length):
-    if length == 1:
+def encode_int(number, size):
+    if size == 1:
         return struct.pack('>B', number & 0xff)
-    elif length == 2:
+    elif size == 2:
         return struct.pack('>H', number & 0xffff)
-    elif length == 4:
+    elif size == 4:
         return struct.pack('>L', number & 0xffffffff)
-    elif length == 8:
+    elif size == 8:
         return struct.pack('>Q', number & 0xffffffffffffffff)
-    elif length == 0:
+    elif size == 0:
         assert number >= 0
         result = bytearray((number & 0x7f,))
         number >>= 7

@@ -176,7 +176,7 @@ class JKSNEncoder:
             return JKSNValue(0x1d, self._encode_int(obj, 1), origin=obj)
         elif -0x8000 <= obj <= 0x7fff:
             return JKSNValue(0x1c, self._encode_int(obj, 2), origin=obj)
-        elif -0x80000000 <= obj <= 0x7fffffff:
+        elif -0x80000000 <= obj <= -0x200000 or 0x200000 <= obj <= 0x7fffffff:
             return JKSNValue(0x1b, self._encode_int(obj, 4), origin=obj)
         elif obj >= 0:
             return JKSNValue(0x1f, self._encode_int(obj, 0), origin=obj)
@@ -297,7 +297,7 @@ class JKSNEncoder:
                         new_control, new_data = 0xbd, self._encode_int(delta, 1)
                     elif -0x8000 <= delta <= 0x7fff:
                         new_control, new_data = 0xbc, self._encode_int(delta, 2)
-                    elif -0x80000000 <= delta <= 0x7fffffff:
+                    elif -0x80000000 <= delta <= -0x200000 or 0x200000 <= delta <= 0x7fffffff:
                         new_control, new_data = 0xbb, self._encode_int(delta, 4)
                     elif delta >= 0:
                         new_control, new_data = 0xbf, self._encode_int(delta, 0)

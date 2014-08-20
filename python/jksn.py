@@ -40,13 +40,13 @@ def dump(obj, fp, header=True, check_circular=True):
     return JKSNEncoder().dumps(obj, fp, header=header, check_circular=check_circular)
 
 
-def loads(s):
+def loads(s, ordered_dict=False):
     '''Load an object from a buffer'''
-    return JKSNDecoder().loads(s)
+    return JKSNDecoder().loads(s, ordered_dict=ordered_dict)
 
-def load(fp):
+def load(fp, ordered_dict=False):
     '''Load an object from a file object'''
-    return JKSNDecoder().load(fp)
+    return JKSNDecoder().load(fp, ordered_dict=ordered_dict)
 
 class JKSNValue:
     def __init__(self, control, data=b'', buf=b'', origin=None):
@@ -75,6 +75,9 @@ class JKSNValue:
 
 class _unspecified_value:
     pass
+
+
+_unspecified_value = _unspecified_value()
 
 
 class JKSNEncoder:
@@ -111,7 +114,7 @@ class JKSNEncoder:
     def dump_value(self, obj):
         if obj is None:
             return self.dump_none(obj)
-        elif isinstance(obj, _unspecified_value):
+        elif obj is _unspecified_value:
             return self.dump_unspecified(obj)
         elif isinstance(obj, bool):
             return self.dump_bool(obj)
@@ -207,7 +210,7 @@ class JKSNEncoder:
                     columns = columns or len(row) != 0
             return columns
 
-        def encode_list_straight(obj):
+        def encode_straight_list(obj):
             length = len(obj)
             if length <= 0xc:
                 result = JKSNValue(0x80 | length, origin=obj)
@@ -222,7 +225,7 @@ class JKSNEncoder:
             assert len(result.children) == length
             return result
 
-        def encode_list_swapped(obj):
+        def encode_swapped_list(obj):
             columns = collections.OrderedDict().fromkeys((column for row in obj for column in row))
             if len(columns) <= 0xc:
                 result = JKSNValue(0xa0 | len(columns), origin=obj)
@@ -234,14 +237,14 @@ class JKSNEncoder:
                 result = JKSNValue(0xaf, self._encode_int(length, 0), origin=obj)
             for column in columns:
                 result.children.append(self.dump_value(column))
-                result.children.append(self.dump_list([row.get(column, _unspecified_value()) for row in obj]))
+                result.children.append(self.dump_list([row.get(column, _unspecified_value) for row in obj]))
             assert len(result.children) == len(columns) * 2
             return result
 
-        result = encode_list_straight(obj)
+        result = encode_straight_list(obj)
         if test_swap_availability(obj):
-            result_swapped = encode_list_swapped(obj)
-            if result_swapped.__len__(3) < result.__len__(3):
+            result_swapped = encode_swapped_list(obj)
+            if result_swapped.__len__(depth=3) < result.__len__(depth=3):
                 result = result_swapped
         return result
 
@@ -331,11 +334,11 @@ class JKSNDecoder:
         self.texthash = [None] * 256
         self.blobhash = [None] * 256
 
-    def loads(self, s):
+    def loads(self, s, ordered_dict=False):
         '''Load an object from a buffer'''
-        return self.load(io.BytesIO(s))
+        return self.load(io.BytesIO(s), ordered_dict=ordered_dict)
 
-    def load(self, fp):
+    def load(self, fp, ordered_dict=False):
         '''Load an object from a file object'''
         typetest = fp.read(0)
         if not isinstance(typetest, bytes):
@@ -343,9 +346,10 @@ class JKSNDecoder:
         header = fp.read(3)
         if header != b'jk!':
             fp.seek(-3, 1)
-        return self.loadobj(fp)
+        self._ordered_dict = collections.OrderedDict if ordered_dict else dict
+        return self.load_value(fp)
 
-    def loadobj(self, fp):
+    def load_value(self, fp):
         while True:
             control = ord(fp.read(1))
             # Special values
@@ -356,7 +360,7 @@ class JKSNDecoder:
             elif control == 0x03:
                 return True
             elif control == 0x0f:
-                s = loadobj(fp)
+                s = load_value(fp)
                 if not isinstance(s, str):
                     raise JKSNDecodeError('JKSN value 0x0f requires a string but found: %r' % s)
                 return json.loads(s)
@@ -436,34 +440,45 @@ class JKSNDecoder:
                 self.blobhash = [None] * 256
             elif control in range(0x71, 0x7d):
                 for i in range(control & 0xf):
-                    self.loadobj(fp)
+                    self.load_value(fp)
             elif control == 0x7d:
                 for i in range(self._decode_int(fp, 2)):
-                    self.loadobj(fp)
+                    self.load_value(fp)
             elif control == 0x7e:
                 for i in range(self._decode_int(fp, 1)):
-                    self.loadobj(fp)
+                    self.load_value(fp)
             elif control == 0x7f:
                 for i in range(self._decode_int(fp, 0)):
-                    self.loadobj(fp)
+                    self.load_value(fp)
             # Arrays
             elif control in range(0x80, 0x8d):
-                return [self.loadobj(fp) for i in range(control & 0xf)]
+                return [self.load_value(fp) for i in range(control & 0xf)]
             elif control == 0x8d:
-                return [self.loadobj(fp) for i in range(self._decode_int(fp, 2))]
+                return [self.load_value(fp) for i in range(self._decode_int(fp, 2))]
             elif control == 0x8e:
-                return [self.loadobj(fp) for i in range(self._decode_int(fp, 1))]
+                return [self.load_value(fp) for i in range(self._decode_int(fp, 1))]
             elif control == 0x8f:
-                return [self.loadobj(fp) for i in range(self._decode_int(fp, 0))]
+                return [self.load_value(fp) for i in range(self._decode_int(fp, 0))]
             # Objects
             elif control in range(0x90, 0x9d):
-                return collections.OrderedDict((self.loadobj(fp), self.loadobj(fp)) for i in range(control & 0xf))
+                return self._ordered_dict((self.load_value(fp), self.load_value(fp)) for i in range(control & 0xf))
             elif control == 0x9d:
-                return collections.OrderedDict((self.loadobj(fp), self.loadobj(fp)) for i in range(self._decode_int(fp, 2)))
+                return self._ordered_dict((self.load_value(fp), self.load_value(fp)) for i in range(self._decode_int(fp, 2)))
             elif control == 0x9e:
-                return collections.OrderedDict((self.loadobj(fp), self.loadobj(fp)) for i in range(self._decode_int(fp, 1)))
+                return self._ordered_dict((self.load_value(fp), self.load_value(fp)) for i in range(self._decode_int(fp, 1)))
             elif control == 0x9f:
-                return collections.OrderedDict((self.loadobj(fp), self.loadobj(fp)) for i in range(self._decode_int(fp, 0)))
+                return self._ordered_dict((self.load_value(fp), self.load_value(fp)) for i in range(self._decode_int(fp, 0)))
+            # Row-col swapped arrays
+            elif control == 0xa0:
+                return _unspecified_value
+            elif control in range(0xa1, 0xad):
+                return self.load_swapped_list(fp, control & 0xf)
+            elif control == 0xad:
+                return self.load_swapped_list(fp, self._decode_int(fp, 2))
+            elif control == 0xae:
+                return self.load_swapped_list(fp, self._decode_int(fp, 1))
+            elif control == 0xaf:
+                return self.load_swapped_list(fp, self._decode_int(fp, 0))
             # Delta encoded integers
             elif control in range(0xb0, 0xbb):
                 if self.lastint is not None:
@@ -513,28 +528,28 @@ class JKSNDecoder:
             elif control == 0xf4:
                 fp.read(64)
             elif control == 0xf8:
-                result = self.loadobj(fp)
+                result = self.load_value(fp)
                 fp.read(4)
                 return result
             elif control == 0xf9:
-                result = self.loadobj(fp)
+                result = self.load_value(fp)
                 fp.read(16)
                 return result
             elif control == 0xfa:
-                result = self.loadobj(fp)
+                result = self.load_value(fp)
                 fp.read(20)
                 return result
             elif control == 0xfb:
-                result = self.loadobj(fp)
+                result = self.load_value(fp)
                 fp.read(32)
                 return result
             elif control == 0xfc:
-                result = self.loadobj(fp)
+                result = self.load_value(fp)
                 fp.read(64)
                 return result
             # Ignore pragmas
             elif control == 0xff:
-                self.loadobj(fp)
+                self.load_value(fp)
             else:
                 raise JKSNDecodeError('cannot decode JKSN from byte 0x%02x' % control)
 
@@ -547,6 +562,20 @@ class JKSNDecoder:
             result = buf
             self.blobhash[_djb_hash(buf)] = result
         return result
+
+    def load_swapped_list(self, fp, column_length):
+        result = []
+        for i in range(column_length):
+            column_name = self.load_value(fp)
+            column_values = self.load_value(fp)
+            if not isinstance(column_values, list):
+                raise JKSNDecodeError('JKSN row-col swapped array requires a array but found: %r' % column_values)
+            for idx, value in enumerate(column_values):
+                if idx == len(result):
+                    result.append([])
+                if value is not _unspecified_value:
+                    result[idx].append((column_name, value))
+        return list(map(self._ordered_dict, result))
 
     @staticmethod
     def _decode_int(fp, size):

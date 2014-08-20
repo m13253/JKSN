@@ -138,13 +138,19 @@ class JKSNEncoder:
                 if id(obj) in self.circular:
                     raise JKSNEncodeError('circular reference detected during JKSN encoding')
                 self.circular.add(id(obj))
-            return self._dump_list(obj)
+            result = self._dump_list(obj)
+            if self.circular is not None:
+                self.circular.remove(id(obj))
+            return result
         elif isinstance(obj, dict):
             if self.circular is not None:
                 if id(obj) in self.circular:
                     raise JKSNEncodeError('circular reference detected during JKSN encoding')
                 self.circular.add(id(obj))
-            return self._dump_dict(obj)
+            result = self._dump_dict(obj)
+            if self.circular is not None:
+                self.circular.remove(id(obj))
+            return result
         else:
             raise JKSNEncodeError('cannot encode JKSN from value: %r' % obj)
 

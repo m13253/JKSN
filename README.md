@@ -200,9 +200,9 @@ If represented in row-col swapped JKSN, is:
 
 ```c
 "jk!" 0xa4 0x44 "name" 0x82 0x45 "Jason" 0x47 "Jackson"
-           0x43 "age" 0xa0 0x1d 0x11
-           0x45 "email" 0x4e 0x11 "jason@example.com" 0x4e 0x13 "jackson@example.com"
-           0x45 "phone" 0x4c "777-777-7777" 0x4c "888-888-8888"
+           0x43 "age" 0x82 0xa0 0x1d 0x11
+           0x45 "email" 0x82 0x4e 0x11 "jason@example.com" 0x4e 0x13 "jackson@example.com"
+           0x45 "phone" 0x82 0x4c "777-777-7777" 0x4c "888-888-8888"
 ```
 
 Row-col swapped array can definitely be nested. However, nested row-col swapped array might cost too much computing time. It is recommended to choose a balanced nesting depth.
@@ -249,9 +249,9 @@ Take the example used in row-col swapping section.
 | JSON, stripped, gzip -9            | 112 bytes | 25.3% smaller |
 | JSON, swapped, stripped, gzip -9   | 127 bytes | 15.3% smaller |
 | JKSN, no swapping                  | 112 bytes | 25.3% smaller |
-| JKSN, transparent swapped          | 106 bytes | 29.3% smaller |
+| JKSN, transparent swapped          | 109 bytes | 27.3% smaller |
 | JKSN, no swap, gzip -9             | 111 bytes | 26.0% smaller |
-| JKSN, transparent swapped, gzip -9 | 104 bytes | 30.7% smaller |
+| JKSN, transparent swapped, gzip -9 | 107 bytes | 28.7% smaller |
 
 A non gzipped JKSN does even better than JSON compressed in any method above.
 

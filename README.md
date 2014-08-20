@@ -94,7 +94,7 @@ There are two hashtables with size 256, one for text strings (UTF-16, UTF-8), th
     0x70: clear the hashtable
     0x7n (where 1<=n<=c): an array of string containing n strings is followed
     0x7d: an unsigned 16-bit integer and an array of string containing that amount of strings is followed
-    0x7e: an unsigned 16-bit integer and an array of string containing that amount of strings is followed
+    0x7e: an unsigned 8-bit integer and an array of string containing that amount of strings is followed
     0x7f: a positive variable length integer and an array of string containing that amount of strings is followed
 
 #### Arrays:

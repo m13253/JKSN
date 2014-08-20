@@ -352,7 +352,7 @@ class JKSNDecoder:
         if header:
             header = fp.read(3)
             if header != b'jk!':
-                fp.seek(-3, 1)
+                fp.seek(-len(header), 1)
         self._ordered_dict = collections.OrderedDict if ordered_dict else dict
         return self._load_value(_file_check_eof(fp))
 

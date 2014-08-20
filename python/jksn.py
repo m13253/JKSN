@@ -296,7 +296,7 @@ class JKSNDecoder:
         return self.loadobj(fp)
 
     def loadobj(self, fp):
-        control = fp.read(1)
+        control = ord(fp.read(1))
         if control in (0x00, 0x01):
             return None
         elif control == 0x02:

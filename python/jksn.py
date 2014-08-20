@@ -3,6 +3,7 @@
 import sys
 if sys.version_info < (3,):
     chr, bytes, str = unichr, str, unicode
+import collections
 import io
 import math
 import struct
@@ -35,10 +36,14 @@ class JKSNValue:
         return result
 
     def __len__(self, depth=0):
-        result = 1 + len(data) + len(buf)
+        result = 1 + len(self.data) + len(self.buf)
         if depth != 1:
             result += sum((JKSNValue.__len__(i, depth-1) for i in self.children))
-        return recursive
+        return result
+
+
+class _unspecified_value:
+    pass
 
 
 class JKSNEncoder:
@@ -63,6 +68,8 @@ class JKSNEncoder:
     def dump_value(self, obj):
         if obj is None:
             return self.dump_none()
+        elif isinstance(obj, _unspecified_value):
+            return self.dump_unspecified()
         elif isinstance(obj, bool):
             return self.dump_bool(obj)
         elif isinstance(obj, int):
@@ -73,17 +80,18 @@ class JKSNEncoder:
             return self.dump_str(obj)
         elif isinstance(obj, bytes):
             return self.dump_bytes(obj)
-        elif isinstance(obj, (list, tuple)):
+        elif isinstance(obj, (list, tuple, set)):
             return self.dump_list(obj)
         elif isinstance(obj, dict):
             return self.dump_dict(obj)
-        elif isinstance(obj, set):
-            return self.dump_list(list(obj))
         else:
             raise ValueError('can not encode JKSN from value: %r' % obj)
 
     def dump_none(self):
         return JKSNValue(0x01)
+
+    def dump_unspecified(self):
+        return JKSNValue(0xa0)
 
     def dump_bool(self, obj):
         return JKSNValue(0x03 if obj else 0x02)
@@ -137,6 +145,55 @@ class JKSNEncoder:
         result.hash = _djb_hash(obj)
         return result
 
+    def dump_list(self, obj):
+
+        def test_swap_availability(obj):
+            columns = False
+            for row in obj:
+                if not isinstance(row, dict):
+                    return False
+                else:
+                    columns = columns or len(row) != 0
+            return columns
+
+        def encode_list_straight(obj):
+            length = len(obj)
+            if length <= 0xc:
+                result = JKSNValue(0x80 | length)
+            elif length <= 0xff:
+                result = JKSNValue(0x8e, self._encode_int(length, 1))
+            elif length <= 0xffff:
+                result = JKSNValue(0x8d, self._encode_int(length, 2))
+            else:
+                result = JKSNValue(0x8f, self._encode_int(length, 0))
+            for item in obj:
+                result.children.append(self.dump_value(item))
+            assert len(result.children) == length
+            return result
+
+        def encode_list_swapped(obj):
+            columns = collections.OrderedDict().fromkeys((column for row in obj for column in row))
+            if len(columns) <= 0xc:
+                result = JKSNValue(0xa0 | len(columns))
+            elif len(columns) <= 0xff:
+                result = JKSNValue(0xae, self._encode_int(length, 1))
+            elif len(columns) <= 0xffff:
+                result = JKSNValue(0xad, self._encode_int(length, 2))
+            else:
+                result = JKSNValue(0xaf, self._encode_int(length, 0))
+            for column in columns:
+                result.children.append(self.dump_value(column))
+                result.children.append(self.dump_list([row.get(column, _unspecified_value()) for row in obj]))
+            assert len(result.children) == len(columns) * 2
+            return result
+
+        result = encode_list_straight(obj)
+        if test_swap_availability(obj):
+            result_swapped = encode_list_swapped(obj)
+            if result_swapped.__len__(3) < result.__len__(3):
+                result = result_swapped
+        return result
+
     def dump_dict(self, obj):
         length = len(obj)
         if length <= 0xc:
@@ -146,8 +203,8 @@ class JKSNEncoder:
         elif length <= 0xffff:
             result = JKSNValue(0x9d, self._encode_int(length, 2))
         else:
-            result = JKSNValue(0x9d, self._encode_int(length, 0))
-        for key, value in dict.items(obj):
+            result = JKSNValue(0x9f, self._encode_int(length, 0))
+        for key, value in obj.items():
             result.children.append(self.dump_value(key))
             result.children.append(self.dump_value(value))
         assert len(result.children) == length * 2

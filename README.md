@@ -113,7 +113,7 @@ Items are nested layers of control bytes and data bytes.
     0x9e: an unsigned 8-bit integer and an object containing that amount of string-item pairs is followed
     0x9f: a positive variable length integer and an object containing that amount of string-item pairs is followed
 
-#### Row-col swapped array:
+#### Row-col swapped arrays:
 
     0xa0: "unspecified", used to skip columns that are not specified
     0xan (where 1<=n<=c): a row-col swapped array containing n columns is followed

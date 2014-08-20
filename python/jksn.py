@@ -675,7 +675,7 @@ if __name__ == '__main__':
     if '--help' in sys.argv:
         sys.stderr.write('Usage: %s [-d] <input >output\n\nOptions:\n\t-d\tDecode JKSN instead of encoding\n\n' % sys.argv[0])
     elif '-d' in sys.argv:
-        json.dump(loads(sys.stdin.buffer.read(), ordered_dict=True), sys.stdout, indent=4)
+        json.dump(loads(sys.stdin.buffer.read(), ordered_dict=True), sys.stdout, indent=2)
         sys.stdout.write('\n')
     else:
         dump(json.load(sys.stdin), sys.stdout.buffer)

@@ -58,9 +58,9 @@ class JKSNEncoder:
         fp.write(self.dumpobj(obj).__bytes__())
 
     def dumpobj(self, obj):
-        return self.dumppart(obj)
+        return self.dump_value(obj)
 
-    def dumppart(self, obj):
+    def dump_value(self, obj):
         if obj is None:
             return self.dump_none()
         elif isinstance(obj, bool):
@@ -77,6 +77,8 @@ class JKSNEncoder:
             return self.dump_list(obj)
         elif isinstance(obj, dict):
             return self.dump_dict(obj)
+        elif isinstance(obj, set):
+            return self.dump_list(list(obj))
         else:
             raise ValueError('can not encode JKSN from value: %r' % obj)
 
@@ -92,13 +94,13 @@ class JKSNEncoder:
         elif -0x80 <= obj <= 0x7f:
             return JKSNValue(0x1d, self._encode_int(obj, 1))
         elif -0x8000 <= obj <= 0x7fff:
-            return JKSNValue(0x1d, seif._encode_int(obj, 2))
+            return JKSNValue(0x1d, self._encode_int(obj, 2))
         elif -0x80000000 <= obj <= 0x7fffffff:
-            return JKSNValue(0x1d, seif._encode_int(obj, 4))
+            return JKSNValue(0x1d, self._encode_int(obj, 4))
         elif obj >= 0:
-            return JKSNValue(0x1f, seif._encode_int(obj, 0))
+            return JKSNValue(0x1f, self._encode_int(obj, 0))
         else:
-            return JKSNValue(0x1e, seif._encode_int(-obj, 0))
+            return JKSNValue(0x1e, self._encode_int(-obj, 0))
 
     def dump_float(self, obj):
         if math.isnan(obj):
@@ -133,6 +135,22 @@ class JKSNEncoder:
         else:
             result = JKSNValue(0x5f, self._encode_int(len(obj), 0), obj)
         result.hash = _djb_hash(obj)
+        return result
+
+    def dump_dict(self, obj):
+        length = len(obj)
+        if length <= 0xc:
+            result = JKSNValue(0x90 | length)
+        elif length <= 0xff:
+            result = JKSNValue(0x9e, self._encode_int(length, 1))
+        elif length <= 0xffff:
+            result = JKSNValue(0x9d, self._encode_int(length, 2))
+        else:
+            result = JKSNValue(0x9d, self._encode_int(length, 0))
+        for key, value in dict.items(obj):
+            result.children.append(self.dump_value(key))
+            result.children.append(self.dump_value(value))
+        assert len(result.children) == length * 2
         return result
 
     @staticmethod

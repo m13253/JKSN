@@ -5,6 +5,7 @@ if sys.version_info < (3,):
     chr, bytes, str = unichr, str, unicode
 import collections
 import io
+import json
 import math
 import struct
 
@@ -16,6 +17,12 @@ def dumps(obj, header=True):
 def dump(obj, fp, header=True):
     return JKSNEncoder().dumps(obj, fp, header=header)
 
+
+def loads(s):
+    return JKSNDecoder().loads(s)
+
+def load(fp):
+    return JKSNDecoder().load(fp)
 
 class JKSNValue:
     def __init__(self, control, data=b'', buf=b'', origin=None):
@@ -270,7 +277,90 @@ class JKSNEncoder:
             result.reverse()
             return bytes(result)
         else:
-            assert number in (1, 2, 4, 0)
+            assert size in (1, 2, 4, 0)
+
+
+class JKSNDecoder:
+    def __init__(self):
+        self.lastint = None
+        self.texthash = [None] * 256
+        self.blobhash = [None] * 256
+
+    def loads(self, s):
+        return self.load(io.BytesIO(s))
+
+    def load(self, fp):
+        header = fp.read(3)
+        if header != b'jk!':
+            fp.seek(-3, 1)
+        return self.loadobj(fp)
+
+    def loadobj(self, fp):
+        control = fp.read(1)
+        if control in (0x00, 0x01):
+            return None
+        elif control == 0x02:
+            return False
+        elif control == 0x03:
+            return True
+        elif control == 0x0f:
+            s = loadobj(fp)
+            if not isinstance(s, str):
+                raise TypeError('JKSN value 0x0f requires a string but found: %r' % s)
+            return json.loads(s)
+        elif control in range(0x10, 0x1b):
+            return control & 0xf
+        elif control == 0x1b:
+            self.lastint = self._unsigned_to_signed(self._decode_int(fp, 4), 32)
+            return self.lastint
+        elif control == 0x1c:
+            self.lastint = self._unsigned_to_signed(self._decode_int(fp, 2), 16)
+            return self.lastint
+        elif control == 0x1d:
+            self.lastint = self._unsigned_to_signed(self._decode_int(fp, 2), 8)
+            return self.lastint
+        elif control == 0x1e:
+            self.lastint = -self._decode_int(fp, 0)
+            return self.lastint
+        elif control == 0x1f:
+            self.lastint = self._decode_int(fp, 0)
+            return self.lastint
+        elif control == 0x20:
+            return float('nan')
+        elif control == 0x2b:
+            raise NotImplementedError('This JKSN decoder does not support long double numbers')
+        elif control == 0x2c:
+            return struct.unpack('>d', fp.read(8))[0]
+        elif control == 0x2d:
+            return struct.unpack('>f', fp.read(4))[0]
+        elif control == 0x2e:
+            return float('-inf')
+        elif control == 0x2f:
+            return float('inf')
+        else:
+            raise ValueError('cannot decode JKSN from byte 0x%02x' % control)
+
+    @staticmethod
+    def _decode_int(fp, size):
+        if size == 1:
+            return struct.unpack('>B', fp.read(1))[0]
+        elif size == 2:
+            return struct.unpack('>H', fp.read(2))[0]
+        elif size == 4:
+            return struct.unpack('>L', fp.read(3))[0]
+        elif size == 0:
+            result = 0
+            thisbyte = -1
+            while thisbyte & 0x80:
+                thisbyte = fp.read(1)
+                result = (result << 7) | (thisbyte & 0x7f)
+            return result
+        else:
+            assert size in (1, 2, 4, 0)
+
+    @staticmethod
+    def _unsigned_to_signed(x, bits):
+        return x - ((x >> (bits - 1)) << bits)
 
 
 def _djb_hash(obj):

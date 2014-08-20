@@ -117,7 +117,7 @@ class JKSNEncoder:
         finally:
             self.circular = None
 
-    def dump_value(self, obj):
+    def _dump_value(self, obj):
         if obj is None:
             return self._dump_none(obj)
         elif obj is _unspecified_value:

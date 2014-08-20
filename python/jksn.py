@@ -1,13 +1,19 @@
 #!/usr/bin/env python3
 
 import sys
-if sys.version_info < (3,):
-    chr, bytes, str = unichr, str, unicode
 import collections
 import io
 import json
 import math
 import struct
+import zlib
+
+
+if sys.version_info < (3,):
+    bytes, str = str, unicode
+    bytechr = chr
+else:
+    bytechr = lambda i: bytes((i,))
 
 
 class JKSNError(ValueError):
@@ -40,13 +46,13 @@ def dump(obj, fp, header=True, check_circular=True):
     return JKSNEncoder().dumps(obj, fp, header=header, check_circular=check_circular)
 
 
-def loads(s, ordered_dict=False):
+def loads(s, header=True, ordered_dict=False):
     '''Load an object from a buffer'''
-    return JKSNDecoder().loads(s, ordered_dict=ordered_dict)
+    return JKSNDecoder().loads(s, header=header, ordered_dict=ordered_dict)
 
-def load(fp, ordered_dict=False):
+def load(fp, header=True, ordered_dict=False):
     '''Load an object from a file object'''
-    return JKSNDecoder().load(fp, ordered_dict=ordered_dict)
+    return JKSNDecoder().load(fp, header=header, ordered_dict=ordered_dict)
 
 class JKSNValue:
     def __init__(self, control, data=b'', buf=b'', origin=None):
@@ -61,7 +67,7 @@ class JKSNValue:
         self.hash = None
 
     def __bytes__(self, recursive=True):
-        result = b''.join((bytes((self.control,)), self.data, self.buf))
+        result = b''.join((bytechr(self.control), self.data, self.buf))
         if recursive:
             result += b''.join(map(JKSNValue.__bytes__, self.children))
         return result
@@ -107,50 +113,50 @@ class JKSNEncoder:
     def dumpobj(self, obj, check_circular=True):
         try:
             self.circular = set() if check_circular else None
-            return self._optimize(self.dump_value(obj))
+            return self._optimize(self._dump_value(obj))
         finally:
             self.circular = None
 
     def dump_value(self, obj):
         if obj is None:
-            return self.dump_none(obj)
+            return self._dump_none(obj)
         elif obj is _unspecified_value:
-            return self.dump_unspecified(obj)
+            return self._dump_unspecified(obj)
         elif isinstance(obj, bool):
-            return self.dump_bool(obj)
+            return self._dump_bool(obj)
         elif isinstance(obj, int):
-            return self.dump_int(obj)
+            return self._dump_int(obj)
         elif isinstance(obj, float):
-            return self.dump_float(obj)
+            return self._dump_float(obj)
         elif isinstance(obj, str):
-            return self.dump_str(obj)
+            return self._dump_str(obj)
         elif isinstance(obj, bytes):
-            return self.dump_bytes(obj)
+            return self._dump_bytes(obj)
         elif isinstance(obj, (list, tuple, set)):
             if self.circular is not None:
                 if id(obj) in self.circular:
                     raise JKSNEncodeError('circular reference detected during JKSN encoding')
                 self.circular.add(id(obj))
-            return self.dump_list(obj)
+            return self._dump_list(obj)
         elif isinstance(obj, dict):
             if self.circular is not None:
                 if id(obj) in self.circular:
                     raise JKSNEncodeError('circular reference detected during JKSN encoding')
                 self.circular.add(id(obj))
-            return self.dump_dict(obj)
+            return self._dump_dict(obj)
         else:
             raise JKSNEncodeError('cannot encode JKSN from value: %r' % obj)
 
-    def dump_none(self, obj):
+    def _dump_none(self, obj):
         return JKSNValue(0x01, origin=obj)
 
-    def dump_unspecified(self, obj):
+    def _dump_unspecified(self, obj):
         return JKSNValue(0xa0, origin=obj)
 
-    def dump_bool(self, obj):
+    def _dump_bool(self, obj):
         return JKSNValue(0x03 if obj else 0x02, origin=obj)
 
-    def dump_int(self, obj):
+    def _dump_int(self, obj):
         if 0 <= obj <= 0xa:
             return JKSNValue(0x10 | obj, origin=obj)
         elif -0x80 <= obj <= 0x7f:
@@ -164,7 +170,7 @@ class JKSNEncoder:
         else:
             return JKSNValue(0x1e, self._encode_int(-obj, 0), origin=obj)
 
-    def dump_float(self, obj):
+    def _dump_float(self, obj):
         if math.isnan(obj):
             return JKSNValue(0x20, origin=obj)
         elif math.isinf(obj):
@@ -172,7 +178,7 @@ class JKSNEncoder:
         else:
             return JKSNValue(0x2c, struct.pack('>d', obj), origin=obj)
 
-    def dump_str(self, obj):
+    def _dump_str(self, obj):
         obj_utf16 = str.encode(obj, 'utf-16-le')
         obj_utf8 = str.encode(obj, 'utf-8')
         obj_short, control = (obj_utf16, 0x30) if len(obj_utf16) < len(obj_utf8) else (obj_utf8, 0x40)
@@ -187,7 +193,7 @@ class JKSNEncoder:
         result.hash = _djb_hash(obj_short)
         return result
 
-    def dump_bytes(self, obj):
+    def _dump_bytes(self, obj):
         if len(obj) <= 0xb:
             result = JKSNValue(0x50 | len(obj), b'', obj, origin=obj)
         elif len(obj) <= 0xff:
@@ -199,7 +205,7 @@ class JKSNEncoder:
         result.hash = _djb_hash(obj)
         return result
 
-    def dump_list(self, obj):
+    def _dump_list(self, obj):
 
         def test_swap_availability(obj):
             columns = False
@@ -221,7 +227,7 @@ class JKSNEncoder:
             else:
                 result = JKSNValue(0x8f, self._encode_int(length, 0), origin=obj)
             for item in obj:
-                result.children.append(self.dump_value(item))
+                result.children.append(self._dump_value(item))
             assert len(result.children) == length
             return result
 
@@ -236,8 +242,8 @@ class JKSNEncoder:
             else:
                 result = JKSNValue(0xaf, self._encode_int(length, 0), origin=obj)
             for column in columns:
-                result.children.append(self.dump_value(column))
-                result.children.append(self.dump_list([row.get(column, _unspecified_value) for row in obj]))
+                result.children.append(self._dump_value(column))
+                result.children.append(self._dump_list([row.get(column, _unspecified_value) for row in obj]))
             assert len(result.children) == len(columns) * 2
             return result
 
@@ -248,7 +254,7 @@ class JKSNEncoder:
                 result = result_swapped
         return result
 
-    def dump_dict(self, obj):
+    def _dump_dict(self, obj):
         length = len(obj)
         if length <= 0xc:
             result = JKSNValue(0x90 | length, origin=obj)
@@ -259,8 +265,8 @@ class JKSNEncoder:
         else:
             result = JKSNValue(0x9f, self._encode_int(length, 0), origin=obj)
         for key, value in obj.items():
-            result.children.append(self.dump_value(key))
-            result.children.append(self.dump_value(value))
+            result.children.append(self._dump_value(key))
+            result.children.append(self._dump_value(value))
         assert len(result.children) == length * 2
         return result
 
@@ -287,18 +293,16 @@ class JKSNEncoder:
             self.lastint = obj.origin
         elif control in (0x30, 0x40):
             if len(obj.buf) > 1:
-                cached = self.texthash[obj.hash]
-                if cached is not None and cached.buf == obj.buf:
+                if self.texthash[obj.hash] == obj.buf:
                     obj.control, obj.data, obj.buf = 0x3c, self._encode_int(obj.hash, 1), b''
                 else:
-                    self.texthash[obj.hash] = obj
+                    self.texthash[obj.hash] = obj.buf
         elif control == 0x50:
             if len(obj.buf) > 1:
-                cached = self.blobhash[obj.hash]
-                if cached is not None and cached.buf == obj.buf:
+                if self.blobhash[obj.hash] == obj.buf:
                     obj.control, obj.data, obj.buf = 0x5c, self._encode_int(obj.hash, 1), b''
                 else:
-                    self.blobhash[obj.hash] = obj
+                    self.blobhash[obj.hash] = obj.buf
         else:
             for child in obj.children:
                 self._optimize(child)
@@ -307,7 +311,7 @@ class JKSNEncoder:
     @staticmethod
     def _encode_int(number, size):
         if size == 1:
-            return struct.pack('>B', number & 0xff)
+            return bytechr(number & 0xff)
         elif size == 2:
             return struct.pack('>H', number & 0xffff)
         elif size == 4:
@@ -323,6 +327,7 @@ class JKSNEncoder:
             return bytes(result)
         else:
             assert size in (1, 2, 4, 0)
+            raise AssertionError
 
 
 class JKSNDecoder:
@@ -334,226 +339,234 @@ class JKSNDecoder:
         self.texthash = [None] * 256
         self.blobhash = [None] * 256
 
-    def loads(self, s, ordered_dict=False):
+    def loads(self, s, header=True, ordered_dict=False):
         '''Load an object from a buffer'''
-        return self.load(io.BytesIO(s), ordered_dict=ordered_dict)
+        return self.load(io.BytesIO(s), header=header, ordered_dict=ordered_dict)
 
-    def load(self, fp, ordered_dict=False):
+    def load(self, fp, header=True, ordered_dict=False):
         '''Load an object from a file object'''
         typetest = fp.read(0)
         if not isinstance(typetest, bytes):
             raise TypeError('%r does not support the buffer interface' % typetest.__name__)
-        header = fp.read(3)
-        if header != b'jk!':
-            fp.seek(-3, 1)
+        if header:
+            header = fp.read(3)
+            if header != b'jk!':
+                fp.seek(-3, 1)
         self._ordered_dict = collections.OrderedDict if ordered_dict else dict
-        return self.load_value(fp)
+        return self._load_value(fp)
 
-    def load_value(self, fp):
+    def _load_value(self, fp):
         while True:
             control = ord(fp.read(1))
+            ctrlhi = control & 0xf0
             # Special values
-            if control in (0x00, 0x01):
-                return None
-            elif control == 0x02:
-                return False
-            elif control == 0x03:
-                return True
-            elif control == 0x0f:
-                s = load_value(fp)
-                if not isinstance(s, str):
-                    raise JKSNDecodeError('JKSN value 0x0f requires a string but found: %r' % s)
-                return json.loads(s)
+            if ctrlhi == 0x00:
+                if control in (0x00, 0x01):
+                    return None
+                elif control == 0x02:
+                    return False
+                elif control == 0x03:
+                    return True
+                elif control == 0x0f:
+                    s = self._load_value(fp)
+                    if not isinstance(s, str):
+                        raise JKSNDecodeError('JKSN value 0x0f requires a string but found: %r' % s)
+                    return json.loads(s)
             # Integers
-            elif control in range(0x10, 0x1b):
-                return control & 0xf
-            elif control == 0x1b:
-                self.lastint = self._unsigned_to_signed(self._decode_int(fp, 4), 32)
-                return self.lastint
-            elif control == 0x1c:
-                self.lastint = self._unsigned_to_signed(self._decode_int(fp, 2), 16)
-                return self.lastint
-            elif control == 0x1d:
-                self.lastint = self._unsigned_to_signed(self._decode_int(fp, 1), 8)
-                return self.lastint
-            elif control == 0x1e:
-                self.lastint = -self._decode_int(fp, 0)
-                return self.lastint
-            elif control == 0x1f:
-                self.lastint = self._decode_int(fp, 0)
+            elif ctrlhi == 0x10:
+                if control <= 0x1a:
+                    self.lastint = control & 0xf
+                elif control == 0x1b:
+                    self.lastint = self._unsigned_to_signed(self._decode_int(fp, 4), 32)
+                elif control == 0x1c:
+                    self.lastint = self._unsigned_to_signed(self._decode_int(fp, 2), 16)
+                elif control == 0x1d:
+                    self.lastint = self._unsigned_to_signed(self._decode_int(fp, 1), 8)
+                elif control == 0x1e:
+                    self.lastint = -self._decode_int(fp, 0)
+                elif control == 0x1f:
+                    self.lastint = self._decode_int(fp, 0)
                 return self.lastint
             # Float point numbers
-            elif control == 0x20:
-                return float('nan')
-            elif control == 0x2b:
-                raise NotImplementedError('This JKSN decoder does not support long double numbers')
-            elif control == 0x2c:
-                return struct.unpack('>d', fp.read(8))[0]
-            elif control == 0x2d:
-                return struct.unpack('>f', fp.read(4))[0]
-            elif control == 0x2e:
-                return float('-inf')
-            elif control == 0x2f:
-                return float('inf')
+            elif ctrlhi == 0x20:
+                if control == 0x20:
+                    return float('nan')
+                elif control == 0x2b:
+                    raise NotImplementedError('This JKSN decoder does not support long double numbers')
+                elif control == 0x2c:
+                    return struct.unpack('>d', fp.read(8))[0]
+                elif control == 0x2d:
+                    return struct.unpack('>f', fp.read(4))[0]
+                elif control == 0x2e:
+                    return float('-inf')
+                elif control == 0x2f:
+                    return float('inf')
             # UTF-16 strings
-            elif control in range(0x30, 0x3c):
-                return self.load_str(fp, control & 0xf, 'utf-16-le')
-            elif control == 0x3c:
-                hashvalue = ord(fp.read(1))
-                if self.texthash[hashvalue] is not None:
-                    return self.texthash[hashvalue]
-                else:
-                    raise JKSNDecodeError('JKSN stream requires a non-existing hash: 0x%02x' % hashvalue)
-            elif control == 0x3d:
-                return self.load_str(fp, self._decode_int(fp, 2), 'utf-16-le')
-            elif control == 0x3e:
-                return self.load_str(fp, self._decode_int(fp, 1), 'utf-16-le')
-            elif control == 0x3f:
-                return self.load_str(fp, self._decode_int(fp, 0), 'utf-16-le')
+            elif ctrlhi == 0x30:
+                if control <= 0x3b:
+                    return self._load_str(fp, control & 0xf, 'utf-16-le')
+                elif control == 0x3c:
+                    hashvalue = ord(fp.read(1))
+                    if self.texthash[hashvalue] is not None:
+                        return self.texthash[hashvalue]
+                    else:
+                        raise JKSNDecodeError('JKSN stream requires a non-existing hash: 0x%02x' % hashvalue)
+                elif control == 0x3d:
+                    return self._load_str(fp, self._decode_int(fp, 2), 'utf-16-le')
+                elif control == 0x3e:
+                    return self._load_str(fp, self._decode_int(fp, 1), 'utf-16-le')
+                elif control == 0x3f:
+                    return self._load_str(fp, self._decode_int(fp, 0), 'utf-16-le')
             # UTF-8 strings
-            elif control in range(0x40, 0x4d):
-                return self.load_str(fp, control & 0xf, 'utf-8')
-            elif control == 0x4d:
-                return self.load_str(fp, self._decode_int(fp, 2), 'utf-8')
-            elif control == 0x4e:
-                return self.load_str(fp, self._decode_int(fp, 1), 'utf-8')
-            elif control == 0x4f:
-                return self.load_str(fp, self._decode_int(fp, 0), 'utf-8')
+            elif ctrlhi == 0x40:
+                if control <= 0x4c:
+                    return self._load_str(fp, control & 0xf, 'utf-8')
+                elif control == 0x4d:
+                    return self._load_str(fp, self._decode_int(fp, 2), 'utf-8')
+                elif control == 0x4e:
+                    return self._load_str(fp, self._decode_int(fp, 1), 'utf-8')
+                elif control == 0x4f:
+                    return self._load_str(fp, self._decode_int(fp, 0), 'utf-8')
             # Blob strings
-            elif control in range(0x50, 0x5c):
-                return self.load_str(fp, control & 0xf)
-            elif control == 0x5c:
-                hashvalue = ord(fp.read(1))
-                if self.blobhash[hashvalue] is not None:
-                    return self.blobhash[hashvalue]
-                else:
-                    raise JKSNDecodeError('JKSN stream requires a non-existing hash: 0x%02x' % hashvalue)
-            elif control == 0x5d:
-                return self.load_str(fp, self._decode_int(fp, 2))
-            elif control == 0x5e:
-                return self.load_str(fp, self._decode_int(fp, 1))
-            elif control == 0x5f:
-                return self.load_str(fp, self._decode_int(fp, 0))
+            elif ctrlhi == 0x50:
+                if control <= 0x5b:
+                    return self._load_str(fp, control & 0xf)
+                elif control == 0x5c:
+                    hashvalue = ord(fp.read(1))
+                    if self.blobhash[hashvalue] is not None:
+                        return self.blobhash[hashvalue]
+                    else:
+                        raise JKSNDecodeError('JKSN stream requires a non-existing hash: 0x%02x' % hashvalue)
+                elif control == 0x5d:
+                    return self._load_str(fp, self._decode_int(fp, 2))
+                elif control == 0x5e:
+                    return self._load_str(fp, self._decode_int(fp, 1))
+                elif control == 0x5f:
+                    return self._load_str(fp, self._decode_int(fp, 0))
             # Hashtable refreshers
-            elif control == 0x70:
-                self.texthash = [None] * 256
-                self.blobhash = [None] * 256
-            elif control in range(0x71, 0x7d):
-                for i in range(control & 0xf):
-                    self.load_value(fp)
-            elif control == 0x7d:
-                for i in range(self._decode_int(fp, 2)):
-                    self.load_value(fp)
-            elif control == 0x7e:
-                for i in range(self._decode_int(fp, 1)):
-                    self.load_value(fp)
-            elif control == 0x7f:
-                for i in range(self._decode_int(fp, 0)):
-                    self.load_value(fp)
+            elif ctrlhi == 0x70:
+                if control == 0x70:
+                    self.texthash = [None] * 256
+                    self.blobhash = [None] * 256
+                elif control in range(0x71, 0x7d):
+                    for i in range(control & 0xf):
+                        self._load_value(fp)
+                elif control == 0x7d:
+                    for i in range(self._decode_int(fp, 2)):
+                        self._load_value(fp)
+                elif control == 0x7e:
+                    for i in range(self._decode_int(fp, 1)):
+                        self._load_value(fp)
+                elif control == 0x7f:
+                    for i in range(self._decode_int(fp, 0)):
+                        self._load_value(fp)
+                continue
             # Arrays
-            elif control in range(0x80, 0x8d):
-                return [self.load_value(fp) for i in range(control & 0xf)]
-            elif control == 0x8d:
-                return [self.load_value(fp) for i in range(self._decode_int(fp, 2))]
-            elif control == 0x8e:
-                return [self.load_value(fp) for i in range(self._decode_int(fp, 1))]
-            elif control == 0x8f:
-                return [self.load_value(fp) for i in range(self._decode_int(fp, 0))]
+            elif ctrlhi == 0x80:
+                if control <= 0x8c:
+                    return [self._load_value(fp) for i in range(control & 0xf)]
+                elif control == 0x8d:
+                    return [self._load_value(fp) for i in range(self._decode_int(fp, 2))]
+                elif control == 0x8e:
+                    return [self._load_value(fp) for i in range(self._decode_int(fp, 1))]
+                elif control == 0x8f:
+                    return [self._load_value(fp) for i in range(self._decode_int(fp, 0))]
             # Objects
-            elif control in range(0x90, 0x9d):
-                return self._ordered_dict((self.load_value(fp), self.load_value(fp)) for i in range(control & 0xf))
-            elif control == 0x9d:
-                return self._ordered_dict((self.load_value(fp), self.load_value(fp)) for i in range(self._decode_int(fp, 2)))
-            elif control == 0x9e:
-                return self._ordered_dict((self.load_value(fp), self.load_value(fp)) for i in range(self._decode_int(fp, 1)))
-            elif control == 0x9f:
-                return self._ordered_dict((self.load_value(fp), self.load_value(fp)) for i in range(self._decode_int(fp, 0)))
+            elif ctrlhi == 0x90:
+                if control <= 0x9c:
+                    return self._ordered_dict((self._load_value(fp), self._load_value(fp)) for i in range(control & 0xf))
+                elif control == 0x9d:
+                    return self._ordered_dict((self._load_value(fp), self._load_value(fp)) for i in range(self._decode_int(fp, 2)))
+                elif control == 0x9e:
+                    return self._ordered_dict((self._load_value(fp), self._load_value(fp)) for i in range(self._decode_int(fp, 1)))
+                elif control == 0x9f:
+                    return self._ordered_dict((self._load_value(fp), self._load_value(fp)) for i in range(self._decode_int(fp, 0)))
             # Row-col swapped arrays
-            elif control == 0xa0:
-                return _unspecified_value
-            elif control in range(0xa1, 0xad):
-                return self.load_swapped_list(fp, control & 0xf)
-            elif control == 0xad:
-                return self.load_swapped_list(fp, self._decode_int(fp, 2))
-            elif control == 0xae:
-                return self.load_swapped_list(fp, self._decode_int(fp, 1))
-            elif control == 0xaf:
-                return self.load_swapped_list(fp, self._decode_int(fp, 0))
+            elif ctrlhi == 0xa0:
+                if control == 0xa0:
+                    return _unspecified_value
+                elif control in range(0xa1, 0xad):
+                    return self._load_swapped_list(fp, control & 0xf)
+                elif control == 0xad:
+                    return self._load_swapped_list(fp, self._decode_int(fp, 2))
+                elif control == 0xae:
+                    return self._load_swapped_list(fp, self._decode_int(fp, 1))
+                elif control == 0xaf:
+                    return self._load_swapped_list(fp, self._decode_int(fp, 0))
             # Delta encoded integers
-            elif control in range(0xb0, 0xbb):
+            elif ctrlhi == 0xb0:
+                if control <= 0xba:
+                    delta = control & 0xf
+                elif control == 0xbb:
+                    delta = self._decode_int(fp, 4)
+                elif control == 0xbc:
+                    delta = self._decode_int(fp, 2)
+                elif control == 0xbd:
+                    delta = self._decode_int(fp, 1)
+                elif control == 0xbe:
+                    delta = -self._decode_int(fp, 0)
+                elif control == 0xbf:
+                    delta = self._decode_int(fp, 0)
                 if self.lastint is not None:
-                    self.lastint += control & 0xf
+                    self.lastint += delta
                     return self.lastint
                 else:
                     raise JKSNDecodeError('JKSN stream contains an invalid delta encoded integer')
-            elif control == 0xbb:
-                if self.lastint is not None:
-                    self.lastint += self._decode_int(fp, 4)
-                    return self.lastint
-                else:
-                    raise JKSNDecodeError('JKSN stream contains an invalid delta encoded integer')
-            elif control == 0xbc:
-                if self.lastint is not None:
-                    self.lastint += self._decode_int(fp, 2)
-                    return self.lastint
-                else:
-                    raise JKSNDecodeError('JKSN stream contains an invalid delta encoded integer')
-            elif control == 0xbd:
-                if self.lastint is not None:
-                    self.lastint += self._decode_int(fp, 1)
-                    return self.lastint
-                else:
-                    raise JKSNDecodeError('JKSN stream contains an invalid delta encoded integer')
-            elif control == 0xbe:
-                if self.lastint is not None:
-                    self.lastint -= self._decode_int(fp, 0)
-                    return self.lastint
-                else:
-                    raise JKSNDecodeError('JKSN stream contains an invalid delta encoded integer')
-            elif control == 0xbf:
-                if self.lastint is not None:
-                    self.lastint += self._decode_int(fp, 0)
-                    return self.lastint
-                else:
-                    raise JKSNDecodeError('JKSN stream contains an invalid delta encoded integer')
-            # Ignore checksums
-            elif control == 0xf0:
-                fp.read(4)
-            elif control == 0xf1:
-                fp.read(16)
-            elif control == 0xf2:
-                fp.read(20)
-            elif control == 0xf3:
-                fp.read(32)
-            elif control == 0xf4:
-                fp.read(64)
-            elif control == 0xf8:
-                result = self.load_value(fp)
-                fp.read(4)
-                return result
-            elif control == 0xf9:
-                result = self.load_value(fp)
-                fp.read(16)
-                return result
-            elif control == 0xfa:
-                result = self.load_value(fp)
-                fp.read(20)
-                return result
-            elif control == 0xfb:
-                result = self.load_value(fp)
-                fp.read(32)
-                return result
-            elif control == 0xfc:
-                result = self.load_value(fp)
-                fp.read(64)
-                return result
-            # Ignore pragmas
-            elif control == 0xff:
-                self.load_value(fp)
-            else:
-                raise JKSNDecodeError('cannot decode JKSN from byte 0x%02x' % control)
+            elif ctrlhi == 0xf0:
+                # Checksums
+                if control <= 0xf4:
+                    if control == 0xf0:
+                        checksum = fp.read(4)
+                        fp = _hashed_file(fp, _crc32_hasher)
+                    elif control == 0xf1:
+                        checksum = fp.read(16)
+                        fp = _hashed_file(fp, hashlib.md5)
+                    elif control == 0xf2:
+                        checksum = fp.read(20)
+                        fp = _hashed_file(fp, hashlib.sha1)
+                    elif control == 0xf3:
+                        checksum = fp.read(32)
+                        fp = _hashed_file(fp, hashlib.sha256)
+                    elif control == 0xf4:
+                        checksum = fp.read(64)
+                        fp = _hashed_file(fp, hashlib.sha512)
+                    result = self._load_value(fp)
+                    if fp.digest() == checksum:
+                        return result
+                    else:
+                        return JKSNDecodeError('checksum mismatch')
+                elif control in range(0xf8, 0xfd):
+                    if control == 0xf8:
+                        hashed_fp = _hashed_file(fp, _crc32_hasher)
+                        result = self._load_value(hashed_fp)
+                        checksum = fp.read(4)
+                    elif control == 0xf9:
+                        hashed_fp = _hashed_file(fp, hashlib.md5)
+                        result = self._load_value(hashed_fp)
+                        checksum = fp.read(16)
+                    elif control == 0xfa:
+                        hashed_fp = _hashed_file(fp, hashlib.sha1)
+                        result = self._load_value(hashed_fp)
+                        checksum = fp.read(20)
+                    elif control == 0xfb:
+                        hashed_fp = _hashed_file(fp, hashlib.sha256)
+                        result = self._load_value(hashed_fp)
+                        checksum = fp.read(32)
+                    elif control == 0xfc:
+                        hashed_fp = _hashed_file(fp, hashlib.sha512)
+                        result = self._load_value(hashed_fp)
+                        checksum = fp.read(64)
+                    if hashed_fp.digest() == checksum:
+                        return result
+                    else:
+                        return JKSNDecodeError('checksum mismatch')
+                # Ignore pragmas
+                elif control == 0xff:
+                    self._load_value(fp)
+                    continue
+            raise JKSNDecodeError('cannot decode JKSN from byte 0x%02x' % control)
 
-    def load_str(self, fp, length, encoding=None):
+    def _load_str(self, fp, length, encoding=None):
         buf = fp.read(length)
         if encoding is not None:
             result = buf.decode(encoding)
@@ -563,11 +576,11 @@ class JKSNDecoder:
             self.blobhash[_djb_hash(buf)] = result
         return result
 
-    def load_swapped_list(self, fp, column_length):
+    def _load_swapped_list(self, fp, column_length):
         result = []
         for i in range(column_length):
-            column_name = self.load_value(fp)
-            column_values = self.load_value(fp)
+            column_name = self._load_value(fp)
+            column_values = self._load_value(fp)
             if not isinstance(column_values, list):
                 raise JKSNDecodeError('JKSN row-col swapped array requires a array but found: %r' % column_values)
             for idx, value in enumerate(column_values):
@@ -580,7 +593,7 @@ class JKSNDecoder:
     @staticmethod
     def _decode_int(fp, size):
         if size == 1:
-            return struct.unpack('>B', fp.read(size))[0]
+            return ord(fp.read(size))
         elif size == 2:
             return struct.unpack('>H', fp.read(size))[0]
         elif size == 4:
@@ -609,3 +622,29 @@ def _djb_hash(obj):
         for i in obj:
             result += (result << 5) + i
     return result & 0xff
+
+
+class _crc32_hasher:
+    def __init__(self, data=b''):
+        self.value = zlib.crc32(data)
+
+    def update(self, data=b''):
+        self.value = zlib.crc32(data, self.value)
+
+    def digest(self):
+        return struct.pack('>L', self.value & 0xffffffff)
+
+
+class _hashed_file:
+    def __init__(self, fp, hasher):
+        self.fp = fp
+        self.hasher = hasher
+
+    def read(self, size=None):
+        result = self.read(size)
+        if result:
+            self.hasher.update(result)
+        return result
+
+    def digest(self):
+        return self.hasher.digest()

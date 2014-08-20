@@ -44,7 +44,7 @@ def dumps(obj, header=True, check_circular=True):
 
 def dump(obj, fp, header=True, check_circular=True):
     '''Dump an object into a file object'''
-    return JKSNEncoder().dumps(obj, fp, header=header, check_circular=check_circular)
+    return JKSNEncoder().dump(obj, fp, header=header, check_circular=check_circular)
 
 
 def loads(s, header=True, ordered_dict=False):
@@ -659,3 +659,12 @@ class _hashed_file:
 
     def digest(self):
         return self.hasher.digest()
+
+
+if __name__ == '__main__':
+    if '--help' in sys.argv:
+        sys.stderr.write('Usage: %s [-d] <input >output\n\nOptions:\n\t-d\tDecode JKSN instead of encoding\n\n' % sys.argv[0])
+    elif '-d' in sys.argv:
+        json.dump(loads(sys.stdin.buffer.read(), ordered_dict=True), sys.stdout)
+    else:
+        dump(json.load(sys.stdin), sys.stdout.buffer)

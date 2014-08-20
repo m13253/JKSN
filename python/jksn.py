@@ -51,9 +51,11 @@ def loads(s, header=True, ordered_dict=False):
     '''Load an object from a buffer'''
     return JKSNDecoder().loads(s, header=header, ordered_dict=ordered_dict)
 
+
 def load(fp, header=True, ordered_dict=False):
     '''Load an object from a file object'''
     return JKSNDecoder().load(fp, header=header, ordered_dict=ordered_dict)
+
 
 class JKSNValue:
     def __init__(self, control, data=b'', buf=b'', origin=None):
@@ -89,7 +91,7 @@ _unspecified_value = _unspecified_value()
 
 class JKSNEncoder:
     '''JKSN encoder
-    
+
     Note: With a certain JKSN encoder, the hashtable is preserved during each dump'''
     def __init__(self):
         self.lastint = None
@@ -343,7 +345,7 @@ class JKSNEncoder:
 
 class JKSNDecoder:
     '''JKSN decoder
-    
+
     Note: With a certain JKSN decoder, the hashtable is preserved during each load'''
     def __init__(self):
         self.lastint = None
@@ -655,6 +657,7 @@ class _file_check_eof:
         if size is not None and len(result) < size:
             raise EOFError
         return result
+
 
 class _hashed_file:
     def __init__(self, fp, hasher):

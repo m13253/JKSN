@@ -2,6 +2,7 @@
 
 import sys
 import collections
+import hashlib
 import io
 import json
 import math
@@ -181,15 +182,15 @@ class JKSNEncoder:
     def _dump_str(self, obj):
         obj_utf16 = str.encode(obj, 'utf-16-le')
         obj_utf8 = str.encode(obj, 'utf-8')
-        obj_short, control = (obj_utf16, 0x30) if len(obj_utf16) < len(obj_utf8) else (obj_utf8, 0x40)
-        if len(obj_short) <= (0xc if control == 0x40 else 0xb):
-            result = JKSNValue(control | len(obj_short), b'', obj_short, origin=obj)
-        elif len(obj_short) <= 0xff:
-            result = JKSNValue(control | 0xe, self._encode_int(len(obj_short), 1), obj_short, origin=obj)
-        elif len(obj_short) <= 0xffff:
-            result = JKSNValue(control | 0xd, self._encode_int(len(obj_short), 2), obj_short, origin=obj)
+        obj_short, control, length = (obj_utf16, 0x30, len(obj_utf16) >> 1) if len(obj_utf16) < len(obj_utf8) else (obj_utf8, 0x40, len(obj_utf8))
+        if length <= (0xc if control == 0x40 else 0xb):
+            result = JKSNValue(control | length, b'', obj_short, origin=obj)
+        elif length <= 0xff:
+            result = JKSNValue(control | 0xe, self._encode_int(length, 1), obj_short, origin=obj)
+        elif length <= 0xffff:
+            result = JKSNValue(control | 0xd, self._encode_int(length, 2), obj_short, origin=obj)
         else:
-            result = JKSNValue(control | 0xf, self._encode_int(len(obj_short), 0), obj_short, origin=obj)
+            result = JKSNValue(control | 0xf, self._encode_int(length, 0), obj_short, origin=obj)
         result.hash = _djb_hash(obj_short)
         return result
 
@@ -353,7 +354,7 @@ class JKSNDecoder:
             if header != b'jk!':
                 fp.seek(-3, 1)
         self._ordered_dict = collections.OrderedDict if ordered_dict else dict
-        return self._load_value(fp)
+        return self._load_value(_file_check_eof(fp))
 
     def _load_value(self, fp):
         while True:
@@ -404,7 +405,7 @@ class JKSNDecoder:
             # UTF-16 strings
             elif ctrlhi == 0x30:
                 if control <= 0x3b:
-                    return self._load_str(fp, control & 0xf, 'utf-16-le')
+                    return self._load_str(fp, (control & 0xf) << 1, 'utf-16-le')
                 elif control == 0x3c:
                     hashvalue = ord(fp.read(1))
                     if self.texthash[hashvalue] is not None:
@@ -412,11 +413,11 @@ class JKSNDecoder:
                     else:
                         raise JKSNDecodeError('JKSN stream requires a non-existing hash: 0x%02x' % hashvalue)
                 elif control == 0x3d:
-                    return self._load_str(fp, self._decode_int(fp, 2), 'utf-16-le')
+                    return self._load_str(fp, self._decode_int(fp, 2) << 1, 'utf-16-le')
                 elif control == 0x3e:
-                    return self._load_str(fp, self._decode_int(fp, 1), 'utf-16-le')
+                    return self._load_str(fp, self._decode_int(fp, 1) << 1, 'utf-16-le')
                 elif control == 0x3f:
-                    return self._load_str(fp, self._decode_int(fp, 0), 'utf-16-le')
+                    return self._load_str(fp, self._decode_int(fp, 0) << 1, 'utf-16-le')
             # UTF-8 strings
             elif ctrlhi == 0x40:
                 if control <= 0x4c:
@@ -635,13 +636,23 @@ class _crc32_hasher:
         return struct.pack('>L', self.value & 0xffffffff)
 
 
+class _file_check_eof:
+    def __init__(self, fp):
+        self.fp = fp
+
+    def read(self, size=None):
+        result = self.fp.read(size)
+        if size is not None and len(result) < size:
+            raise EOFError
+        return result
+
 class _hashed_file:
     def __init__(self, fp, hasher):
         self.fp = fp
-        self.hasher = hasher
+        self.hasher = hasher()
 
     def read(self, size=None):
-        result = self.read(size)
+        result = self.fp.read(size)
         if result:
             self.hasher.update(result)
         return result

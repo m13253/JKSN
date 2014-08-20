@@ -123,10 +123,11 @@ Items are nested layers of control bytes and data bytes.
 
 #### Delta encoded integers:
 
-An Integer is followed after `0xbb` `0xbc` `0xbd` `0xbe` `0xbf`, representing an integer that is larger than the previous occurred integer by x.
+An Integer is followed after `0xbb` `0xbc` `0xbd` `0xbe` `0xbf`, representing an integer that is larger than the previous occurred integer by n.
 
     0xb0: represents the same previous occurred integer
-    0xbn (where 1<=n<=a): represents an integer that is larger than the previous occurred integer by x
+    0xbn (where 1<=n<=5): represents an integer that is larger than the previous occurred integer by n
+    0xbn (where 6<=n<=a): represents an integer that is larger than the previous occurred integer by n-11
     0xbb: a signed 32-bit integer is followed
     0xbc: a signed 16-bit integer is followed
     0xbd: a signed 8-bit integer is followed

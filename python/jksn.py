@@ -289,8 +289,10 @@ class JKSNEncoder:
             if self.lastint is not None:
                 delta = obj.origin - self.lastint
                 if abs(delta) < abs(obj.origin):
-                    if delta <= 0xa:
+                    if 0 <= delta <= 0x5:
                         new_control, new_data = 0xb0 | delta, b''
+                    elif -0x5 <= delta <= -0x1:
+                        new_control, new_data = 0xb0 | (delta + 11), b''
                     elif -0x80 <= delta <= 0x7f:
                         new_control, new_data = 0xbd, self._encode_int(delta, 1)
                     elif -0x8000 <= delta <= 0x7fff:
@@ -461,7 +463,7 @@ class JKSNDecoder:
                 if control == 0x70:
                     self.texthash = [None] * 256
                     self.blobhash = [None] * 256
-                elif control in range(0x71, 0x7d):
+                elif control <= 0x7c:
                     for i in range(control & 0xf):
                         self._load_value(fp)
                 elif control == 0x7d:
@@ -498,7 +500,7 @@ class JKSNDecoder:
             elif ctrlhi == 0xa0:
                 if control == 0xa0:
                     return _unspecified_value
-                elif control in range(0xa1, 0xad):
+                elif control <= 0xac:
                     return self._load_swapped_list(fp, control & 0xf)
                 elif control == 0xad:
                     return self._load_swapped_list(fp, self._decode_int(fp, 2))
@@ -508,8 +510,10 @@ class JKSNDecoder:
                     return self._load_swapped_list(fp, self._decode_int(fp, 0))
             # Delta encoded integers
             elif ctrlhi == 0xb0:
-                if control <= 0xba:
+                if control <= 0xb5:
                     delta = control & 0xf
+                elif control <= 0xba:
+                    delta = (control & 0xf) - 11
                 elif control == 0xbb:
                     delta = self._decode_int(fp, 4)
                 elif control == 0xbc:

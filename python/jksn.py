@@ -569,7 +569,7 @@ class JKSNDecoder:
                         return result
                     else:
                         return JKSNDecodeError('checksum mismatch')
-                elif control in range(0xf8, 0xfd):
+                elif 0xf8 <= control <= 0xfc:
                     if control == 0xf8:
                         hashed_fp = _hashed_file(fp, _crc32_hasher)
                         result = self._load_value(hashed_fp)

@@ -118,7 +118,7 @@ Items are nested layers of control bytes and data bytes.
     0xa0: "unspecified", used to skip columns that are not specified
     0xan (where 1<=n<=c): a row-col swapped array containing n columns is followed
     0xad: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns is followed
-    0xae: an unsigned 16-bit integer and a row-col swapped array containing that amount of columns is followed
+    0xae: an unsigned 8-bit integer and a row-col swapped array containing that amount of columns is followed
     0xaf: a positive variable length integer and a row-col swapped array containing that amount of columns is followed
 
 #### Delta encoded integers:

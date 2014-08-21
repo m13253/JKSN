@@ -1,5 +1,5 @@
-JKSN Python reference implementation
-====================================
+JKSN JavaScript reference implementation
+========================================
 
 This is the JavaScript implementation of JKSN.
 

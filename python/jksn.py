@@ -616,7 +616,7 @@ class JKSNDecoder:
             column_name = self._load_value(fp)
             column_values = self._load_value(fp)
             if not isinstance(column_values, list):
-                raise JKSNDecodeError('JKSN row-col swapped array requires a array but found: %r' % column_values)
+                raise JKSNDecodeError('JKSN row-col swapped array requires an array but found: %r' % column_values)
             for idx, value in enumerate(column_values):
                 if idx == len(result):
                     result.append([])

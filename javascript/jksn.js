@@ -23,7 +23,7 @@ function JKSNEncoder() {
                 if(depth === undefined)
                     depth = 0;
                 if(depth != 1)
-                    result = this.children.reduce(function (a, b) { return a+b; }, result);
+                    result = this.children.reduce(function (a, b) { return a + b.getSize(depth-1); }, result);
                 return result;
             }
         };
@@ -81,8 +81,9 @@ function JKSNEncoder() {
         var obj_utf8 = unescape(encodeURIComponent(obj));
         var obj_utf16 = new Uint8Array(obj.length << 1);
         for(var i = 0, j = 0, k = 1; i < obj.length; i++, j += 2, k += 2) {
-            obj_utf16[j] = obj[i];
-            obj_utf16[k] = obj[i] >>> 8;
+            var charCodeI = obj.charCodeAt(i);
+            obj_utf16[j] = charCodeI;
+            obj_utf16[k] = charCodeI >>> 8;
         }
         obj_utf16 = String.fromCharCode.apply(null, obj_utf16);
         if(obj_utf16.length < obj_utf8.length) {
@@ -95,21 +96,97 @@ function JKSNEncoder() {
             var strlen = obj_utf8.length;
         }
         if(strlen <= (control == 0x40 ? 0xc : 0xb))
-            var result = JKSNValue(origin, control | strlen, "", obj_short);
+            var result = JKSNValue(obj, control | strlen, "", obj_short);
         else if(strlen <= 0xff)
-            var result = JKSNValue(origin, control | 0xe, encodeInt(strlen, 1), obj_short);
+            var result = JKSNValue(obj, control | 0xe, encodeInt(strlen, 1), obj_short);
         else if(strlen <= 0xffff)
-            var result = JKSNValue(origin, control | 0xd, encodeInt(strlen, 2), obj_short);
+            var result = JKSNValue(obj, control | 0xd, encodeInt(strlen, 2), obj_short);
         else
-            var result = JKSNValue(origin, control | 0xf, encodeInt(strlen, 0), obj_short);
+            var result = JKSNValue(obj, control | 0xf, encodeInt(strlen, 0), obj_short);
         result.hash = DJBHash(obj_short);
         return result;
     }
     function dumpArray(obj) {
-        throw "Not implemented";
+        function testSwapAvailability(obj) {
+            columns = false;
+            for(var row = 0; row < obj.length; row++)
+                if(typeof obj[row] !== "object" || obj[row] === undefined || obj[row] === null || obj[row] instanceof unspecifiedValue)
+                    return false;
+                else
+                    for(var key in obj[row]) {
+                        columns = true;
+                        break;
+                    }
+            return columns;
+        }
+        function encodeStraightArray(obj) {
+            objlen = obj.length;
+            if(objlen <= 0xc)
+                var result = JKSNValue(obj, 0x80 | objlen);
+            else if(objlen <= 0xff)
+                var result = JKSNValue(obj, 0x8e, encodeInt(objlen, 1));
+            else if(objlen <= 0xffff)
+                var result = JKSNValue(obj, 0x8d, encodeInt(objlen, 2));
+            else
+                var result = JKSNValue(obj, 0x8f, encodeInt(objlen, 0));
+            result.children = obj.map(dumpValue);
+            if(result.children.length != objlen)
+                throw "Assertion failed: result.children.length == objlen";
+            return result;
+        }
+        function encodeSwappedArray(obj) {
+            var columns = [];
+            var columns_set = {};
+            for(var row = 0; row < obj.length; row++)
+                for(var column in obj[row])
+                    if(!columns_set[column]) {
+                        columns.push(column)
+                        columns_set[column] = true;
+                    }
+            var collen = columns.length;
+            if(collen <= 0xc)
+                var result = JKSNValue(obj, 0xa0 | collen);
+            else if(collen <= 0xff)
+                var result = JKSNValue(obj, 0xae, encodeInt(collen, 1));
+            else if(collen <= 0xffff)
+                var result = JKSNValue(obj, 0xad, encodeInt(collen, 2));
+            else
+                var result = JKSNValue(obj, 0xaf, encodeInt(collen, 0));
+            for(var column = 0; column < collen; column++) {
+                var columns_value = new Array(obj.length);
+                for(var row = 0; row < obj.length; row++)
+                    columns_value[row] = (result.childobj[row][columns[column]] !== undefined ? result.childobj[row][columns[column]] : new unspecifiedValue())
+                result.children.push(dumpValue(columns[column]), dumpArray(columns_value));
+            }
+            if(result.children.length != obj.length * 2)
+                throw "Assertion failed: result.children.length == obj.length * 2";
+            return result;
+        }
+        var result = encodeStraightArray(obj);
+        if(testSwapAvailability(obj)) {
+            var resultSwapped = encodeSwappedArray(obj);
+            if(resultSwapped.getSize(3) < result.getSize(3))
+                result = resultSwapped;
+        }
+        return result;
     }
     function dumpObject(obj) {
-        throw "Not implemented";
+        var objlen = 0;
+        var children = [];
+        for(var key in obj) {
+            objlen++;
+            children.push(dumpValue(key), dumpValue(obj[key]));
+        }
+        if(objlen <= 0xc)
+            var result = JKSNValue(obj, 0x90 | objlen);
+        else if(objlen <= 0xff)
+            var result = JKSNValue(obj, 0x9e, encodeInt(objlen, 1));
+        else if(objlen <= 0xffff)
+            var result = JKSNValue(obj, 0x9d, encodeInt(objlen, 2));
+        else
+            var result = JKSNValue(obj, 0x9f, encodeInt(objlen, 0));
+        result.children = children;
+        return result;
     }
     function optimize(obj) {
         return obj;
@@ -147,7 +224,7 @@ function JKSNEncoder() {
         },
         "stringifyToString": function (obj, header) {
             var result = dumpToObject(obj);
-            if(header)
+            if(header || header === undefined)
                 return "jk!"+result;
             else
                 return result;

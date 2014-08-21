@@ -244,17 +244,17 @@ Since implementing the full functionality of JKSN costs too much resources and d
 
 Take the example used in row-col swapping section.
 
-| Compression method                 | Size      | Percent saved |
-| ---------------------------------- | --------- | ------------- |
-| JSON, not stripping whitespace     | 170 bytes | 13.3% larger  |
-| JSON, stripped whitespace          | 150 bytes | base          |
-| JSON, row-col swapped, stripped    | 143 bytes | 4.6% smaller  |
-| JSON, stripped, gzip -9            | 112 bytes | 25.3% smaller |
-| JSON, swapped, stripped, gzip -9   | 127 bytes | 15.3% smaller |
-| JKSN, no swapping                  | 112 bytes | 25.3% smaller |
-| JKSN, transparent swapped          | 109 bytes | 27.3% smaller |
-| JKSN, no swap, gzip -9             | 111 bytes | 26.0% smaller |
-| JKSN, transparent swapped, gzip -9 | 107 bytes | 28.7% smaller |
+| Compression method                     | Size          | Percent saved     |
+| -------------------------------------- | ------------- | ----------------- |
+|   JSON, not stripping whitespace       |   170 bytes   |   13.3% larger    |
+| **JSON, stripped whitespace**          |   150 bytes   |   base            |
+|   JSON, row-col swapped, stripped      |   143 bytes   |   4.6% smaller    |
+| **JSON, stripped, gzip -9**            |   112 bytes   |   25.3% smaller   |
+|   JSON, swapped, stripped, gzip -9     |   127 bytes   |   15.3% smaller   |
+|   JKSN, no swapping                    |   112 bytes   |   25.3% smaller   |
+|   JKSN, transparent swapped            |   109 bytes   |   27.3% smaller   |
+|   JKSN, no swap, gzip -9               |   111 bytes   |   26.0% smaller   |
+| **JKSN, transparent swapped, gzip -9** | **107 bytes** | **28.7% smaller** |
 
 A non gzipped JKSN does even better than JSON compressed in any method above.
 
@@ -267,7 +267,7 @@ What about BSON, MessagePack, BJSON, ubJSON?
 | MessagePack                                  | 120 bytes | [Node.JS](https://github.com/msgpack/msgpack-node)   |
 | JSONH                                        | 116 bytes | [Python 2](https://github.com/WebReflection/JSONH)   |
 | BJSON with builtin adaptive huffman encoding | 115 bytes | [Node.JS](https://github.com/asterick/BJSON)         |
-| JKSN                                         | 109 bytes | [Python 3](https://github.com/m13253/JKSN)           |
+| **JKSN**                                     | 109 bytes | [Python 3](https://github.com/m13253/JKSN)           |
 
 ### Reference implementation
 

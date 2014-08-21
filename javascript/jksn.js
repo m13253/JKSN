@@ -1,5 +1,5 @@
 (function(window) {
-
+"use strict";
 function JKSNEncoder() {
     var lastint = null;
     var texthash = new Array(256);
@@ -125,7 +125,7 @@ function JKSNEncoder() {
     }
     function dumpArray(obj) {
         function testSwapAvailability(obj) {
-            columns = false;
+            var columns = false;
             for(var row = 0; row < obj.length; row++)
                 if(typeof obj[row] !== "object" || obj[row] === undefined || obj[row] === null || obj[row] instanceof unspecifiedValue)
                     return false;
@@ -137,7 +137,7 @@ function JKSNEncoder() {
             return columns;
         }
         function encodeStraightArray(obj) {
-            objlen = obj.length;
+            var objlen = obj.length;
             if(objlen <= 0xc)
                 var result = JKSNValue(obj, 0x80 | objlen);
             else if(objlen <= 0xff)
@@ -646,8 +646,7 @@ function DJBHash(arr) {
             result += (result << 5) + arr[i];
     return result;
 }
-
-JKSN = {
+var JKSN = {
     "encoder": JKSNEncoder,
     "decoder": JKSNDecoder,
     "parseFromArrayBuffer": function (buf) {
@@ -663,7 +662,5 @@ JKSN = {
         return new JKSN.encoder().stringifyToString(obj, header);
     }
 }
-
 window.JKSN = JKSN;
-
 }(this));

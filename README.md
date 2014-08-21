@@ -1,7 +1,7 @@
 JKSN specification
 ==================
 
-JKSN, prononced as "Jackson", is an abbreviation of Jackson Compressed Serialize Notation, aims to be a binary serialization format compatible with JSON.
+JKSN, prononced as "Jackson", is an abbreviation of JKSN Compressed Serialize Notation, aims to be a binary serialization format compatible with JSON.
 
 JKSN is suitable for the situation that network bandwidth is expensive but processing time is cheap.
 

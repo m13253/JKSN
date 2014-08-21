@@ -213,26 +213,26 @@ function JKSNEncoder() {
                 var delta = obj.origin - lastint;
                 if(Math.abs(delta) < Math.abs(obj.origin)) {
                     if(delta >= 0 && delta <= 0x5) {
-                        newControl = 0xb0 | delta;
-                        newData = "";
+                        var newControl = 0xb0 | delta;
+                        var newData = "";
                     } else if(delta >= -0x5 && delta <= -0x1) {
-                        newControl = 0xb0 | (delta+11);
-                        newData = "";
+                        var newControl = 0xb0 | (delta+11);
+                        var newData = "";
                     } else if(delta >= -0x80 && delta <= 0x7f) {
-                        newControl = 0xbd;
-                        newData = encodeInt(delta, 1);
+                        var newControl = 0xbd;
+                        var newData = encodeInt(delta, 1);
                     } else if(delta >= -0x8000 && delta <= 0x7fff) {
-                        newControl = 0xbc;
-                        newData = encodeInt(delta, 2);
+                        var newControl = 0xbc;
+                        var newData = encodeInt(delta, 2);
                     } else if((delta >= -0x80000000 && delta <= -0x200000) || (delta >= 0x200000 && delta <= 0x7fffffff)) {
-                        newControl = 0xbb;
-                        newData = encodeInt(delta, 4);
+                        var newControl = 0xbb;
+                        var newData = encodeInt(delta, 4);
                     } else if(delta >= 0) {
-                        newControl = 0xbf;
-                        newData = encodeInt(delta, 0);
+                        var newControl = 0xbf;
+                        var newData = encodeInt(delta, 0);
                     } else {
-                        newControl = 0xbe;
-                        newData = encodeInt(-delta, 0);
+                        var newControl = 0xbe;
+                        var newData = encodeInt(-delta, 0);
                     }
                     if(newData.length < obj.data.length) {
                         obj.control = newControl;
@@ -278,7 +278,7 @@ function JKSNEncoder() {
         case 0:
             if(!(number >= 0))
                 throw "Assertion failed: number >= 0";
-            result = [number & 0x7f];
+            var result = [number & 0x7f];
             number >>>= 7;
             while(number != 0) {
                 result.unshift((number & 0x7f) | 0x80);

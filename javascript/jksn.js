@@ -650,16 +650,16 @@ function DJBHash(arr) {
 JKSN = {
     "encoder": JKSNEncoder,
     "decoder": JKSNDecoder,
-    "parseFromArrayBuffer": function parse(buf) {
+    "parseFromArrayBuffer": function (buf) {
         return new JKSN.decoder().parseFromArrayBuffer(buf);
     },
-    "parseFromString": function parse(buf) {
+    "parseFromString": function (buf) {
         return new JKSN.decoder().parseFromString(buf);
     },
-    "stringifyToArrayBuffer": function stringify(obj, header) {
+    "stringifyToArrayBuffer": function (obj, header) {
         return new JKSN.encoder().stringifyToArrayBuffer(obj, header);
     },
-    "stringifyToString": function stringify(obj, header) {
+    "stringifyToString": function (obj, header) {
         return new JKSN.encoder().stringifyToString(obj, header);
     }
 }

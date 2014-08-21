@@ -644,7 +644,7 @@ function DJBHash(arr) {
     else
         for(var i = 0; i < arr.length; i++)
             result += (result << 5) + arr[i];
-    return result;
+    return result & 0xff;
 }
 var JKSN = {
     "encoder": JKSNEncoder,

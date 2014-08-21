@@ -75,14 +75,14 @@ def load(fp, header=True, ordered_dict=False):
 
 
 class JKSNValue:
-    def __init__(self, control, data=b'', buf=b'', origin=None):
+    def __init__(self, origin, control, data=b'', buf=b''):
         assert isinstance(control, int) and 0 <= control <= 255
         assert isinstance(data, bytes)
         assert isinstance(buf, bytes)
+        self.origin = origin
         self.control = control
         self.data = data
         self.buf = buf
-        self.origin = origin
         self.children = []
         self.hash = None
 
@@ -178,60 +178,60 @@ class JKSNEncoder:
             raise JKSNEncodeError('cannot encode JKSN from value: %r' % obj)
 
     def _dump_none(self, obj):
-        return JKSNValue(0x01, origin=obj)
+        return JKSNValue(obj, 0x01)
 
     def _dump_unspecified(self, obj):
-        return JKSNValue(0xa0, origin=obj)
+        return JKSNValue(obj, 0xa0)
 
     def _dump_bool(self, obj):
-        return JKSNValue(0x03 if obj else 0x02, origin=obj)
+        return JKSNValue(obj, 0x03 if obj else 0x02)
 
     def _dump_int(self, obj):
         if 0 <= obj <= 0xa:
-            return JKSNValue(0x10 | obj, origin=obj)
+            return JKSNValue(obj, 0x10 | obj)
         elif -0x80 <= obj <= 0x7f:
-            return JKSNValue(0x1d, self._encode_int(obj, 1), origin=obj)
+            return JKSNValue(obj, 0x1d, self._encode_int(obj, 1))
         elif -0x8000 <= obj <= 0x7fff:
-            return JKSNValue(0x1c, self._encode_int(obj, 2), origin=obj)
+            return JKSNValue(obj, 0x1c, self._encode_int(obj, 2))
         elif -0x80000000 <= obj <= -0x200000 or 0x200000 <= obj <= 0x7fffffff:
-            return JKSNValue(0x1b, self._encode_int(obj, 4), origin=obj)
+            return JKSNValue(obj, 0x1b, self._encode_int(obj, 4))
         elif obj >= 0:
-            return JKSNValue(0x1f, self._encode_int(obj, 0), origin=obj)
+            return JKSNValue(obj, 0x1f, self._encode_int(obj, 0))
         else:
-            return JKSNValue(0x1e, self._encode_int(-obj, 0), origin=obj)
+            return JKSNValue(obj, 0x1e, self._encode_int(-obj, 0))
 
     def _dump_float(self, obj):
         if math.isnan(obj):
-            return JKSNValue(0x20, origin=obj)
+            return JKSNValue(obj, 0x20)
         elif math.isinf(obj):
-            return JKSNValue(0x2f if obj >= 0 else 0x2e, origin=obj)
+            return JKSNValue(obj, 0x2f if obj >= 0 else 0x2e)
         else:
-            return JKSNValue(0x2c, struct.pack('>d', obj), origin=obj)
+            return JKSNValue(obj, 0x2c, struct.pack('>d', obj))
 
     def _dump_str(self, obj):
         obj_utf16 = str.encode(obj, 'utf-16-le')
         obj_utf8 = str.encode(obj, 'utf-8')
         obj_short, control, length = (obj_utf16, 0x30, len(obj_utf16) >> 1) if len(obj_utf16) < len(obj_utf8) else (obj_utf8, 0x40, len(obj_utf8))
         if length <= (0xc if control == 0x40 else 0xb):
-            result = JKSNValue(control | length, b'', obj_short, origin=obj)
+            result = JKSNValue(obj, control | length, b'', obj_short)
         elif length <= 0xff:
-            result = JKSNValue(control | 0xe, self._encode_int(length, 1), obj_short, origin=obj)
+            result = JKSNValue(obj, control | 0xe, self._encode_int(length, 1), obj_short)
         elif length <= 0xffff:
-            result = JKSNValue(control | 0xd, self._encode_int(length, 2), obj_short, origin=obj)
+            result = JKSNValue(obj, control | 0xd, self._encode_int(length, 2), obj_short)
         else:
-            result = JKSNValue(control | 0xf, self._encode_int(length, 0), obj_short, origin=obj)
+            result = JKSNValue(obj, control | 0xf, self._encode_int(length, 0), obj_short)
         result.hash = _djb_hash(obj_short)
         return result
 
     def _dump_bytes(self, obj):
         if len(obj) <= 0xb:
-            result = JKSNValue(0x50 | len(obj), b'', obj, origin=obj)
+            result = JKSNValue(obj, 0x50 | len(obj), b'', obj)
         elif len(obj) <= 0xff:
-            result = JKSNValue(0x5e, self._encode_int(len(obj), 1), obj, origin=obj)
+            result = JKSNValue(obj, 0x5e, self._encode_int(len(obj), 1), obj)
         elif len(obj) <= 0xffff:
-            result = JKSNValue(0x5d, self._encode_int(len(obj), 2), obj, origin=obj)
+            result = JKSNValue(obj, 0x5d, self._encode_int(len(obj), 2), obj)
         else:
-            result = JKSNValue(0x5f, self._encode_int(len(obj), 0), obj, origin=obj)
+            result = JKSNValue(obj, 0x5f, self._encode_int(len(obj), 0), obj)
         result.hash = _djb_hash(obj)
         return result
 
@@ -249,13 +249,13 @@ class JKSNEncoder:
         def encode_straight_list(obj):
             length = len(obj)
             if length <= 0xc:
-                result = JKSNValue(0x80 | length, origin=obj)
+                result = JKSNValue(obj, 0x80 | length)
             elif length <= 0xff:
-                result = JKSNValue(0x8e, self._encode_int(length, 1), origin=obj)
+                result = JKSNValue(obj, 0x8e, self._encode_int(length, 1))
             elif length <= 0xffff:
-                result = JKSNValue(0x8d, self._encode_int(length, 2), origin=obj)
+                result = JKSNValue(obj, 0x8d, self._encode_int(length, 2))
             else:
-                result = JKSNValue(0x8f, self._encode_int(length, 0), origin=obj)
+                result = JKSNValue(obj, 0x8f, self._encode_int(length, 0))
             for item in obj:
                 result.children.append(self._dump_value(item))
             assert len(result.children) == length
@@ -264,13 +264,13 @@ class JKSNEncoder:
         def encode_swapped_list(obj):
             columns = collections.OrderedDict().fromkeys((column for row in obj for column in row))
             if len(columns) <= 0xc:
-                result = JKSNValue(0xa0 | len(columns), origin=obj)
+                result = JKSNValue(obj, 0xa0 | len(columns))
             elif len(columns) <= 0xff:
-                result = JKSNValue(0xae, self._encode_int(length, 1), origin=obj)
+                result = JKSNValue(obj, 0xae, self._encode_int(length, 1))
             elif len(columns) <= 0xffff:
-                result = JKSNValue(0xad, self._encode_int(length, 2), origin=obj)
+                result = JKSNValue(obj, 0xad, self._encode_int(length, 2))
             else:
-                result = JKSNValue(0xaf, self._encode_int(length, 0), origin=obj)
+                result = JKSNValue(obj, 0xaf, self._encode_int(length, 0))
             for column in columns:
                 result.children.append(self._dump_value(column))
                 result.children.append(self._dump_list([row.get(column, _unspecified_value) for row in obj]))
@@ -287,13 +287,13 @@ class JKSNEncoder:
     def _dump_dict(self, obj):
         length = len(obj)
         if length <= 0xc:
-            result = JKSNValue(0x90 | length, origin=obj)
+            result = JKSNValue(obj, 0x90 | length)
         elif length <= 0xff:
-            result = JKSNValue(0x9e, self._encode_int(length, 1), origin=obj)
+            result = JKSNValue(obj, 0x9e, self._encode_int(length, 1))
         elif length <= 0xffff:
-            result = JKSNValue(0x9d, self._encode_int(length, 2), origin=obj)
+            result = JKSNValue(obj, 0x9d, self._encode_int(length, 2))
         else:
-            result = JKSNValue(0x9f, self._encode_int(length, 0), origin=obj)
+            result = JKSNValue(obj, 0x9f, self._encode_int(length, 0))
         for key, value in obj.items():
             result.children.append(self._dump_value(key))
             result.children.append(self._dump_value(value))

@@ -260,13 +260,14 @@ A non gzipped JKSN does even better than JSON compressed in any method above.
 
 What about BSON, MessagePack, BJSON, ubJSON?
 
-| Format                               | Size      | Implementation                                     |
-| ------------------------------------ | --------- | -------------------------------------------------- |
-| BSON                                 | 172 bytes | http://bsonspec.org/implementations.html (Python3) |
-| Universal Binary Json                | 150 bytes | https://github.com/Sannis/node-ubjson              |
-| MessagePack                          | 120 bytes | https://github.com/msgpack/msgpack-node            |
-| BJSON with adaptive huffman encoding | 115 bytes | https://github.com/asterick/BJSON                  |
-| JKSN without gzip                    | 109 bytes | https://github.com/m13253/JKSN                     |
+| Format                               | Size      | Implementation                                       |
+| ------------------------------------ | --------- | ---------------------------------------------------- |
+| BSON                                 | 172 bytes | [Python 3](http://bsonspec.org/implementations.html) |
+| Universal Binary Json                | 150 bytes | [Node.JS](https://github.com/Sannis/node-ubjson)     |
+| MessagePack                          | 120 bytes | [Node.JS](https://github.com/msgpack/msgpack-node)   |
+| JSONH                                | 116 bytes | [Python 2](https://github.com/WebReflection/JSONH)   |
+| BJSON with adaptive huffman encoding | 115 bytes | [Node.JS](https://github.com/asterick/BJSON)         |
+| JKSN without gzip                    | 109 bytes | [Python 3](https://github.com/m13253/JKSN)           |
 
 ### Reference implementation
 

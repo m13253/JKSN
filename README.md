@@ -258,6 +258,12 @@ Take the example used in row-col swapping section.
 
 A non gzipped JKSN does even better than JSON compressed in any method above.
 
+### Reference implementation
+
+There is a Python reference implementation in the `python` directory in this repository.
+
+There are other implementations in other languages as well. Some of them implemented a part of the functionality.
+
 ### License of this document
 
 This document, as well as JKSN specification, is licensed under BSD license.

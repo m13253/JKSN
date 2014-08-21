@@ -256,8 +256,7 @@ class JKSNEncoder:
                 result = JKSNValue(obj, 0x8d, self._encode_int(length, 2))
             else:
                 result = JKSNValue(obj, 0x8f, self._encode_int(length, 0))
-            for item in obj:
-                result.children.append(self._dump_value(item))
+            result.children = list(map(self._dump_value, obj))
             assert len(result.children) == length
             return result
 

@@ -15,7 +15,7 @@ function JKSNEncoder() {
             "children": [],
             "toString": function (recursive) {
                 var result = [String.fromCharCode(this.control), this.data, this.buf];
-                result.push.apply(this.children);
+                result.push.apply(result, this.children);
                 return result.join("");
             },
             "getSize": function (depth) {
@@ -227,7 +227,7 @@ function JKSNEncoder() {
             if(header || header === undefined)
                 return "jk!"+result;
             else
-                return result;
+                return result.toString();
         }
     };
 }

@@ -1,8 +1,12 @@
 (function(window) {
 
 function JKSNEncoder() {
+    var lastint = null;
+    var texthash = new Array(256);
+    var blobhash = new Array(256);
+    return {
+    };
 }
-
 function JKSNDecoder() {
     var lastint = null;
     var texthash = new Array(256);
@@ -310,20 +314,27 @@ function JKSNDecoder() {
         } while(thisbyte & 0x80);
         return result;
     }
+    function LittleEndianUint16FromUint8Array(arr) {
+        var result = new Uint16Array(arr.length/2);
+        for(var i = 0, j = 1, k = 0; j < arr.length; i += 2, j += 2, k++)
+            result[k] = arr[i] | (arr[j] << 8);
+        return result;
+    }
     return {
-        "parse": function (buf) {
+        "parseFromArrayBuffer": function (buf) {
             var headerbuf = new Uint8Array(buf, 0, 3);
-            if(headerbuf[0] == "j" && headerbuf[1] == "k" && headerbuf[2] == "!")
+            if(headerbuf[0] == 106 && headerbuf[1] == 107 && headerbuf[2] == 33)
                 offset = 3;
             return loadValue(new DataView(buf));
+        },
+        "parseFromString": function (str) {
+            var buf = new ArrayBuffer(str.length);
+            var bufview = new Uint8Array(buf);
+            for(var i = 0; i < str.length; i++)
+                bufview[i] = str.charCodeAt(i);
+            return this.parseFromArrayBuffer(buf);
         }
     };
-}
-function LittleEndianUint16FromUint8Array(arr) {
-    var result = new Uint16Array(arr.length/2);
-    for(var i = 0, j = 1, k = 0; j < arr.length; i += 2, j += 2, k++)
-        result[k] = arr[i] | (arr[j] << 8);
-    return result;
 }
 function DJBHash(arr) {
     var result = 0;
@@ -335,11 +346,17 @@ function DJBHash(arr) {
 JKSN = {
     "encoder": JKSNEncoder,
     "decoder": JKSNDecoder,
-    "parse": function parse(buf) {
-        return (new JKSN.decoder()).parse(buf);
+    "parseFromArrayBuffer": function parse(buf) {
+        return new JKSN.decoder().parseFromArrayBuffer(buf);
     },
-    "stringify": function stringify(obj, header) {
-        return (new JKSN.encoder()).stringify(obj, header);
+    "parseFromString": function parse(buf) {
+        return new JKSN.decoder().parseFromString(buf);
+    },
+    "stringifyToArrayBuffer": function stringify(obj, header) {
+        return new JKSN.encoder().stringifyToArrayBuffer(obj, header);
+    },
+    "stringifyToString": function stringify(obj, header) {
+        return new JKSN.encoder().stringifyToString(obj, header);
     }
 }
 

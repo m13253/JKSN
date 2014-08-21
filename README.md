@@ -258,6 +258,16 @@ Take the example used in row-col swapping section.
 
 A non gzipped JKSN does even better than JSON compressed in any method above.
 
+What about BSON, MessagePack, BJSON, ubJSON?
+
+| Format                               | Size      | Implementation                                     |
+| ------------------------------------ | --------- | -------------------------------------------------- |
+| BSON                                 | 172 bytes | http://bsonspec.org/implementations.html (Python3) |
+| Universal Binary Json                | 150 bytes | https://github.com/Sannis/node-ubjson              |
+| MessagePack                          | 120 bytes | https://github.com/msgpack/msgpack-node            |
+| BJSON with adaptive huffman encoding | 115 bytes | https://github.com/asterick/BJSON                  |
+| JKSN without gzip                    | 109 bytes | https://github.com/m13253/JKSN                     |
+
 ### Reference implementation
 
 There is a Python reference implementation in the `python` directory in this repository.

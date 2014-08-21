@@ -48,6 +48,8 @@ function JKSNEncoder() {
             return dumpNumber(obj);
         else if(typeof obj === "string")
             return dumpString(obj);
+        else if(obj instanceof ArrayBuffer)
+            return dumpBuffer(obj);
         else if(typeof obj !== "function" && obj.length !== undefined)
             return dumpArray(obj);
         else
@@ -58,7 +60,7 @@ function JKSNEncoder() {
             return JKSNValue(obj, 0x20);
         else if(!isFinite(obj))
             return JKSNValue(obj, obj >= 0 ? 0x2f : 0x2e);
-        else if(obj | 0 === obj)
+        else if((obj | 0) === obj)
             if(obj >= 0 && obj <= 0xa)
                 return JKSNValue(obj, 0x10 | obj);
             else if(obj >= -0x80 && obj <= 0x7f)
@@ -72,7 +74,7 @@ function JKSNEncoder() {
             else
                 return JKSNValue(obj, 0x1e, -encodeInt(obj, 0));
         else {
-            var f64buf = new DataView(new BufferArray(8));
+            var f64buf = new DataView(new ArrayBuffer(8));
             f64buf.setFloat64(0, obj, false);
             return JKSNValue(obj, 0x2c, encodeInt(f64buf.getUint32(0, false), 4)+encodeInt(f64buf.getUint32(4, false), 4));
         }
@@ -104,6 +106,21 @@ function JKSNEncoder() {
         else
             var result = JKSNValue(obj, control | 0xf, encodeInt(strlen, 0), obj_short);
         result.hash = DJBHash(obj_short);
+        return result;
+    }
+    function dumpBuffer(obj) {
+        var strbuf = new Uint8Array(obj);
+        var str = String.fromCharCode.apply(null, strbuf);
+        var strlen = str.length;
+        if(strlen <= 0xb)
+            var result = JKSNValue(obj, 0x50 | strlen, "", str);
+        else if(strlen <= 0xff)
+            var result = JKSNValue(obj, 0x5e, encodeInt(strlen, 1), str);
+        else if(strlen <= 0xffff)
+            var result = JKSNValue(obj, 0x5e, encodeInt(strlen, 2), str);
+        else
+            var result = JKSNValue(obj, 0x5e, encodeInt(strlen, 0), str);
+        result.hash = DJBHash(strbuf);
         return result;
     }
     function dumpArray(obj) {
@@ -155,11 +172,11 @@ function JKSNEncoder() {
             for(var column = 0; column < collen; column++) {
                 var columns_value = new Array(obj.length);
                 for(var row = 0; row < obj.length; row++)
-                    columns_value[row] = (result.childobj[row][columns[column]] !== undefined ? result.childobj[row][columns[column]] : new unspecifiedValue())
+                    columns_value[row] = (obj[row][columns[column]] !== undefined ? obj[row][columns[column]] : new unspecifiedValue())
                 result.children.push(dumpValue(columns[column]), dumpArray(columns_value));
             }
-            if(result.children.length != obj.length * 2)
-                throw "Assertion failed: result.children.length == obj.length * 2";
+            if(result.children.length != collen * 2)
+                throw "Assertion failed: result.children.length == columns.length * 2";
             return result;
         }
         var result = encodeStraightArray(obj);
@@ -189,6 +206,65 @@ function JKSNEncoder() {
         return result;
     }
     function optimize(obj) {
+        var control = obj.control & 0xf0;
+        switch(control) {
+        case 0x10:
+            if(lastint !== null) {
+                var delta = obj.origin - lastint;
+                if(Math.abs(delta) < Math.abs(obj.origin)) {
+                    if(delta >= 0 && delta <= 0x5) {
+                        newControl = 0xb0 | delta;
+                        newData = "";
+                    } else if(delta >= -0x5 && delta <= -0x1) {
+                        newControl = 0xb0 | (delta+11);
+                        newData = "";
+                    } else if(delta >= -0x80 && delta <= 0x7f) {
+                        newControl = 0xbd;
+                        newData = encodeInt(delta, 1);
+                    } else if(delta >= -0x8000 && delta <= 0x7fff) {
+                        newControl = 0xbc;
+                        newData = encodeInt(delta, 2);
+                    } else if((delta >= -0x80000000 && delta <= -0x200000) || (delta >= 0x200000 && delta <= 0x7fffffff)) {
+                        newControl = 0xbb;
+                        newData = encodeInt(delta, 4);
+                    } else if(delta >= 0) {
+                        newControl = 0xbf;
+                        newData = encodeInt(delta, 0);
+                    } else {
+                        newControl = 0xbe;
+                        newData = encodeInt(-delta, 0);
+                    }
+                    if(newData.length < obj.data.length) {
+                        obj.control = newControl;
+                        obj.data = newData;
+                    }
+                }
+            }
+            lastint = obj.origin;
+            break;
+        case 0x30:
+        case 0x40:
+            if(obj.buf.length > 1)
+                if(texthash[obj.hash] == obj.buf) {
+                    obj.control = 0x3c;
+                    obj.data = encodeInt(obj.hash, 1);
+                    obj.buf = "";
+                } else
+                    texthash[obj.hash] = obj.buf;
+            break;
+        case 0x50:
+            if(obj.buf.length > 1)
+                if(blobhash[obj.hash] == obj.buf) {
+                    obj.control = 0x5c;
+                    obj.data = encodeInt(obj.hash, 1);
+                    obj.buf = "";
+                } else
+                    blobhash[obj.hash] = obj.buf;
+            break;
+        default:
+            for(var i = 0; i < obj.children.length; i++)
+                optimize(obj.children[i]);
+        }
         return obj;
     }
     function encodeInt(number, size) {
@@ -562,8 +638,12 @@ function JKSNDecoder() {
 }
 function DJBHash(arr) {
     var result = 0;
-    for(var i = 0; i < arr.length; i++)
-        result += (result << 5) + arr[i];
+    if(arr.charCodeAt)
+        for(var i = 0; i < arr.length; i++)
+            result += (result << 5) + arr.charCodeAt(i);
+    else
+        for(var i = 0; i < arr.length; i++)
+            result += (result << 5) + arr[i];
     return result;
 }
 

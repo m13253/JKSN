@@ -1,18 +1,14 @@
 #include <stdlib.h>
 #include "jksn.h"
 
-typedef struct jksn_children {
-    struct jksn_value value;
-    struct jksn_children *next;
-} jksn_children;
-
 typedef struct jksn_value {
     const jksn_t *origin;
     char control;
     jksn_blobstring data;
     jksn_blobstring buf;
-    jksn_children *children;
     uint8_t hash;
+    struct jksn_value *first_child;
+    struct jksn_value *next_child;
 } jksn_value;
 
 static const char *jksn_error_messages[] = {

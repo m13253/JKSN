@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 # Copyright (c) 2014 StarBrilliant <m13253@hotmail.com>
 # All rights reserved.
@@ -698,7 +698,21 @@ if __name__ == '__main__':
     if '--help' in sys.argv:
         sys.stderr.write('Usage: %s [-d] <input >output\n\nOptions:\n\t-d\tDecode JKSN instead of encoding\n\n' % sys.argv[0])
     elif '-d' in sys.argv:
-        json.dump(loads(sys.stdin.buffer.read(), ordered_dict=True), sys.stdout, indent=2)
+        if sys.version_info < (3,):
+            stdin_buffer = sys.stdin
+            if sys.platform.startswith("win"):
+                import os, msvcrt
+                msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
+        else:
+            stdout_buffer = sys.stdin.buffer
+        json.dump(loads(stdin_buffer.read(), ordered_dict=True), sys.stdout, indent=2)
         sys.stdout.write('\n')
     else:
-        dump(json.load(sys.stdin), sys.stdout.buffer)
+        if sys.version_info < (3,):
+            stdout_buffer = sys.stdout
+            if sys.platform.startswith("win"):
+                import os, msvcrt
+                msvcrt.setmode(sys.stdout.fileno(), os.O_BINARY)
+        else:
+            stdout_buffer = sys.stdout.buffer
+        dump(json.load(sys.stdin), stdout_buffer)

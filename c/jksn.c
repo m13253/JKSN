@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#define _JKSN_PRIVATE
 #include "jksn.h"
 
 typedef struct jksn_value {
@@ -11,12 +12,20 @@ typedef struct jksn_value {
     struct jksn_value *next_child;
 } jksn_value;
 
+struct jksn_cache {
+    int haslastint;
+    int64_t lastint;
+    jksn_utf8string texthash[256];
+    jksn_blobstring blobhash[256];
+};
+
 static const char *jksn_error_messages[] = {
     "success",
     "no enough memory",
     "JKSN stream may be truncated or corrupted",
     "JKSN stream contains an invalid control byte",
     "this JKSN decoder does not support JSON literals",
+    "this build of JKSN decoder does not support variable length integers",
     "this build of JKSN decoder does not support long double numbers",
     "JKSN stream requires a non-existing hash",
     "JKSN stream contains an invalid delta encoded integer",
@@ -33,6 +42,10 @@ typedef enum {
     JKSN_EDELTA,
     JKSN_ESWAPARRAY
 } jksn_error_message_no;
+
+jksn_cache *jksn_cache_new(void) {
+    return calloc(1, sizeof (struct jksn_cache));
+}
 
 jksn_t *jksn_free(jksn_t *object) {
     if(object) {

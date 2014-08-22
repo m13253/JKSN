@@ -1,5 +1,6 @@
 AR=ar
 CC=gcc
+RM=rm -f
 override CFLAGS+=-fPIC -Wall -O3
 
 .PHONY: all clean
@@ -7,7 +8,7 @@ override CFLAGS+=-fPIC -Wall -O3
 all: libjksn.a libjksn.so
 
 clean:
-	rm libjksn.so libjksn.a jksn.o
+	$(RM) libjksn.so libjksn.a jksn.o
 
 libjksn.a: jksn.o
 	$(AR) crs $@ $^

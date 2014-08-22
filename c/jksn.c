@@ -21,21 +21,23 @@ struct jksn_cache {
 };
 
 static const char *jksn_error_messages[] = {
-    "success",
-    "no enough memory",
-    "JKSN stream may be truncated or corrupted",
-    "JKSN stream contains an invalid control byte",
-    "this JKSN decoder does not support JSON literals",
-    "this build of JKSN decoder does not support variable length integers",
-    "this build of JKSN decoder does not support long double numbers",
-    "JKSN stream requires a non-existing hash",
-    "JKSN stream contains an invalid delta encoded integer",
-    "JKSN row-col swapped array requires an array but not found"
+    "OK",
+    "JKSNError: no enough memory",
+    "JKSNDecodeError: JKSN stream may be truncated or corrupted",
+    "JKSNEncodeError: cannot encode unrecognizable type of value",
+    "JKSNDecodeError: JKSN stream contains an invalid control byte",
+    "JKSNDecodeError: this JKSN decoder does not support JSON literals",
+    "JKSNDecodeError: this build of JKSN decoder does not support variable length integers",
+    "JKSNError: this build of JKSN decoder does not support long double numbers",
+    "JKSNDecodeError: JKSN stream requires a non-existing hash",
+    "JKSNDecodeError: JKSN stream contains an invalid delta encoded integer",
+    "JKSNDecodeError: JKSN row-col swapped array requires an array but not found"
 };
 typedef enum {
     JKSN_EOK,
     JKSN_ENOMEM,
     JKSN_ETRUNC,
+    JKSN_ETYPE,
     JKSN_ECONTROL,
     JKSN_EJSON,
     JKSN_ELONGDOUBLE,
@@ -44,8 +46,35 @@ typedef enum {
     JKSN_ESWAPARRAY
 } jksn_error_message_no;
 
+static jksn_value *jksn_value_new(const jksn_t *origin, uint8_t control, const jksn_blobstring *data, const jksn_blobstring *buf);
+static jksn_value *jksn_value_free(jksn_value *object);
+static size_t jksn_value_size(const jksn_value *object, int depth);
+static char *jksn_value_output(char *output, const jksn_value *object);
+static int jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache *cache);
+static int jksn_optimize(jksn_value *object, jksn_cache *cache);
+
 jksn_cache *jksn_cache_new(void) {
     return calloc(1, sizeof (struct jksn_cache));
+}
+
+jksn_cache *jksn_cache_free(jksn_cache *cache) {
+    if(cache) {
+        size_t i;
+        cache->haslastint = 0;
+        for(i = 0; i < 256; i++)
+            if(cache->texthash[i].str) {
+                cache->texthash[i].size = 0;
+                free(cache->texthash[i].str);
+                cache->texthash[i].str = NULL;
+            }
+        for(i = 0; i < 256; i++)
+            if(cache->blobhash[i].buf) {
+                cache->blobhash[i].size = 0;
+                free(cache->blobhash[i].buf);
+                cache->blobhash[i].buf = NULL;
+            }
+    }
+    return NULL;
 }
 
 jksn_t *jksn_free(jksn_t *object) {
@@ -149,6 +178,41 @@ static char *jksn_value_output(char *output, const jksn_value *object) {
         object = object->next_child;
     }
     return output;
+}
+
+int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int header, jksn_cache *cache_) {
+    jksn_cache *cache = cache_ ? cache_ : jksn_cache_new();
+    if(!cache)
+        return JKSN_ENOMEM;
+    else {
+        jksn_value *result_value;
+        jksn_error_message_no retval = jksn_dump_value(&result_value, object, cache);
+        if(retval == JKSN_EOK) {
+            retval = jksn_optimize(result_value, cache);
+            if(retval == JKSN_EOK && result) {
+                *result = malloc(sizeof (jksn_blobstring));
+                (*result)->size = jksn_value_size(result_value, 0);
+                (*result)->buf = malloc((*result)->size);
+                jksn_value_output((*result)->buf, result_value);
+            }
+        }
+        jksn_value_free(result_value);
+        if(cache != cache_)
+            jksn_cache_free(cache);
+        return retval;
+    }
+}
+
+static int jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+    jksn_error_message_no retval = JKSN_EOK;
+    *result = jksn_value_new(NULL, 0x00, NULL, NULL);
+    if(!result)
+        return JKSN_ENOMEM;
+    return retval;
+}
+
+static int jksn_optimize(jksn_value *result, jksn_cache *cache) {
+    return JKSN_EOK;
 }
 
 const char *jksn_errcode(int errcode) {

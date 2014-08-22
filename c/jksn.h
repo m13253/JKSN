@@ -16,7 +16,7 @@ typedef struct {
 
 typedef struct {
     size_t size;
-    struct jksn_t *children;
+    struct jksn_t **children;
 } jksn_array;
 
 typedef struct {

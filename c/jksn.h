@@ -41,7 +41,8 @@ typedef struct jksn_t {
         JKSN_STRING,
         JKSN_BLOB,
         JKSN_ARRAY,
-        JKSN_OBJECT
+        JKSN_OBJECT,
+        JKSN_UNSPECIFIED
     } data_type;
     union {
         int data_bool;

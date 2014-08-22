@@ -1,10 +1,11 @@
 #include <stdlib.h>
+#include <string.h>
 #define _JKSN_PRIVATE
 #include "jksn.h"
 
 typedef struct jksn_value {
     const jksn_t *origin;
-    char control;
+    uint8_t control;
     jksn_blobstring data;
     jksn_blobstring buf;
     uint8_t hash;
@@ -89,6 +90,19 @@ jksn_t *jksn_free(jksn_t *object) {
     return NULL;
 }
 
+static jksn_value *jksn_value_new(const jksn_t *origin, uint8_t control, const jksn_blobstring *data, const jksn_blobstring *buf) {
+    jksn_value *result = calloc(1, sizeof (jksn_value));
+    if(result) {
+        result->origin = origin;
+        result->control = control;
+        if(data)
+            result->data = *data;
+        if(buf)
+            result->buf = *buf;
+    }
+    return result;
+}
+
 static jksn_value *jksn_value_free(jksn_value *object) {
     while(object) {
         jksn_value *this_object = object;
@@ -98,12 +112,43 @@ static jksn_value *jksn_value_free(jksn_value *object) {
         object->buf.size = 0;
         free(object->buf.buf);
         object->buf.buf = NULL;
-        jksn_value_free(object->first_child);
-        object->first_child = NULL;
+        if(object->first_child) {
+            jksn_value_free(object->first_child);
+            object->first_child = NULL;
+        }
         object = object->next_child;
         free(this_object);
     }
     return NULL;
+}
+
+static size_t jksn_value_size(const jksn_value *object, int depth) {
+    size_t result = 0;
+    if(object) {
+        result = 1 + object->data.size + object->buf.size;
+        if(depth != 1)
+            for(object = object->first_child; object; object = object->next_child)
+                result += jksn_value_size(object, depth-1);
+    }
+    return result;
+}
+
+static char *jksn_value_output(char *output, const jksn_value *object) {
+    while(object) {
+        *(output++) = (char) object->control;
+        if(object->data.size != 0) {
+            memcpy(output, object->data.buf, object->data.size);
+            output += object->data.size;
+        }
+        if(object->data.buf != 0) {
+            memcpy(output, object->buf.buf, object->buf.size);
+            output += object->buf.size;
+        }
+        if(object->first_child)
+            jksn_value_output(output, object->first_child);
+        object = object->next_child;
+    }
+    return output;
 }
 
 const char *jksn_errcode(int errcode) {

@@ -63,8 +63,8 @@ typedef void jksn_cache;
 #endif
 
 jksn_cache *jksn_cache_new(void);
-int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int header, jksn_cache **cache);
-int jksn_parse(jksn_t **result, const jksn_blobstring *buffer, jksn_cache **cache);
+int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int header, jksn_cache *cache);
+int jksn_parse(jksn_t **result, const jksn_blobstring *buffer, jksn_cache *cache);
 jksn_t *jksn_free(jksn_t *object);
 const char *jksn_errcode(int errcode);
 

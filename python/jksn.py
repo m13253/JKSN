@@ -50,7 +50,7 @@ class JKSNDecodeError(JKSNError):
 
 
 class JKSNChecksumError(JKSNDecodeError):
-    '''This version of JKSN decoder does not verify checksum'''
+    '''Exception class raised during checksum verification when decoding'''
     pass
 
 
@@ -567,7 +567,7 @@ class JKSNDecoder:
                     if fp.digest() == checksum:
                         return result
                     else:
-                        return JKSNDecodeError('checksum mismatch')
+                        return JKSNChecksumError('checksum mismatch')
                 elif 0xf8 <= control <= 0xfc:
                     if control == 0xf8:
                         hashed_fp = _hashed_file(fp, _crc32_hasher)
@@ -592,7 +592,7 @@ class JKSNDecoder:
                     if hashed_fp.digest() == checksum:
                         return result
                     else:
-                        return JKSNDecodeError('checksum mismatch')
+                        return JKSNChecksumError('checksum mismatch')
                 # Ignore pragmas
                 elif control == 0xff:
                     self._load_value(fp)

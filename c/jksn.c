@@ -1,15 +1,17 @@
 #include <stdlib.h>
 #include "jksn.h"
 
+typedef struct jksn_children {
+    struct jksn_value value;
+    struct jksn_children *next;
+} jksn_children;
+
 typedef struct jksn_value {
     const jksn_t *origin;
     char control;
     jksn_blobstring data;
     jksn_blobstring buf;
-    struct jksn_children {
-        struct jksn_value *value;
-        struct jksn_children *next;
-    } *children;
+    jksn_children *children;
     uint8_t hash;
 } jksn_value;
 
@@ -75,6 +77,10 @@ jksn_t *jksn_free(jksn_t *object) {
             break;
         }
     }
+    return NULL;
+}
+
+static jksn_value *jksn_value_free(jksn_value *object) {
     return NULL;
 }
 

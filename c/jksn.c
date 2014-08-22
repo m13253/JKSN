@@ -40,6 +40,7 @@ typedef enum {
     JKSN_ETYPE,
     JKSN_ECONTROL,
     JKSN_EJSON,
+    JKSN_EVARINT,
     JKSN_ELONGDOUBLE,
     JKSN_EHASH,
     JKSN_EDELTA,
@@ -205,7 +206,7 @@ int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int heade
 
 static int jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
     jksn_error_message_no retval = JKSN_EOK;
-    *result = jksn_value_new(NULL, 0x00, NULL, NULL);
+    *result = NULL;
     if(!result)
         return JKSN_ENOMEM;
     return retval;

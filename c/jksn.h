@@ -31,7 +31,7 @@ typedef struct {
 
 typedef struct jksn_t {
     enum {
-        JKSN_UNDEF,
+        JKSN_UNDEFINED,
         JKSN_NULL,
         JKSN_BOOL,
         JKSN_INT,
@@ -68,6 +68,10 @@ jksn_cache *jksn_cache_free(jksn_cache *cache);
 int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int header, jksn_cache *cache);
 int jksn_parse(jksn_t **result, const jksn_blobstring *buffer, jksn_cache *cache);
 jksn_t *jksn_free(jksn_t *object);
+jksn_utf8string *jksn_utf8string_new(const char *utf8string);
+jksn_utf8string *jksn_utf8string_free(jksn_blobstring *utf8string);
+jksn_blobstring *jksn_blobstring_new(const char *blobstring, size_t size);
+jksn_blobstring *jksn_blobstring_free(jksn_blobstring *blobstring);
 const char *jksn_errcode(int errcode);
 
 #endif

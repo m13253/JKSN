@@ -78,6 +78,66 @@ jksn_cache *jksn_cache_free(jksn_cache *cache) {
     return NULL;
 }
 
+jksn_utf8string *jksn_utf8string_new(const char *utf8string) {
+    jksn_utf8string *result = malloc(sizeof (jksn_utf8string));
+    if(result) {
+        if(utf8string) {
+            result->size = strlen(utf8string);
+            result->str = malloc(result->size+1);
+            if(result->str)
+                memcpy(result->str, utf8string, result->size+1);
+            else {
+                free(result);
+                result = NULL;
+            }
+        } else {
+            result->size = 0;
+            result->str = NULL;
+        }
+    }
+    return result;
+}
+
+jksn_utf8string *jksn_utf8string_free(jksn_blobstring *utf8string) {
+    if(utf8string) {
+        utf8string->size = 0;
+        free(utf8string->buf);
+        utf8string->buf = NULL;
+        free(utf8string);
+    }
+    return NULL;
+}
+
+jksn_blobstring *jksn_blobstring_new(const char *blobstring, size_t size) {
+    jksn_blobstring *result = malloc(sizeof (jksn_blobstring));
+    if(result) {
+        if(blobstring) {
+            result->buf = malloc(size);
+            if(result->buf) {
+                memcpy(result->buf, blobstring, size);
+                result->size = size;
+            } else {
+                free(result);
+                result = NULL;
+            }
+        } else {
+            result->size = 0;
+            result->buf = NULL;
+        }
+    }
+    return result;
+}
+
+jksn_blobstring *jksn_blobstring_free(jksn_blobstring *blobstring) {
+    if(blobstring) {
+        blobstring->size = 0;
+        free(blobstring->buf);
+        blobstring->buf = NULL;
+        free(blobstring);
+    }
+    return NULL;
+}
+
 jksn_t *jksn_free(jksn_t *object) {
     if(object) {
         size_t i;
@@ -182,31 +242,46 @@ static char *jksn_value_output(char *output, const jksn_value *object) {
 }
 
 int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int header, jksn_cache *cache_) {
-    jksn_cache *cache = cache_ ? cache_ : jksn_cache_new();
-    if(!cache)
-        return JKSN_ENOMEM;
+    if(!object)
+        return JKSN_ETYPE;
     else {
-        jksn_value *result_value;
-        jksn_error_message_no retval = jksn_dump_value(&result_value, object, cache);
-        if(retval == JKSN_EOK) {
-            retval = jksn_optimize(result_value, cache);
-            if(retval == JKSN_EOK && result) {
-                *result = malloc(sizeof (jksn_blobstring));
-                (*result)->size = jksn_value_size(result_value, 0);
-                (*result)->buf = malloc((*result)->size);
-                jksn_value_output((*result)->buf, result_value);
+        jksn_cache *cache = cache_ ? cache_ : jksn_cache_new();
+        if(!cache)
+            return JKSN_ENOMEM;
+        else {
+            jksn_value *result_value = NULL;
+            jksn_error_message_no retval = jksn_dump_value(&result_value, object, cache);
+            if(retval == JKSN_EOK) {
+                retval = jksn_optimize(result_value, cache);
+                if(retval == JKSN_EOK && result) {
+                    *result = malloc(sizeof (jksn_blobstring));
+                    (*result)->size = jksn_value_size(result_value, 0);
+                    (*result)->buf = malloc((*result)->size);
+                    jksn_value_output((*result)->buf, result_value);
+                }
             }
+            jksn_value_free(result_value);
+            if(cache != cache_)
+                jksn_cache_free(cache);
+            return retval;
         }
-        jksn_value_free(result_value);
-        if(cache != cache_)
-            jksn_cache_free(cache);
-        return retval;
     }
 }
 
 static int jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
     jksn_error_message_no retval = JKSN_EOK;
     *result = NULL;
+    switch(object->data_type) {
+    case JKSN_UNDEFINED:
+        *result = jksn_value_new(object, 0x00, NULL, NULL);
+        break;
+    case JKSN_NULL:
+        *result = jksn_value_new(object, 0x01, NULL, NULL);
+        break;
+    case JKSN_BOOL:
+        *result = jksn_value_new(object, object->data_bool ? 0x03 : 0x02, NULL, NULL);
+        break;
+    }
     if(!result)
         return JKSN_ENOMEM;
     return retval;

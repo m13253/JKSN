@@ -77,6 +77,19 @@ jksn_t *jksn_free(jksn_t *object) {
 }
 
 static jksn_value *jksn_value_free(jksn_value *object) {
+    while(object) {
+        jksn_value *this_object = object;
+        object->data.size = 0;
+        free(object->data.buf);
+        object->data.buf = NULL;
+        object->buf.size = 0;
+        free(object->buf.buf);
+        object->buf.buf = NULL;
+        jksn_value_free(object->first_child);
+        object->first_child = NULL;
+        object = object->next_child;
+        free(this_object);
+    }
     return NULL;
 }
 

@@ -423,7 +423,7 @@ class JKSNDecoder:
                 if control == 0x20:
                     return float('nan')
                 elif control == 0x2b:
-                    raise NotImplementedError('This JKSN decoder does not support long double numbers')
+                    raise NotImplementedError('this JKSN decoder does not support long double numbers')
                 elif control == 0x2c:
                     return struct.unpack('>d', fp.read(8))[0]
                 elif control == 0x2d:

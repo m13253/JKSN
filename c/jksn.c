@@ -521,6 +521,11 @@ static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t
             utf8size--;
             continue;
         } else if((uint8_t) utf8str[0] < 0xc0) {
+            if(utf16str)
+                utf16str[reslen] = 0xfffd;
+            reslen++;
+            utf8str++;
+            utf8size--;
         } else if((uint8_t) utf8str[0] < 0xe0) {
             if(jksn_utf8_check_continuation(utf8str, utf8size, 1)) {
                 uint32_t ucs4 = (utf8str[0] & 0x1f) << 6 | (utf8str[1] & 0x3f);
@@ -560,12 +565,13 @@ static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t
                     continue;
                 }
             }
+        } else {
+            if(utf16str)
+                utf16str[reslen] = 0xfffd;
+            reslen++;
+            utf8str++;
+            utf8size--;
         }
-        if(utf16str)
-            utf16str[reslen] = 0xfffd;
-        reslen++;
-        utf8str++;
-        utf8size--;
     }
     return reslen;
 }

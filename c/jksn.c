@@ -380,27 +380,27 @@ static jksn_error_message_no jksn_dump_longdouble(jksn_value **result, const jks
         if(!buf.buf)
             return JKSN_ENOMEM;
         if(little_endian) {
-            buf.buf[0] = conv.bufint[9];
-            buf.buf[1] = conv.bufint[8];
-            buf.buf[2] = conv.bufint[7];
-            buf.buf[3] = conv.bufint[6];
-            buf.buf[4] = conv.bufint[5];
-            buf.buf[5] = conv.bufint[4];
-            buf.buf[6] = conv.bufint[3];
-            buf.buf[7] = conv.bufint[2];
-            buf.buf[8] = conv.bufint[1];
-            buf.buf[9] = conv.bufint[0];
+            buf.buf[0] = (char) conv.bufint[9];
+            buf.buf[1] = (char) conv.bufint[8];
+            buf.buf[2] = (char) conv.bufint[7];
+            buf.buf[3] = (char) conv.bufint[6];
+            buf.buf[4] = (char) conv.bufint[5];
+            buf.buf[5] = (char) conv.bufint[4];
+            buf.buf[6] = (char) conv.bufint[3];
+            buf.buf[7] = (char) conv.bufint[2];
+            buf.buf[8] = (char) conv.bufint[1];
+            buf.buf[9] = (char) conv.bufint[0];
         } else {
-            buf.buf[0] = conv.bufint[2];
-            buf.buf[1] = conv.bufint[3];
-            buf.buf[2] = conv.bufint[4];
-            buf.buf[3] = conv.bufint[5];
-            buf.buf[4] = conv.bufint[6];
-            buf.buf[5] = conv.bufint[7];
-            buf.buf[6] = conv.bufint[8];
-            buf.buf[7] = conv.bufint[9];
-            buf.buf[8] = conv.bufint[10];
-            buf.buf[9] = conv.bufint[11];
+            buf.buf[0] = (char) conv.bufint[2];
+            buf.buf[1] = (char) conv.bufint[3];
+            buf.buf[2] = (char) conv.bufint[4];
+            buf.buf[3] = (char) conv.bufint[5];
+            buf.buf[4] = (char) conv.bufint[6];
+            buf.buf[5] = (char) conv.bufint[7];
+            buf.buf[6] = (char) conv.bufint[8];
+            buf.buf[7] = (char) conv.bufint[9];
+            buf.buf[8] = (char) conv.bufint[10];
+            buf.buf[9] = (char) conv.bufint[11];
         }
         *result = jksn_value_new(object, 0x2b, &buf, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
@@ -418,27 +418,27 @@ static jksn_error_message_no jksn_dump_longdouble(jksn_value **result, const jks
         if(!buf.buf)
             return JKSN_ENOMEM;
         if(little_endian) {
-            buf.buf[0] = conv.bufint[9];
-            buf.buf[1] = conv.bufint[8];
-            buf.buf[2] = conv.bufint[7];
-            buf.buf[3] = conv.bufint[6];
-            buf.buf[4] = conv.bufint[5];
-            buf.buf[5] = conv.bufint[4];
-            buf.buf[6] = conv.bufint[3];
-            buf.buf[7] = conv.bufint[2];
-            buf.buf[8] = conv.bufint[1];
-            buf.buf[9] = conv.bufint[0];
+            buf.buf[0] = (char) conv.bufint[9];
+            buf.buf[1] = (char) conv.bufint[8];
+            buf.buf[2] = (char) conv.bufint[7];
+            buf.buf[3] = (char) conv.bufint[6];
+            buf.buf[4] = (char) conv.bufint[5];
+            buf.buf[5] = (char) conv.bufint[4];
+            buf.buf[6] = (char) conv.bufint[3];
+            buf.buf[7] = (char) conv.bufint[2];
+            buf.buf[8] = (char) conv.bufint[1];
+            buf.buf[9] = (char) conv.bufint[0];
         } else {
-            buf.buf[0] = conv.bufint[6];
-            buf.buf[1] = conv.bufint[7];
-            buf.buf[2] = conv.bufint[8];
-            buf.buf[3] = conv.bufint[9];
-            buf.buf[4] = conv.bufint[10];
-            buf.buf[5] = conv.bufint[11];
-            buf.buf[6] = conv.bufint[12];
-            buf.buf[7] = conv.bufint[13];
-            buf.buf[8] = conv.bufint[14];
-            buf.buf[9] = conv.bufint[15];
+            buf.buf[0] = (char) conv.bufint[6];
+            buf.buf[1] = (char) conv.bufint[7];
+            buf.buf[2] = (char) conv.bufint[8];
+            buf.buf[3] = (char) conv.bufint[9];
+            buf.buf[4] = (char) conv.bufint[10];
+            buf.buf[5] = (char) conv.bufint[11];
+            buf.buf[6] = (char) conv.bufint[12];
+            buf.buf[7] = (char) conv.bufint[13];
+            buf.buf[8] = (char) conv.bufint[14];
+            buf.buf[9] = (char) conv.bufint[15];
         }
         *result = jksn_value_new(object, 0x2b, &buf, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;

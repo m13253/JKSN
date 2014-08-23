@@ -29,21 +29,23 @@ typedef struct {
     jksn_keyvalue *children;
 } jksn_object;
 
+typedef enum {
+    JKSN_UNDEFINED,
+    JKSN_NULL,
+    JKSN_BOOL,
+    JKSN_INT,
+    JKSN_FLOAT,
+    JKSN_DOUBLE,
+    JKSN_LONG_DOUBLE,
+    JKSN_STRING,
+    JKSN_BLOB,
+    JKSN_ARRAY,
+    JKSN_OBJECT,
+    JKSN_UNSPECIFIED
+} jksn_data_type;
+
 typedef struct jksn_t {
-    enum jksn_data_type {
-        JKSN_UNDEFINED,
-        JKSN_NULL,
-        JKSN_BOOL,
-        JKSN_INT,
-        JKSN_FLOAT,
-        JKSN_DOUBLE,
-        JKSN_LONG_DOUBLE,
-        JKSN_STRING,
-        JKSN_BLOB,
-        JKSN_ARRAY,
-        JKSN_OBJECT,
-        JKSN_UNSPECIFIED
-    } data_type;
+    jksn_data_type data_type;
     union {
         int data_bool;
         int64_t data_int;
@@ -75,7 +77,7 @@ jksn_t *jksn_free(jksn_t *object);
 jksn_blobstring *jksn_blobstring_free(jksn_blobstring *blobstring);
 const char *jksn_errcode(int errcode);
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

@@ -86,6 +86,14 @@ class JKSNValue:
         self.children = []
         self.hash = None
 
+    def output(self, fp, recursive=True):
+        fp.write(bytechr(self.control))
+        fp.write(self.data)
+        fp.write(self.buf)
+        if recursive:
+            for i in self.children:
+                JKSNValue.output(i, fp)
+
     def __bytes__(self, recursive=True):
         result = b''.join((bytechr(self.control), self.data, self.buf))
         if recursive:
@@ -117,18 +125,21 @@ class JKSNEncoder:
 
     def dumps(self, obj, header=True, check_circular=True):
         '''Dump an object into a buffer'''
-        result = self.dumpobj(obj, check_circular=check_circular).__bytes__()
+        result = self.dumpobj(obj, check_circular=check_circular)
+        result_len = result.__len__()
+        buf = io.BytesIO(b'\0' * (result_len + 3 if header else result_len))
         if header:
-            return b'jk!' + result
-        else:
-            return result
+            buf.write(b'jk!')
+        result.output(buf)
+        buf.seek(0)
+        return buf.read()
 
     def dump(self, obj, fp, header=True, check_circular=True):
         '''Dump an object into a file object'''
-        result = self.dumpobj(obj, check_circular=check_circular).__bytes__()
+        result = self.dumpobj(obj, check_circular=check_circular)
         if header:
             fp.write(b'jk!')
-        fp.write(result)
+        result.dump(fp)
 
     def dumpobj(self, obj, check_circular=True):
         try:

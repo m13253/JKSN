@@ -57,6 +57,10 @@ static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *ob
 static jksn_error_message_no jksn_dump_float(jksn_value **result, const jksn_t *object);
 static jksn_error_message_no jksn_dump_double(jksn_value **result, const jksn_t *object);
 static jksn_error_message_no jksn_dump_longdouble(jksn_value **result, const jksn_t *object);
+static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t *object, jksn_cache *cache);
+static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *object, jksn_cache *cache);
+static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *object, jksn_cache *cache);
+static jksn_error_message_no jksn_dump_object(jksn_value **result, const jksn_t *object, jksn_cache *cache);
 static jksn_error_message_no jksn_optimize(jksn_value *object, jksn_cache *cache);
 static size_t jksn_encode_int(char (*result)[10], uint64_t object, size_t size);
 
@@ -254,6 +258,25 @@ static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *
             retval = jksn_dump_longdouble(result, object);
         else
             retval = JKSN_ELONGDOUBLE;
+        break;
+    case JKSN_STRING:
+        retval = jksn_dump_string(result, object, cache);
+        break;
+    case JKSN_BLOB:
+        retval = jksn_dump_blob(result, object, cache);
+        break;
+    case JKSN_ARRAY:
+        retval = jksn_dump_array(result, object, cache);
+        break;
+    case JKSN_OBJECT:
+        retval = jksn_dump_object(result, object, cache);
+        break;
+    case JKSN_UNSPECIFIED:
+        *result = jksn_value_new(object, 0xa0, NULL, NULL);
+        retval = *result ? JKSN_EOK : JKSN_ENOMEM;
+        break;
+    default:
+        retval = JKSN_ETYPE;
     }
     return retval;
 }

@@ -127,10 +127,15 @@ class JKSNEncoder:
         '''Dump an object into a buffer'''
         result = self.dumpobj(obj, check_circular=check_circular)
         result_len = result.__len__()
-        buf = io.BytesIO(b'\0' * (result_len + 3 if header else result_len))
         if header:
+            buf = io.BytesIO(b'\0' * (result_len+3))
             buf.write(b'jk!')
-        result.output(buf)
+            result.output(buf)
+            assert buf.tell() == result_len+3
+        else:
+            buf = io.BytesIO(b'\0' * result_len)
+            result.output(buf)
+            assert buf.tell() == result_len
         buf.seek(0)
         return buf.read()
 
@@ -139,7 +144,7 @@ class JKSNEncoder:
         result = self.dumpobj(obj, check_circular=check_circular)
         if header:
             fp.write(b'jk!')
-        result.dump(fp)
+        result.write(fp)
 
     def dumpobj(self, obj, check_circular=True):
         try:

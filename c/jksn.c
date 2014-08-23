@@ -63,6 +63,8 @@ static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *
 static jksn_error_message_no jksn_dump_object(jksn_value **result, const jksn_t *object, jksn_cache *cache);
 static jksn_error_message_no jksn_optimize(jksn_value *object, jksn_cache *cache);
 static size_t jksn_encode_int(char result[], uint64_t object, size_t size);
+static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size);
+static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size);
 
 jksn_cache *jksn_cache_new(void) {
     return calloc(1, sizeof (struct jksn_cache));
@@ -496,6 +498,127 @@ static size_t jksn_encode_int(char result[], uint64_t number, size_t size) {
         assert(size == 1 || size == 2 || size == 4 || size == 0);
     }
     return size;
+}
+
+static int jksn_utf8_check_continuation(const char *utf8str, size_t length, size_t check_length) {
+    if(check_length < length) {
+        while(check_length--)
+            if((*++utf8str & 0xc0) != 0x80)
+                return 0;
+        return 1;
+    } else
+        return 0;
+}
+
+static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size) {
+    size_t reslen = 0;
+    while(utf8size) {
+        if((uint8_t) utf8str[0] < 0x80) {
+            if(utf16str)
+                utf16str[reslen] = utf8str[0];
+            reslen++;
+            utf8str++;
+            utf8size--;
+            continue;
+        } else if((uint8_t) utf8str[0] < 0xc0) {
+        } else if((uint8_t) utf8str[0] < 0xe0) {
+            if(jksn_utf8_check_continuation(utf8str, utf8size, 1)) {
+                uint32_t ucs4 = (utf8str[0] & 0x1f) << 6 | (utf8str[1] & 0x3f);
+                if(ucs4 >= 0x80) {
+                    if(utf16str)
+                        utf16str[reslen] = ucs4;
+                    reslen++;
+                    utf8str += 2;
+                    utf8size -= 2;
+                    continue;
+                }
+            }
+        } else if((uint8_t) utf8str[0] < 0xf0) {
+            if(jksn_utf8_check_continuation(utf8str, utf8size, 2)) {
+                uint32_t ucs4 = (utf8str[0] & 0xf) << 12 | (utf8str[1] & 0x3f) << 6 | (utf8str[2] & 0x3f);
+                if(ucs4 >= 0x800 && (ucs4 & 0xf800) != 0xd800) {
+                    if(utf16str)
+                        utf16str[reslen] = ucs4;
+                    reslen++;
+                    utf8str += 3;
+                    utf8size -= 3;
+                    continue;
+                }
+            }
+        } else if((uint8_t) utf8str[0] < 0xf8) {
+            if(jksn_utf8_check_continuation(utf8str, utf8size, 3)) {
+                uint32_t ucs4 = (utf8str[0] & 0x7) << 18 | (utf8str[1] & 0x3f) << 12 | (utf8str[2] & 0x3f) << 6 | (utf8str[3] & 0x3f);
+                if(ucs4 >= 0x10000 && ucs4 < 0x110000) {
+                    if(utf16str) {
+                        ucs4 -= 0x10000;
+                        utf16str[reslen] = ucs4 >> 10;
+                        utf16str[reslen+1] = ucs4 & 0x3ff;
+                    }
+                    reslen += 2;
+                    utf8str += 4;
+                    utf8size -= 4;
+                    continue;
+                }
+            }
+        }
+        if(utf16str)
+            utf16str[reslen] = 0xfffd;
+        reslen++;
+        utf8str++;
+        utf8size--;
+    }
+    return reslen;
+}
+
+static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size) {
+    size_t reslen = 0;
+    while(utf16size) {
+        if(utf16str[0] < 0x80) {
+            if(utf8str)
+                utf8str[reslen] = utf16str[0];
+            reslen++;
+            utf16str++;
+            utf16size--;
+        } else if(utf16str[0] < 0x800) {
+            if(utf8str) {
+                utf8str[reslen] = utf16str[0] >> 6 | 0xc0;
+                utf8str[reslen+1] = (utf16str[0] & 0x3f) | 0x80;
+            }
+            reslen += 2;
+            utf16str++;
+            utf16size--;
+        } else if((utf16str[0] & 0xf800) != 0xd800) {
+            if(utf8str) {
+                utf8str[reslen] = utf16str[0] >> 12 | 0xe0;
+                utf8str[reslen+1] = ((utf16str[0] >> 6) & 0x3f) | 0x80;
+                utf8str[reslen+2] = (utf16str[0] & 0x3f) | 0x80;
+            }
+            reslen += 3;
+            utf16str++;
+            utf16size--;
+        } else if(utf16size != 1 && (utf16str[0] & 0xfc00) == 0xd800 && (utf16str[1] & 0xfc00) == 0xdc00) {
+            uint32_t ucs4 = ((utf16str[0] & 0x3ff) << 10 | (utf16str[1] & 0x3ff)) + 0x10000;
+            if(utf8str) {
+                utf8str[reslen] = ucs4 >> 18 | 0xf0;
+                utf8str[reslen+1] = ((ucs4 >> 12) & 0x3f) | 0x80;
+                utf8str[reslen+2] = ((ucs4 >> 6) & 0x3f) | 0x80;
+                utf8str[reslen+3] = (ucs4 & 0x3f) | 0x80;
+            }
+            reslen += 4;
+            utf16str++;
+            utf16size--;
+        } else {
+            if(utf8str) {
+                utf8str[reslen] = 0xef;
+                utf8str[reslen+1] = 0xbf;
+                utf8str[reslen+2] = 0xbd;
+            }
+            reslen += 3;
+            utf16str++;
+            utf16size--;
+        }
+    }
+    return reslen;
 }
 
 const char *jksn_errcode(int errcode) {

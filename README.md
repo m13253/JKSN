@@ -52,7 +52,7 @@ An IEEE 754 float point number is followed after `0x2b` `0x2c` `0x2d`.
 The most significant bit, that is the IEEE 754 sign bit, is transferred first.
 
     0x20: NaN
-    0x2b: an IEEE 754 long double (128-bit) number is followed
+    0x2b: an IEEE 754 long double (80-bit, 10 bytes) number is followed
     0x2c: an IEEE 754 double (64-bit) number is followed
     0x2d: an IEEE 754 float (32-bit) number is followed
     0x2e: -Infinity

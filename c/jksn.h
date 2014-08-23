@@ -63,6 +63,10 @@ typedef struct jksn_cache jksn_cache;
 typedef void jksn_cache;
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 jksn_cache *jksn_cache_new(void);
 jksn_cache *jksn_cache_free(jksn_cache *cache);
 int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int header, jksn_cache *cache);
@@ -70,5 +74,9 @@ int jksn_parse(jksn_t **result, const jksn_blobstring *buffer, jksn_cache *cache
 jksn_t *jksn_free(jksn_t *object);
 jksn_blobstring *jksn_blobstring_free(jksn_blobstring *blobstring);
 const char *jksn_errcode(int errcode);
+
+#ifdef _cplusplus
+}
+#endif
 
 #endif

@@ -54,6 +54,9 @@ static size_t jksn_value_size(const jksn_value *object, int depth);
 static char *jksn_value_output(char *output, const jksn_value *object);
 static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache *cache);
 static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *object, jksn_cache *cache);
+static jksn_error_message_no jksn_dump_float(jksn_value **result, const jksn_t *object);
+static jksn_error_message_no jksn_dump_double(jksn_value **result, const jksn_t *object);
+static jksn_error_message_no jksn_dump_longdouble(jksn_value **result, const jksn_t *object);
 static jksn_error_message_no jksn_optimize(jksn_value *object, jksn_cache *cache);
 static size_t jksn_encode_int(char (*result)[10], uint64_t object, size_t size);
 
@@ -227,24 +230,32 @@ static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *
     switch(object->data_type) {
     case JKSN_UNDEFINED:
         *result = jksn_value_new(object, 0x00, NULL, NULL);
+        retval = *result ? JKSN_EOK : JKSN_ENOMEM;
         break;
     case JKSN_NULL:
         *result = jksn_value_new(object, 0x01, NULL, NULL);
+        retval = *result ? JKSN_EOK : JKSN_ENOMEM;
         break;
     case JKSN_BOOL:
         *result = jksn_value_new(object, object->data_bool ? 0x03 : 0x02, NULL, NULL);
+        retval = *result ? JKSN_EOK : JKSN_ENOMEM;
         break;
     case JKSN_INT:
         retval = jksn_dump_int(result, object, cache);
         break;
-    // TODO
+    case JKSN_FLOAT:
+        retval = jksn_dump_float(result, object);
+        break;
+    case JKSN_DOUBLE:
+        retval = jksn_dump_double(result, object);
+        break;
+    case JKSN_LONG_DOUBLE:
+        if(sizeof (long double) == 16)
+            retval = jksn_dump_longdouble(result, object);
+        else
+            retval = JKSN_ELONGDOUBLE;
     }
-    if(retval != JKSN_EOK)
-        return retval;
-    else if(!*result)
-        return JKSN_ENOMEM;
-    else
-        return JKSN_EOK;
+    return retval;
 }
 
 static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *object, jksn_cache *cache) {

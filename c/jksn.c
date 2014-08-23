@@ -51,8 +51,9 @@ static jksn_value *jksn_value_new(const jksn_t *origin, uint8_t control, const j
 static jksn_value *jksn_value_free(jksn_value *object);
 static size_t jksn_value_size(const jksn_value *object, int depth);
 static char *jksn_value_output(char *output, const jksn_value *object);
-static int jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache *cache);
-static int jksn_optimize(jksn_value *object, jksn_cache *cache);
+static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache *cache);
+static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *object, jksn_cache *cache);
+static jksn_error_message_no jksn_optimize(jksn_value *object, jksn_cache *cache);
 
 jksn_cache *jksn_cache_new(void) {
     return calloc(1, sizeof (struct jksn_cache));
@@ -268,7 +269,7 @@ int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int heade
     }
 }
 
-static int jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
     jksn_error_message_no retval = JKSN_EOK;
     *result = NULL;
     switch(object->data_type) {
@@ -281,13 +282,19 @@ static int jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache
     case JKSN_BOOL:
         *result = jksn_value_new(object, object->data_bool ? 0x03 : 0x02, NULL, NULL);
         break;
+    case JKSN_INT:
+        retval = jksn_dump_int(result, object, cache);
+        break;
+    // TODO
     }
-    if(!result)
-        return JKSN_ENOMEM;
     return retval;
 }
 
-static int jksn_optimize(jksn_value *result, jksn_cache *cache) {
+static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+    // TODO
+}
+
+static jksn_error_message_no jksn_optimize(jksn_value *result, jksn_cache *cache) {
     return JKSN_EOK;
 }
 

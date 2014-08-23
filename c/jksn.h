@@ -30,7 +30,7 @@ typedef struct {
 } jksn_object;
 
 typedef struct jksn_t {
-    enum {
+    enum jksn_data_type {
         JKSN_UNDEFINED,
         JKSN_NULL,
         JKSN_BOOL,

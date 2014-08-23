@@ -36,9 +36,21 @@ function JKSNEncoder() {
             "data": data || "",
             "buf": buf || "",
             "children": [],
+            "output": function (buf, offset, recursive) {
+                buf[offset++] = this.control;
+                for(var i = 0; i < this.data.length; i++)
+                    buf[offset++] = this.data.charCodeAt(i);
+                for(var i = 0; i < this.buf.length; i++)
+                    buf[offset++] = this.buf.charCodeAt(i);
+                if(recursive !== false)
+                    for(var i = 0; i < this.children.length; i++)
+                        offset = this.children[i].output(buf, offset);
+                return offset;
+            },
             "toString": function (recursive) {
                 var result = [String.fromCharCode(this.control), this.data, this.buf];
-                result.push.apply(result, this.children);
+                if(recursive !== false)
+                    result.push.apply(result, this.children);
                 return result.join("");
             },
             "getSize": function (depth) {
@@ -314,19 +326,23 @@ function JKSNEncoder() {
     }
     return {
         "stringifyToArrayBuffer": function (obj, header) {
-            var str = this.stringifyToString(obj, header);
-            var buf = new ArrayBuffer(str.length);
+            var result = dumpToObject(obj);
+            var result_size = result.getSize();
+            var buf = new ArrayBuffer(header !== false ? result_size + 3 : result_size);
             var bufview = new Uint8Array(buf);
-            for(var i = 0; i < str.length; i++)
-                bufview[i] = str.charCodeAt(i);
+            if(header !== false) {
+                bufview[0] = 106;
+                bufview[1] = 107;
+                bufview[2] = 33;
+                if(result.output(bufview, 3) != result_size+3)
+                    throw "Assersion failed: result.output(bufview, 3) != result.getSize()+3"
+            } else
+                if(result.output(bufview, 0) != result_size)
+                    throw "Assersion failed: result.output(bufview, 0) != result.getSize()"
             return buf;
         },
         "stringifyToString": function (obj, header) {
-            var result = dumpToObject(obj);
-            if(header || header === undefined)
-                return "jk!"+result;
-            else
-                return result.toString();
+            return String.fromCharCode.apply(null, new Uint8Array(this.stringifyToArrayBuffer(obj, header)));
         }
     };
 }

@@ -556,8 +556,8 @@ static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t
                 if(ucs4 >= 0x10000 && ucs4 < 0x110000) {
                     if(utf16str) {
                         ucs4 -= 0x10000;
-                        utf16str[reslen] = ucs4 >> 10;
-                        utf16str[reslen+1] = ucs4 & 0x3ff;
+                        utf16str[reslen] = ucs4 >> 10 | 0xd800;
+                        utf16str[reslen+1] = (ucs4 & 0x3ff) | 0xdc00;
                     }
                     reslen += 2;
                     utf8str += 4;

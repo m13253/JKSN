@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #define _JKSN_PRIVATE
@@ -54,6 +55,7 @@ static char *jksn_value_output(char *output, const jksn_value *object);
 static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache *cache);
 static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *object, jksn_cache *cache);
 static jksn_error_message_no jksn_optimize(jksn_value *object, jksn_cache *cache);
+static size_t jksn_encode_int(char (*result)[10], uint64_t object, size_t size);
 
 jksn_cache *jksn_cache_new(void) {
     return calloc(1, sizeof (struct jksn_cache));
@@ -287,15 +289,78 @@ static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *
         break;
     // TODO
     }
-    return retval;
+    if(retval != JKSN_EOK)
+        return retval;
+    else if(!*result)
+        return JKSN_ENOMEM;
+    else
+        return JKSN_EOK;
 }
 
 static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
-    // TODO
+    jksn_blobstring buf;
+    char bufbuf[10];
+    if(object->data_int >= 0 && object->data_int <= 0xa)
+        *result = jksn_value_new(object, 0x10 | object->data_int, NULL, NULL);
+    else if(object->data_int >= -0x80 && object->data_int <= 0x7f) {
+        buf.size = jksn_encode_int(&bufbuf, object->data_int, 1);
+        buf.buf = bufbuf;
+        *result = jksn_value_new(object, 0x1d, &buf, NULL);
+    } else if(object->data_int >= -0x8000 && object->data_int <= 0x7fff) {
+        buf.size = jksn_encode_int(&bufbuf, object->data_int, 2);
+        buf.buf = bufbuf;
+        *result = jksn_value_new(object, 0x1c, &buf, NULL);
+    } else if((object->data_int >= -0x80000000L && object->data_int <= -0x200000L) || (object->data_int >= 0x200000L && object->data_int <= 0x7fffffffL)) {
+        buf.size = jksn_encode_int(&bufbuf, object->data_int, 4);
+        buf.buf = bufbuf;
+        *result = jksn_value_new(object, 0x1b, &buf, NULL);
+    } else if(object->data_int >= 0) {
+        buf.size = jksn_encode_int(&bufbuf, object->data_int, 0);
+        buf.buf = bufbuf;
+        *result = jksn_value_new(object, 0x1e, &buf, NULL);
+    } else {
+        buf.size = jksn_encode_int(&bufbuf, -object->data_int, 0);
+        buf.buf = bufbuf;
+        *result = jksn_value_new(object, 0x1f, &buf, NULL);
+    }
+    return *result ? JKSN_EOK : JKSN_ENOMEM;
 }
 
 static jksn_error_message_no jksn_optimize(jksn_value *result, jksn_cache *cache) {
     return JKSN_EOK;
+}
+
+static size_t jksn_encode_int(char (*result)[10], uint64_t number, size_t size) {
+    switch(size) {
+    case 1:
+        (*result)[0] = (char) (uint8_t) number;
+        break;
+    case 2:
+        (*result)[0] = (char) (uint8_t) (number >> 8);
+        (*result)[1] = (char) (uint8_t) number;
+        break;
+    case 4:
+        (*result)[0] = (char) (uint8_t) (number >> 24);
+        (*result)[1] = (char) (uint8_t) (number >> 16);
+        (*result)[2] = (char) (uint8_t) (number >> 8);
+        (*result)[3] = (char) (uint8_t) number;
+        break;
+    case 0:
+        assert(number >= 0);
+        (*result)[(size = 9)] = (char) (((uint8_t) number) & 0x7f);
+        number >>= 7;
+        while(number != 0) {
+            (*result)[--size] = (char) (((uint8_t) number) | 0x80);
+            number >>= 7;
+        }
+        assert((*result) <= (*result)+size);
+        memmove((*result), (*result)+size, 10-size);
+        size = 10-size;
+        break;
+    default:
+        assert(size == 1 || size == 2 || size == 4 || size == 0);
+    }
+    return size;
 }
 
 const char *jksn_errcode(int errcode) {

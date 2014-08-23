@@ -81,56 +81,6 @@ jksn_cache *jksn_cache_free(jksn_cache *cache) {
     return NULL;
 }
 
-jksn_utf8string *jksn_utf8string_new(const char *utf8string) {
-    jksn_utf8string *result = malloc(sizeof (jksn_utf8string));
-    if(result) {
-        if(utf8string) {
-            result->size = strlen(utf8string);
-            result->str = malloc(result->size+1);
-            if(result->str)
-                memcpy(result->str, utf8string, result->size+1);
-            else {
-                free(result);
-                result = NULL;
-            }
-        } else {
-            result->size = 0;
-            result->str = NULL;
-        }
-    }
-    return result;
-}
-
-jksn_utf8string *jksn_utf8string_free(jksn_blobstring *utf8string) {
-    if(utf8string) {
-        utf8string->size = 0;
-        free(utf8string->buf);
-        utf8string->buf = NULL;
-        free(utf8string);
-    }
-    return NULL;
-}
-
-jksn_blobstring *jksn_blobstring_new(const char *blobstring, size_t size) {
-    jksn_blobstring *result = malloc(sizeof (jksn_blobstring));
-    if(result) {
-        if(blobstring) {
-            result->buf = malloc(size);
-            if(result->buf) {
-                memcpy(result->buf, blobstring, size);
-                result->size = size;
-            } else {
-                free(result);
-                result = NULL;
-            }
-        } else {
-            result->size = 0;
-            result->buf = NULL;
-        }
-    }
-    return result;
-}
-
 jksn_blobstring *jksn_blobstring_free(jksn_blobstring *blobstring) {
     if(blobstring) {
         blobstring->size = 0;

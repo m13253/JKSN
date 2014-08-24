@@ -509,7 +509,10 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
             *result = jksn_value_new(object, 0x3f, &data, &buf);
         }
     } else {
-        jksn_blobstring buf = {object->data_string.size, object->data_string.str};
+        jksn_blobstring buf = {object->data_string.size, malloc(object->data_string.size)};
+        if(!buf.buf)
+            return JKSN_ENOMEM;
+        memcpy(buf.buf, object->data_string.str, object->data_string.size);
         if(buf.size <= 0xc)
             *result = jksn_value_new(object, 0x40 | buf.size, NULL, &buf);
         else if(buf.size <= 0xff) {
@@ -536,6 +539,10 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
 }
 
 static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+    jksn_blobstring buf = {object->data_blob.size, malloc(object->data_blob.size)};
+    if(!buf.buf)
+        return JKSN_ENOMEM;
+    memcpy(buf.buf, object->data_blob.buf, object->data_blob.size);
     if(object->data_blob.size <= 0xb)
         *result = jksn_value_new(object, 0x50 | object->data_blob.size, NULL, &object->data_blob);
     else if(object->data_blob.size <= 0xff) {

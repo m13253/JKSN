@@ -194,7 +194,7 @@ static char *jksn_value_output(char output[], const jksn_value *object) {
             memcpy(output, object->data.buf, object->data.size);
             output += object->data.size;
         }
-        if(object->data.buf != 0) {
+        if(object->buf.size != 0) {
             memcpy(output, object->buf.buf, object->buf.size);
             output += object->buf.size;
         }
@@ -473,11 +473,12 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
     size_t utf16size = jksn_utf8_to_utf16(NULL, object->data_string.str, object->data_string.size, 1);
     if(utf16size != (size_t) (ptrdiff_t) -1 && utf16size*2 < object->data_string.size) {
         uint16_t *utf16str = malloc(utf16size*2);
-        jksn_blobstring buf = {utf16size*2, (char *) utf16str};
+        jksn_blobstring buf = {0, (char *) utf16str};
         size_t i;
         if(!utf16str)
             return JKSN_ENOMEM;
-        assert(jksn_utf8_to_utf16(utf16str, object->data_string.str, object->data_string.size, 1) == utf16size);
+        buf.size = jksn_utf8_to_utf16(utf16str, object->data_string.str, object->data_string.size, 1) * 2;
+        assert(buf.size == utf16size * 2);
         for(i = 0; i < utf16size; i++)
             utf16str[i] = jksn_htons(utf16str[i]);
         if(utf16size <= 0xb)

@@ -536,7 +536,28 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
 }
 
 static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
-    return JKSN_ETYPE;
+    if(object->data_blob.size <= 0xc)
+        *result = jksn_value_new(object, 0x40 | object->data_blob.size, NULL, &object->data_blob);
+    else if(object->data_blob.size <= 0xff) {
+        jksn_blobstring data = {1, malloc(1)};
+        if(!data.buf)
+            return JKSN_ENOMEM;
+        jksn_encode_int(data.buf, object->data_blob.size, 1);
+        *result = jksn_value_new(object, 0x4e, &data, &object->data_blob);
+    } else if(object->data_blob.size <= 0xffff) {
+        jksn_blobstring data = {2, malloc(2)};
+        if(!data.buf)
+            return JKSN_ENOMEM;
+        jksn_encode_int(data.buf, object->data_blob.size, 2);
+        *result = jksn_value_new(object, 0x4d, &data, &object->data_blob);
+    } else {
+        jksn_blobstring data = {0, malloc(10)};
+        if(!data.buf)
+            return JKSN_ENOMEM;
+        data.size = jksn_encode_int(data.buf, object->data_blob.size, 0);
+        *result = jksn_value_new(object, 0x4f, &data, &object->data_blob);
+    }
+    return *result ? JKSN_EOK : JKSN_ENOMEM;
 }
 
 static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *object, jksn_cache *cache) {

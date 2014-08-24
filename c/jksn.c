@@ -66,6 +66,7 @@ static jksn_error_message_no jksn_optimize(jksn_value *object, jksn_cache *cache
 static size_t jksn_encode_int(char result[], uint64_t object, size_t size);
 static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size, int strict);
 static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size);
+static uint16_t jksn_htons(uint16_t n);
 
 jksn_cache *jksn_cache_new(void) {
     return calloc(1, sizeof (struct jksn_cache));
@@ -292,36 +293,40 @@ static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *
 }
 
 static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
-    jksn_blobstring buf;
     cache->lastint = object->data_int;
     if(object->data_int >= 0 && object->data_int <= 0xa)
         *result = jksn_value_new(object, 0x10 | object->data_int, NULL, NULL);
     else if(object->data_int >= -0x80 && object->data_int <= 0x7f) {
-        if(!(buf.buf = malloc(1)))
+        jksn_blobstring data = {1, malloc(1)};
+        if(!data.buf)
             return JKSN_ENOMEM;
-        buf.size = jksn_encode_int(buf.buf, (uint64_t) object->data_int, 1);
-        *result = jksn_value_new(object, 0x1d, &buf, NULL);
+        jksn_encode_int(data.buf, (uint64_t) object->data_int, 1);
+        *result = jksn_value_new(object, 0x1d, &data, NULL);
     } else if(object->data_int >= -0x8000 && object->data_int <= 0x7fff) {
-        if(!(buf.buf = malloc(2)))
+        jksn_blobstring data = {2, malloc(2)};
+        if(!data.buf)
             return JKSN_ENOMEM;
-        buf.size = jksn_encode_int(buf.buf, (uint64_t) object->data_int, 2);
-        *result = jksn_value_new(object, 0x1c, &buf, NULL);
+        jksn_encode_int(data.buf, (uint64_t) object->data_int, 2);
+        *result = jksn_value_new(object, 0x1c, &data, NULL);
     } else if((object->data_int >= -0x80000000L && object->data_int <= -0x200000L) ||
               (object->data_int >= 0x200000L && object->data_int <= 0x7fffffffL)) {
-        if(!(buf.buf = malloc(4)))
+        jksn_blobstring data = {4, malloc(4)};
+        if(!data.buf)
             return JKSN_ENOMEM;
-        buf.size = jksn_encode_int(buf.buf, (uint64_t) object->data_int, 4);
-        *result = jksn_value_new(object, 0x1b, &buf, NULL);
+        jksn_encode_int(data.buf, (uint64_t) object->data_int, 4);
+        *result = jksn_value_new(object, 0x1b, &data, NULL);
     } else if(object->data_int >= 0) {
-        if(!(buf.buf = malloc(10)))
+        jksn_blobstring data = {0, malloc(10)};
+        if(!data.buf)
             return JKSN_ENOMEM;
-        buf.size = jksn_encode_int(buf.buf, (uint64_t) object->data_int, 0);
-        *result = jksn_value_new(object, 0x1e, &buf, NULL);
+        data.size = jksn_encode_int(data.buf, (uint64_t) object->data_int, 0);
+        *result = jksn_value_new(object, 0x1e, &data, NULL);
     } else {
-        if(!(buf.buf = malloc(10)))
+        jksn_blobstring data = {0, malloc(10)};
+        if(!data.buf)
             return JKSN_ENOMEM;
-        buf.size = jksn_encode_int(buf.buf, (uint64_t) -object->data_int, 0);
-        *result = jksn_value_new(object, 0x1f, &buf, NULL);
+        data.size = jksn_encode_int(data.buf, (uint64_t) -object->data_int, 0);
+        *result = jksn_value_new(object, 0x1f, &data, NULL);
     }
     return *result ? JKSN_EOK : JKSN_ENOMEM;
 }
@@ -334,16 +339,15 @@ static jksn_error_message_no jksn_dump_float(jksn_value **result, const jksn_t *
         *result = jksn_value_new(object, object->data_float >= 0.0f ? 0x2f : 0x2e, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else {
-        jksn_blobstring buf;
         union {
-            float buffloat;
-            uint32_t bufint;
+            float data_float;
+            uint32_t data_int;
         } conv = {object->data_float};
+        jksn_blobstring data = {4, malloc(4)};
         assert(sizeof (float) == 4);
-        buf.buf = malloc(4);
-        if(buf.buf) {
-            buf.size = jksn_encode_int(buf.buf, conv.bufint, 4);
-            *result = jksn_value_new(object, 0x2d, &buf, NULL);
+        if(data.buf) {
+            jksn_encode_int(data.buf, conv.data_int, 4);
+            *result = jksn_value_new(object, 0x2d, &data, NULL);
             return *result ? JKSN_EOK : JKSN_ENOMEM;
         } else
             return JKSN_ENOMEM;
@@ -358,26 +362,24 @@ static jksn_error_message_no jksn_dump_double(jksn_value **result, const jksn_t 
         *result = jksn_value_new(object, object->data_double >= 0.0 ? 0x2f : 0x2e, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else {
-        jksn_blobstring buf;
         union {
-            uint32_t bufint[2];
-            double bufdouble;
+            uint32_t data_int[2];
+            double data_double;
             uint8_t endiantest;
         } conv = {{1, 0}};
+        jksn_blobstring data = {8, malloc(8)};
         assert(sizeof (double) == 8);
-        buf.buf = malloc(8);
-        if(buf.buf) {
+        if(data.buf) {
             int little_endian = (conv.endiantest == 1);
-            conv.bufdouble = object->data_double;
-            buf.size = 8;
+            conv.data_double = object->data_double;
             if(little_endian) {
-                jksn_encode_int(buf.buf, conv.bufint[1], 4);
-                jksn_encode_int(buf.buf+4, conv.bufint[0], 4);
+                jksn_encode_int(data.buf, conv.data_int[1], 4);
+                jksn_encode_int(data.buf+4, conv.data_int[0], 4);
             } else {
-                jksn_encode_int(buf.buf, conv.bufint[0], 4);
-                jksn_encode_int(buf.buf+4, conv.bufint[1], 4);
+                jksn_encode_int(data.buf, conv.data_int[0], 4);
+                jksn_encode_int(data.buf+4, conv.data_int[1], 4);
             }
-            *result = jksn_value_new(object, 0x2c, &buf, NULL);
+            *result = jksn_value_new(object, 0x2c, &data, NULL);
             return *result ? JKSN_EOK : JKSN_ENOMEM;
         } else
             return JKSN_ENOMEM;
@@ -392,87 +394,144 @@ static jksn_error_message_no jksn_dump_longdouble(jksn_value **result, const jks
         *result = jksn_value_new(object, object->data_long_double >= 0.0L ? 0x2f : 0x2e, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else if(sizeof (long double) == 12) {
-        jksn_blobstring buf;
         union {
-            uint8_t bufint[12];
-            long double buflongdouble;
+            uint8_t data_int[12];
+            long double data_long_double;
             uint8_t endiantest;
         } conv = {{1, 0}};
+        jksn_blobstring data = {10, malloc(10)};
         int little_endian = (conv.endiantest == 1);
-        conv.buflongdouble = object->data_long_double;
-        buf.size = 10;
-        buf.buf = malloc(10);
-        if(!buf.buf)
+        if(!data.buf)
             return JKSN_ENOMEM;
+        conv.data_long_double = object->data_long_double;
         if(little_endian) {
-            buf.buf[0] = (char) conv.bufint[9];
-            buf.buf[1] = (char) conv.bufint[8];
-            buf.buf[2] = (char) conv.bufint[7];
-            buf.buf[3] = (char) conv.bufint[6];
-            buf.buf[4] = (char) conv.bufint[5];
-            buf.buf[5] = (char) conv.bufint[4];
-            buf.buf[6] = (char) conv.bufint[3];
-            buf.buf[7] = (char) conv.bufint[2];
-            buf.buf[8] = (char) conv.bufint[1];
-            buf.buf[9] = (char) conv.bufint[0];
+            data.buf[0] = (char) conv.data_int[9];
+            data.buf[1] = (char) conv.data_int[8];
+            data.buf[2] = (char) conv.data_int[7];
+            data.buf[3] = (char) conv.data_int[6];
+            data.buf[4] = (char) conv.data_int[5];
+            data.buf[5] = (char) conv.data_int[4];
+            data.buf[6] = (char) conv.data_int[3];
+            data.buf[7] = (char) conv.data_int[2];
+            data.buf[8] = (char) conv.data_int[1];
+            data.buf[9] = (char) conv.data_int[0];
         } else {
-            buf.buf[0] = (char) conv.bufint[2];
-            buf.buf[1] = (char) conv.bufint[3];
-            buf.buf[2] = (char) conv.bufint[4];
-            buf.buf[3] = (char) conv.bufint[5];
-            buf.buf[4] = (char) conv.bufint[6];
-            buf.buf[5] = (char) conv.bufint[7];
-            buf.buf[6] = (char) conv.bufint[8];
-            buf.buf[7] = (char) conv.bufint[9];
-            buf.buf[8] = (char) conv.bufint[10];
-            buf.buf[9] = (char) conv.bufint[11];
+            data.buf[0] = (char) conv.data_int[2];
+            data.buf[1] = (char) conv.data_int[3];
+            data.buf[2] = (char) conv.data_int[4];
+            data.buf[3] = (char) conv.data_int[5];
+            data.buf[4] = (char) conv.data_int[6];
+            data.buf[5] = (char) conv.data_int[7];
+            data.buf[6] = (char) conv.data_int[8];
+            data.buf[7] = (char) conv.data_int[9];
+            data.buf[8] = (char) conv.data_int[10];
+            data.buf[9] = (char) conv.data_int[11];
         }
-        *result = jksn_value_new(object, 0x2b, &buf, NULL);
+        *result = jksn_value_new(object, 0x2b, &data, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else if(sizeof (long double) == 16) {
-        jksn_blobstring buf;
         union {
-            uint8_t bufint[16];
-            long double buflongdouble;
+            uint8_t data_int[16];
+            long double data_long_double;
             uint8_t endiantest;
         } conv = {{1, 0}};
+        jksn_blobstring data = {10, malloc(10)};
         int little_endian = (conv.endiantest == 1);
-        conv.buflongdouble = object->data_long_double;
-        buf.size = 10;
-        buf.buf = malloc(10);
-        if(!buf.buf)
+        if(!data.buf)
             return JKSN_ENOMEM;
+        conv.data_long_double = object->data_long_double;
         if(little_endian) {
-            buf.buf[0] = (char) conv.bufint[9];
-            buf.buf[1] = (char) conv.bufint[8];
-            buf.buf[2] = (char) conv.bufint[7];
-            buf.buf[3] = (char) conv.bufint[6];
-            buf.buf[4] = (char) conv.bufint[5];
-            buf.buf[5] = (char) conv.bufint[4];
-            buf.buf[6] = (char) conv.bufint[3];
-            buf.buf[7] = (char) conv.bufint[2];
-            buf.buf[8] = (char) conv.bufint[1];
-            buf.buf[9] = (char) conv.bufint[0];
+            data.buf[0] = (char) conv.data_int[9];
+            data.buf[1] = (char) conv.data_int[8];
+            data.buf[2] = (char) conv.data_int[7];
+            data.buf[3] = (char) conv.data_int[6];
+            data.buf[4] = (char) conv.data_int[5];
+            data.buf[5] = (char) conv.data_int[4];
+            data.buf[6] = (char) conv.data_int[3];
+            data.buf[7] = (char) conv.data_int[2];
+            data.buf[8] = (char) conv.data_int[1];
+            data.buf[9] = (char) conv.data_int[0];
         } else {
-            buf.buf[0] = (char) conv.bufint[6];
-            buf.buf[1] = (char) conv.bufint[7];
-            buf.buf[2] = (char) conv.bufint[8];
-            buf.buf[3] = (char) conv.bufint[9];
-            buf.buf[4] = (char) conv.bufint[10];
-            buf.buf[5] = (char) conv.bufint[11];
-            buf.buf[6] = (char) conv.bufint[12];
-            buf.buf[7] = (char) conv.bufint[13];
-            buf.buf[8] = (char) conv.bufint[14];
-            buf.buf[9] = (char) conv.bufint[15];
+            data.buf[0] = (char) conv.data_int[6];
+            data.buf[1] = (char) conv.data_int[7];
+            data.buf[2] = (char) conv.data_int[8];
+            data.buf[3] = (char) conv.data_int[9];
+            data.buf[4] = (char) conv.data_int[10];
+            data.buf[5] = (char) conv.data_int[11];
+            data.buf[6] = (char) conv.data_int[12];
+            data.buf[7] = (char) conv.data_int[13];
+            data.buf[8] = (char) conv.data_int[14];
+            data.buf[9] = (char) conv.data_int[15];
         }
-        *result = jksn_value_new(object, 0x2b, &buf, NULL);
+        *result = jksn_value_new(object, 0x2b, &data, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else
         return JKSN_ELONGDOUBLE;
 }
 
 static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
-    return JKSN_ETYPE;
+    size_t utf16size = jksn_utf8_to_utf16(NULL, object->data_string.str, object->data_string.size, 1);
+    if(utf16size != (size_t) (ptrdiff_t) -1 && utf16size*2 < object->data_string.size) {
+        uint16_t *utf16str = malloc(utf16size*2);
+        jksn_blobstring buf = {utf16size*2, (char *) utf16str};
+        size_t i;
+        if(!utf16str)
+            return JKSN_ENOMEM;
+        assert(jksn_utf8_to_utf16(utf16str, object->data_string.str, object->data_string.size, 1) == utf16size);
+        for(i = 0; i < utf16size; i++)
+            utf16str[i] = jksn_htons(utf16str[i]);
+        if(utf16size <= 0xb)
+            *result = jksn_value_new(object, 0x30 | utf16size, NULL, &buf);
+        else if(utf16size <= 0xff) {
+            jksn_blobstring data = {1, malloc(1)};
+            if(!data.buf) {
+                free(utf16str);
+                return JKSN_ENOMEM;
+            }
+            jksn_encode_int(data.buf, utf16size, 1);
+            *result = jksn_value_new(object, 0x3e, &data, &buf);
+        } else if(utf16size <= 0xffff) {
+            jksn_blobstring data = {2, malloc(2)};
+            if(!data.buf) {
+                free(utf16str);
+                return JKSN_ENOMEM;
+            }
+            jksn_encode_int(data.buf, utf16size, 2);
+            *result = jksn_value_new(object, 0x3d, &data, &buf);
+        } else {
+            jksn_blobstring data = {0, malloc(10)};
+            if(!data.buf) {
+                free(utf16str);
+                return JKSN_ENOMEM;
+            }
+            data.size = jksn_encode_int(data.buf, utf16size, 0);
+            *result = jksn_value_new(object, 0x3f, &data, &buf);
+        }
+    } else {
+        jksn_blobstring buf = {object->data_string.size, object->data_string.str};
+        if(buf.size <= 0xc)
+            *result = jksn_value_new(object, 0x40 | buf.size, NULL, &buf);
+        else if(buf.size <= 0xff) {
+            jksn_blobstring data = {1, malloc(1)};
+            if(!data.buf)
+                return JKSN_ENOMEM;
+            jksn_encode_int(data.buf, buf.size, 1);
+            *result = jksn_value_new(object, 0x4e, &data, &buf);
+        } else if(buf.size <= 0xffff) {
+            jksn_blobstring data = {2, malloc(2)};
+            if(!data.buf)
+                return JKSN_ENOMEM;
+            jksn_encode_int(data.buf, buf.size, 2);
+            *result = jksn_value_new(object, 0x4d, &data, &buf);
+        } else {
+            jksn_blobstring data = {0, malloc(10)};
+            if(!data.buf)
+                return JKSN_ENOMEM;
+            data.size = jksn_encode_int(data.buf, buf.size, 0);
+            *result = jksn_value_new(object, 0x4f, &data, &buf);
+        }
+    }
+    return *result ? JKSN_EOK : JKSN_ENOMEM;
 }
 
 static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
@@ -646,6 +705,17 @@ static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t
         }
     }
     return reslen;
+}
+
+static uint16_t jksn_htons(uint16_t n) {
+    union {
+        uint16_t word;
+        uint8_t byte;
+    } endiantest = {1};
+    if(endiantest.byte == 1)
+        return (n << 8) | (n >> 8);
+    else
+        return n;
 }
 
 const char *jksn_errcode(int errcode) {

@@ -63,7 +63,7 @@ static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *
 static jksn_error_message_no jksn_dump_object(jksn_value **result, const jksn_t *object, jksn_cache *cache);
 static jksn_error_message_no jksn_optimize(jksn_value *object, jksn_cache *cache);
 static size_t jksn_encode_int(char result[], uint64_t object, size_t size);
-static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size);
+static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size, int strict);
 static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size);
 
 jksn_cache *jksn_cache_new(void) {
@@ -510,7 +510,7 @@ static int jksn_utf8_check_continuation(const char *utf8str, size_t length, size
         return 0;
 }
 
-static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size) {
+static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size, int strict) {
     size_t reslen = 0;
     while(utf8size) {
         if((uint8_t) utf8str[0] < 0x80) {
@@ -521,11 +521,6 @@ static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t
             utf8size--;
             continue;
         } else if((uint8_t) utf8str[0] < 0xc0) {
-            if(utf16str)
-                utf16str[reslen] = 0xfffd;
-            reslen++;
-            utf8str++;
-            utf8size--;
         } else if((uint8_t) utf8str[0] < 0xe0) {
             if(jksn_utf8_check_continuation(utf8str, utf8size, 1)) {
                 uint32_t ucs4 = (utf8str[0] & 0x1f) << 6 | (utf8str[1] & 0x3f);
@@ -565,7 +560,10 @@ static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t
                     continue;
                 }
             }
-        } else {
+        }
+        if(strict)
+            return (size_t) (ptrdiff_t) -1;
+        else {
             if(utf16str)
                 utf16str[reslen] = 0xfffd;
             reslen++;

@@ -28,8 +28,8 @@ int main(int argc, char *argv[]) {
             for(len = 0; buf[len]; len++) {
             }
             fprintf(stderr, "Input UTF-8 size: %zu\n", len);
-            uint16_t *out = malloc(jksn_utf8_to_utf16(NULL, buf, len) * sizeof (uint16_t));
-            fwrite(out, sizeof (uint16_t), jksn_utf8_to_utf16(out, buf, len), stdout);
+            uint16_t *out = malloc(jksn_utf8_to_utf16(NULL, buf, len, 0) * sizeof (uint16_t));
+            fwrite(out, sizeof (uint16_t), jksn_utf8_to_utf16(out, buf, len, 0), stdout);
             free(out);
         }
     }

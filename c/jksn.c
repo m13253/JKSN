@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #define _JKSN_PRIVATE
@@ -326,49 +327,71 @@ static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *ob
 }
 
 static jksn_error_message_no jksn_dump_float(jksn_value **result, const jksn_t *object) {
-    jksn_blobstring buf;
-    union {
-        float buffloat;
-        uint32_t bufint;
-    } conv = {object->data_float};
-    assert(sizeof (float) == 4);
-    buf.buf = malloc(4);
-    if(buf.buf) {
-        buf.size = jksn_encode_int(buf.buf, conv.bufint, 4);
-        *result = jksn_value_new(object, 0x2d, &buf, NULL);
+    if(isnan(object->data_float)) {
+        *result = jksn_value_new(object, 0x20, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
-    } else
-        return JKSN_ENOMEM;
+    } else if(isinf(object->data_float)) {
+        *result = jksn_value_new(object, object->data_float >= 0.0f ? 0x2f : 0x2e, NULL, NULL);
+        return *result ? JKSN_EOK : JKSN_ENOMEM;
+    } else {
+        jksn_blobstring buf;
+        union {
+            float buffloat;
+            uint32_t bufint;
+        } conv = {object->data_float};
+        assert(sizeof (float) == 4);
+        buf.buf = malloc(4);
+        if(buf.buf) {
+            buf.size = jksn_encode_int(buf.buf, conv.bufint, 4);
+            *result = jksn_value_new(object, 0x2d, &buf, NULL);
+            return *result ? JKSN_EOK : JKSN_ENOMEM;
+        } else
+            return JKSN_ENOMEM;
+    }
 }
 
 static jksn_error_message_no jksn_dump_double(jksn_value **result, const jksn_t *object) {
-    jksn_blobstring buf;
-    union {
-        uint32_t bufint[2];
-        double bufdouble;
-        uint8_t endiantest;
-    } conv = {{1, 0}};
-    assert(sizeof (double) == 8);
-    buf.buf = malloc(8);
-    if(buf.buf) {
-        int little_endian = (conv.endiantest == 1);
-        conv.bufdouble = object->data_double;
-        buf.size = 8;
-        if(little_endian) {
-            jksn_encode_int(buf.buf, conv.bufint[1], 4);
-            jksn_encode_int(buf.buf+4, conv.bufint[0], 4);
-        } else {
-            jksn_encode_int(buf.buf, conv.bufint[0], 4);
-            jksn_encode_int(buf.buf+4, conv.bufint[1], 4);
-        }
-        *result = jksn_value_new(object, 0x2c, &buf, NULL);
+    if(isnan(object->data_double)) {
+        *result = jksn_value_new(object, 0x20, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
-    } else
-        return JKSN_ENOMEM;
+    } else if(isinf(object->data_double)) {
+        *result = jksn_value_new(object, object->data_double >= 0.0 ? 0x2f : 0x2e, NULL, NULL);
+        return *result ? JKSN_EOK : JKSN_ENOMEM;
+    } else {
+        jksn_blobstring buf;
+        union {
+            uint32_t bufint[2];
+            double bufdouble;
+            uint8_t endiantest;
+        } conv = {{1, 0}};
+        assert(sizeof (double) == 8);
+        buf.buf = malloc(8);
+        if(buf.buf) {
+            int little_endian = (conv.endiantest == 1);
+            conv.bufdouble = object->data_double;
+            buf.size = 8;
+            if(little_endian) {
+                jksn_encode_int(buf.buf, conv.bufint[1], 4);
+                jksn_encode_int(buf.buf+4, conv.bufint[0], 4);
+            } else {
+                jksn_encode_int(buf.buf, conv.bufint[0], 4);
+                jksn_encode_int(buf.buf+4, conv.bufint[1], 4);
+            }
+            *result = jksn_value_new(object, 0x2c, &buf, NULL);
+            return *result ? JKSN_EOK : JKSN_ENOMEM;
+        } else
+            return JKSN_ENOMEM;
+    }
 }
 
 static jksn_error_message_no jksn_dump_longdouble(jksn_value **result, const jksn_t *object) {
-    if(sizeof (long double) == 12) {
+    if(isnan(object->data_long_double)) {
+        *result = jksn_value_new(object, 0x20, NULL, NULL);
+        return *result ? JKSN_EOK : JKSN_ENOMEM;
+    } else if(isinf(object->data_long_double)) {
+        *result = jksn_value_new(object, object->data_long_double >= 0.0L ? 0x2f : 0x2e, NULL, NULL);
+        return *result ? JKSN_EOK : JKSN_ENOMEM;
+    } else if(sizeof (long double) == 12) {
         jksn_blobstring buf;
         union {
             uint8_t bufint[12];

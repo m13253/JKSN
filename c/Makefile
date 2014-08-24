@@ -2,6 +2,7 @@ AR=ar
 CC=gcc
 RM=rm -f
 override CFLAGS+=-fPIC -Wall -O3
+override LDFLAGS+=-lm
 
 .PHONY: all clean
 

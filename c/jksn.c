@@ -611,8 +611,8 @@ static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t
                 utf8str[reslen+3] = (ucs4 & 0x3f) | 0x80;
             }
             reslen += 4;
-            utf16str++;
-            utf16size--;
+            utf16str += 2;
+            utf16size -= 2;
         } else {
             if(utf8str) {
                 utf8str[reslen] = 0xef;

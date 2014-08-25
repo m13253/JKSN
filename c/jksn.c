@@ -66,6 +66,7 @@ static jksn_error_message_no jksn_optimize(jksn_value *object, jksn_cache *cache
 static size_t jksn_encode_int(char result[], uint64_t object, size_t size);
 static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size, int strict);
 static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size);
+static uint8_t jksn_djbhash(jksn_blobstring *buf);
 static uint16_t jksn_htons(uint16_t n);
 
 jksn_cache *jksn_cache_new(void) {
@@ -535,7 +536,11 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
             *result = jksn_value_new(object, 0x4f, &data, &buf);
         }
     }
-    return *result ? JKSN_EOK : JKSN_ENOMEM;
+    if(*result) {
+        (*result)->hash = jksn_djbhash(&(*result)->buf);
+        return JKSN_EOK;
+    } else
+        return JKSN_ENOMEM;
 }
 
 static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
@@ -564,7 +569,11 @@ static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *o
         data.size = jksn_encode_int(data.buf, object->data_blob.size, 0);
         *result = jksn_value_new(object, 0x5f, &data, &object->data_blob);
     }
-    return *result ? JKSN_EOK : JKSN_ENOMEM;
+    if(*result) {
+        (*result)->hash = jksn_djbhash(&(*result)->buf);
+        return JKSN_EOK;
+    } else
+        return JKSN_ENOMEM;
 }
 
 static int jksn_test_swap_availability(const jksn_t *object) {
@@ -825,6 +834,14 @@ static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t
         }
     }
     return reslen;
+}
+
+static uint8_t jksn_djbhash(jksn_blobstring *buf) {
+    unsigned int result = 0;
+    size_t i;
+    for(i = 0; i < buf->size; i++)
+        result += (result << 5) + (uint8_t) buf->buf[i];
+    return (uint8_t) result;
 }
 
 static uint16_t jksn_htons(uint16_t n) {

@@ -880,7 +880,7 @@ static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2) {
             return obj1->data_float != obj2->data_float;
         case JKSN_DOUBLE:
             return obj1->data_double != obj2->data_double;
-        case JKSN_LONGDOUBLE:
+        case JKSN_LONG_DOUBLE:
             return obj1->data_long_double != obj2->data_long_double;
         case JKSN_STRING:
             return obj1->data_string.size != obj2->data_string.size ||

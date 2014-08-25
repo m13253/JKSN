@@ -718,6 +718,11 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
             row_array->data_type = JKSN_ARRAY;
             row_array->data_array.size = object->data_array.size;
             row_array->data_array.children = malloc(object->data_array.size * sizeof (jksn_t *));
+            if(!row_array->data_array.children) {
+                free(row_array);
+                columns = jksn_swap_columns_free(columns);
+                return JKSN_ENOMEM;
+            }
             for(row = 0; row < object->data_array.size; row++) {
                 row_array->data_array.children[row] = malloc(sizeof (jksn_t));
                 if(!row_array->data_array.children[row]) {
@@ -742,6 +747,7 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
                 return retval;
             }
             next_child = &(*next_child)->next_child;
+            next_column = next_column->next;
             columns_size--;
         }
         assert(columns_size == 0);

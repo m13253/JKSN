@@ -567,8 +567,47 @@ static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *o
     return *result ? JKSN_EOK : JKSN_ENOMEM;
 }
 
+static jksn_error_message_no jksn_encode_straight_array(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+    if(object->data_array.size <= 0xc)
+        *result = jksn_value_new(object, 0x80 | object->data_array.size, NULL, NULL);
+    else if(object->data_array.size <= 0xff) {
+        jksn_blobstring data = {1, malloc(1)};
+        if(!data.buf)
+            return JKSN_ENOMEM;
+        jksn_encode_int(data.buf, object->data_array.size, 1);
+        *result = jksn_value_new(object, 0x8e, &data, NULL);
+    } else if(object->data_array.size <= 0xffff) {
+        jksn_blobstring data = {2, malloc(2)};
+        if(!data.buf)
+            return JKSN_ENOMEM;
+        jksn_encode_int(data.buf, object->data_array.size, 2);
+        *result = jksn_value_new(object, 0x8d, &data, NULL);
+    } else {
+        jksn_blobstring data = {0, malloc(10)};
+        if(!data.buf)
+            return JKSN_ENOMEM;
+        data.size = jksn_encode_int(data.buf, object->data_array.size, 0);
+        *result = jksn_value_new(object, 0x8f, &data, NULL);
+    }
+    if(!*result)
+        return JKSN_ENOMEM;
+    else {
+        size_t i;
+        jksn_value **next_child = &(*result)->first_child;
+        for(i = 0; i < object->data_array.size; i++) {
+            jksn_error_message_no retval = jksn_dump_value(next_child, object->data_array.children[i], cache);
+            if(retval != JKSN_EOK)
+                return retval;
+        }
+        return JKSN_EOK;
+    }
+}
+
 static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
-    return JKSN_ETYPE;
+    jksn_error_message_no retval = jksn_encode_straight_array(result, object, cache);
+    if(retval != JKSN_EOK)
+        return retval;
+    return JKSN_EOK;
 }
 
 static jksn_error_message_no jksn_dump_object(jksn_value **result, const jksn_t *object, jksn_cache *cache) {

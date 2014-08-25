@@ -567,6 +567,17 @@ static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *o
     return *result ? JKSN_EOK : JKSN_ENOMEM;
 }
 
+static int jksn_test_swap_availability(const jksn_t *object) {
+    int columns = 0;
+    size_t row;
+    for(row = 0; row < object->data_array.size; row++)
+        if(object->data_array.children[row]->data_type != JKSN_OBJECT)
+            return 0;
+        else if(object->data_array.children[row]->data_object.size != 0)
+            columns = 1;
+    return columns;
+}
+
 static jksn_error_message_no jksn_encode_straight_array(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
     if(object->data_array.size <= 0xc)
         *result = jksn_value_new(object, 0x80 | object->data_array.size, NULL, NULL);

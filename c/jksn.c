@@ -704,6 +704,47 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
         columns = jksn_swap_columns_free(columns);
         return JKSN_ENOMEM;
     } else {
+        jksn_value **next_child = &(*result)->first_child;
+        struct jksn_swap_columns *next_column = columns;
+        while(next_column) {
+            jksn_error_message_no retval;
+            size_t row;
+            jksn_t *row_array = malloc(sizeof (jksn_t));
+            if(!row_array) {
+                columns = jksn_swap_columns_free(columns);
+                return JKSN_ENOMEM;
+            }
+            row_array->data_type = JKSN_ARRAY;
+            row_array->data_array.size = object->data_array.size;
+            row_array->data_array.children = malloc(object->data_array.size * sizeof (jksn_t *));
+            for(row = 0; row < object->data_array.size; row++) {
+                row_array->data_array.children[row] = malloc(sizeof (jksn_t));
+                if(!row_array->data_array.children[row]) {
+                    free(row_array);
+                    columns = jksn_swap_columns_free(columns);
+                    return JKSN_ENOMEM;
+                } else {
+                    size_t i;
+                    row_array->data_array.children[row]->data_type = JKSN_UNSPECIFIED;
+                    for(i = object->data_array.children[row]->data_object.size; i--; )
+                        if(!jksn_compare(next_column->key, object->data_array.children[row]->data_object.children[i].key)) {
+                            free(row_array->data_array.children[row]);
+                            row_array->data_array.children[row] = object->data_array.children[row]->data_object.children[i].value;
+                            break;
+                        }
+                }
+            }
+            retval = jksn_dump_array(next_child, row_array, cache);
+            free(row_array);
+            if(retval != JKSN_EOK) {
+                columns = jksn_swap_columns_free(columns);
+                return retval;
+            }
+            next_child = &(*next_child)->next_child;
+            columns_size--;
+        }
+        assert(columns_size == 0);
+        return JKSN_EOK;
     }
 }
 
@@ -711,6 +752,16 @@ static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *
     jksn_error_message_no retval = jksn_encode_straight_array(result, object, cache);
     if(retval != JKSN_EOK)
         return retval;
+    if(jksn_test_swap_availability(object)) {
+        jksn_value *result_swapped = NULL;
+        retval = jksn_encode_swapped_array(&result_swapped, object, cache);
+        assert(retval == JKSN_EOK);
+        if(retval == JKSN_EOK && jksn_value_size(result_swapped, 3) < jksn_value_size(*result, 3)) {
+            jksn_value_free(*result);
+            *result = result_swapped;
+        } else
+            result_swapped = jksn_value_free(result_swapped);
+    }
     return JKSN_EOK;
 }
 

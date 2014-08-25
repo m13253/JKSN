@@ -85,7 +85,8 @@ static jksn_error_message_no jksn_optimize(jksn_value *object, jksn_cache *cache
 static size_t jksn_encode_int(char result[], uint64_t object, size_t size);
 static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size, int strict);
 static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size);
-static uint8_t jksn_djbhash(jksn_blobstring *buf);
+static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2);
+static uint8_t jksn_djbhash(const jksn_blobstring *buf);
 static uint16_t jksn_htons(uint16_t n);
 
 jksn_cache *jksn_cache_new(void) {
@@ -642,6 +643,13 @@ static jksn_error_message_no jksn_encode_straight_array(jksn_value **result, con
     }
 }
 
+static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+    struct jksn_swap_columns {
+        jksn_t *key;
+        struct jksn_swap_columns *next;
+    } columns;
+}
+
 static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
     jksn_error_message_no retval = jksn_encode_straight_array(result, object, cache);
     if(retval != JKSN_EOK)
@@ -855,7 +863,39 @@ static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t
     return reslen;
 }
 
-static uint8_t jksn_djbhash(jksn_blobstring *buf) {
+static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2) {
+    if(obj1 == obj2)
+        return 0;
+    else if(obj1->data_type != obj2->data_type)
+        return 1;
+    else switch(obj1->data_type) {
+        case JKSN_UNDEFINED:
+        case JKSN_NULL:
+            return 0;
+        case JKSN_BOOL:
+            return obj1->data_bool != obj2->data_bool;
+        case JKSN_INT:
+            return obj1->data_int != obj2->data_int;
+        case JKSN_FLOAT:
+            return obj1->data_float != obj2->data_float;
+        case JKSN_DOUBLE:
+            return obj1->data_double != obj2->data_double;
+        case JKSN_LONGDOUBLE:
+            return obj1->data_long_double != obj2->data_long_double;
+        case JKSN_STRING:
+            return obj1->data_string.size != obj2->data_string.size ||
+                   memcmp(obj1->data_string.str, obj2->data_string.str, obj1->data_string.size);
+        case JKSN_BLOB:
+            return obj1->data_blob.size != obj2->data_blob.size ||
+                   memcmp(obj1->data_blob.buf, obj2->data_blob.buf, obj1->data_blob.size);
+        case JKSN_UNSPECIFIED:
+            return 0;
+        default:
+            return 1;
+    }
+}
+
+static uint8_t jksn_djbhash(const jksn_blobstring *buf) {
     unsigned int result = 0;
     size_t i;
     for(i = 0; i < buf->size; i++)

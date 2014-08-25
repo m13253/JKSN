@@ -644,6 +644,7 @@ static jksn_error_message_no jksn_encode_straight_array(jksn_value **result, con
             jksn_error_message_no retval = jksn_dump_value(next_child, object->data_array.children[i], cache);
             if(retval != JKSN_EOK)
                 return retval;
+            next_child = &(*next_child)->next_child;
         }
         return JKSN_EOK;
     }

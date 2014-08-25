@@ -93,7 +93,7 @@ static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t
 static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size);
 static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2);
 static uint8_t jksn_djbhash(const jksn_blobstring *buf);
-static uint16_t jksn_htons(uint16_t n);
+static uint16_t jksn_uint16_to_le(uint16_t n);
 
 jksn_cache *jksn_cache_new(void) {
     return calloc(1, sizeof (struct jksn_cache));
@@ -507,7 +507,7 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
         buf.size = jksn_utf8_to_utf16(utf16str, object->data_string.str, object->data_string.size, 1) * 2;
         assert(buf.size == utf16size * 2);
         for(i = 0; i < utf16size; i++)
-            utf16str[i] = jksn_htons(utf16str[i]);
+            utf16str[i] = jksn_uint16_to_le(utf16str[i]);
         if(utf16size <= 0xb)
             *result = jksn_value_new(object, 0x30 | utf16size, NULL, &buf);
         else if(utf16size <= 0xff) {
@@ -1021,15 +1021,15 @@ static uint8_t jksn_djbhash(const jksn_blobstring *buf) {
     return (uint8_t) result;
 }
 
-static uint16_t jksn_htons(uint16_t n) {
+static uint16_t jksn_uint16_to_le(uint16_t n) {
     union {
         uint16_t word;
         uint8_t byte;
     } endiantest = {1};
     if(endiantest.byte == 1)
-        return (n << 8) | (n >> 8);
-    else
         return n;
+    else
+        return (n << 8) | (n >> 8);
 }
 
 const char *jksn_errcode(int errcode) {

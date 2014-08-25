@@ -41,6 +41,11 @@ struct jksn_cache {
     jksn_blobstring blobhash[256];
 };
 
+struct jksn_swap_columns {
+    jksn_t *key;
+    struct jksn_swap_columns *next;
+};
+
 static const char *jksn_error_messages[] = {
     "OK",
     "JKSNError: no enough memory",
@@ -83,6 +88,7 @@ static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *
 static jksn_error_message_no jksn_dump_object(jksn_value **result, const jksn_t *object, jksn_cache *cache);
 static jksn_error_message_no jksn_optimize(jksn_value *object, jksn_cache *cache);
 static size_t jksn_encode_int(char result[], uint64_t object, size_t size);
+static struct jksn_swap_columns *jksn_swap_columns_free(struct jksn_swap_columns *columns);
 static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size, int strict);
 static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size);
 static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2);
@@ -644,10 +650,61 @@ static jksn_error_message_no jksn_encode_straight_array(jksn_value **result, con
 }
 
 static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
-    struct jksn_swap_columns {
-        jksn_t *key;
-        struct jksn_swap_columns *next;
-    } columns;
+    struct jksn_swap_columns *columns = NULL;
+    size_t columns_size = 0;
+    size_t row;
+    for(row = 0; row < object->data_array.size; row++) {
+        size_t column;
+        for(column = 0; column < object->data_array.children[row]->data_object.size; column++) {
+            struct jksn_swap_columns **next_column = &columns;
+            while(*next_column) {
+                if(!jksn_compare((*next_column)->key, object->data_array.children[row]->data_object.children[column].key))
+                    break;
+                next_column = &(*next_column)->next;
+            }
+            if(!*next_column) {
+                *next_column = calloc(1, sizeof (struct jksn_swap_columns));
+                if(!*next_column) {
+                    columns = jksn_swap_columns_free(columns);
+                    return JKSN_ENOMEM;
+                }
+                (*next_column)->key = object->data_array.children[row]->data_object.children[column].key;
+                columns_size++;
+            }
+        }
+    }
+    if(columns_size <= 0xc)
+        *result = jksn_value_new(object, 0xa0 | columns_size, NULL, NULL);
+    else if(columns_size <= 0xff) {
+        jksn_blobstring data = {1, malloc(1)};
+        if(!data.buf) {
+            columns = jksn_swap_columns_free(columns);
+            return JKSN_ENOMEM;
+        }
+        jksn_encode_int(data.buf, columns_size, 1);
+        *result = jksn_value_new(object, 0xae, &data, NULL);
+    } else if(columns_size <= 0xffff) {
+        jksn_blobstring data = {2, malloc(2)};
+        if(!data.buf) {
+            columns = jksn_swap_columns_free(columns);
+            return JKSN_ENOMEM;
+        }
+        jksn_encode_int(data.buf, columns_size, 2);
+        *result = jksn_value_new(object, 0xad, &data, NULL);
+    } else {
+        jksn_blobstring data = {0, malloc(10)};
+        if(!data.buf) {
+            columns = jksn_swap_columns_free(columns);
+            return JKSN_ENOMEM;
+        }
+        data.size = jksn_encode_int(data.buf, columns_size, 0);
+        *result = jksn_value_new(object, 0xaf, &data, NULL);
+    }
+    if(!*result) {
+        columns = jksn_swap_columns_free(columns);
+        return JKSN_ENOMEM;
+    } else {
+    }
 }
 
 static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
@@ -736,6 +793,16 @@ static size_t jksn_encode_int(char result[], uint64_t number, size_t size) {
         assert(size == 1 || size == 2 || size == 4 || size == 0);
     }
     return size;
+}
+
+static struct jksn_swap_columns *jksn_swap_columns_free(struct jksn_swap_columns *columns) {
+    struct jksn_swap_columns *column = columns;
+    while(column) {
+        struct jksn_swap_columns *next_column = column->next;
+        free(column);
+        column = next_column;
+    }
+    return NULL;
 }
 
 static int jksn_utf8_check_continuation(const char *utf8str, size_t length, size_t check_length) {

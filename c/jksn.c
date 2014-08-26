@@ -248,16 +248,20 @@ int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int heade
                 if(retval == JKSN_EOK && result) {
                     *result = malloc(sizeof (jksn_blobstring));
                     if(header) {
+                        const char *output_end;
                         (*result)->size = jksn_value_size(result_value, 0) + 3;
                         (*result)->buf = malloc((*result)->size);
                         (*result)->buf[0] = 'j';
                         (*result)->buf[1] = 'k';
                         (*result)->buf[2] = '!';
-                        jksn_value_output((*result)->buf + 3, result_value);
+                        output_end = jksn_value_output((*result)->buf + 3, result_value);
+                        assert(output_end - ((*result)->buf + 3) == (*result)->size);
                     } else {
+                        const char *output_end;
                         (*result)->size = jksn_value_size(result_value, 0);
                         (*result)->buf = malloc((*result)->size);
-                        jksn_value_output((*result)->buf, result_value);
+                        output_end = jksn_value_output((*result)->buf, result_value);
+                        assert(output_end - ((*result)->buf) == (*result)->size);
                     }
                 }
             }

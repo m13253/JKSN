@@ -730,21 +730,14 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
                 return JKSN_ENOMEM;
             }
             for(row = 0; row < object->data_array.size; row++) {
-                row_array->data_array.children[row] = alloca(sizeof (jksn_t));
-                if(!row_array->data_array.children[row]) {
-                    free(row_array);
-                    columns = jksn_swap_columns_free(columns);
-                    return JKSN_ENOMEM;
-                } else {
-                    size_t i;
-                    row_array->data_array.children[row]->data_type = JKSN_UNSPECIFIED;
-                    for(i = object->data_array.children[row]->data_object.size; i--; )
-                        if(!jksn_compare(next_column->key, object->data_array.children[row]->data_object.children[i].key)) {
-                            free(row_array->data_array.children[row]);
-                            row_array->data_array.children[row] = object->data_array.children[row]->data_object.children[i].value;
-                            break;
-                        }
-                }
+                static jksn_t unspecified_value = {JKSN_UNSPECIFIED};
+                size_t i;
+                row_array->data_array.children[row] = &unspecified_value;
+                for(i = object->data_array.children[row]->data_object.size; i--; )
+                    if(!jksn_compare(next_column->key, object->data_array.children[row]->data_object.children[i].key)) {
+                        row_array->data_array.children[row] = object->data_array.children[row]->data_object.children[i].value;
+                        break;
+                    }
             }
             retval = jksn_dump_value(next_child, next_column->key, cache);
             if(retval != JKSN_EOK) {

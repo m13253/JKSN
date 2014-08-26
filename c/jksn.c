@@ -226,7 +226,7 @@ static char *jksn_value_output(char output[], const jksn_value *object) {
             output += object->buf.size;
         }
         if(object->first_child)
-            jksn_value_output(output, object->first_child);
+            output = jksn_value_output(output, object->first_child);
         object = object->next_child;
     }
     return output;

@@ -4,17 +4,19 @@
 jksn_t children[] = {
     { JKSN_STRING, { .data_string = { 7, "element" } } },
     { JKSN_STRING, { .data_string = { 6, "元素" } } },
+    { JKSN_STRING, { .data_string = { 7, "element" } } },
+    /* { JKSN_STRING, { .data_string = { 6, "元素" } } } */
 };
 
 jksn_t *children_array[] = {
-    &children[0], &children[1]
+    &children[0], &children[1], &children[2], &children[1]
 };
 
 jksn_t object = {
     JKSN_ARRAY,
     {
         .data_array = {
-            .size = 2,
+            .size = 4,
             .children = children_array
         }
     }

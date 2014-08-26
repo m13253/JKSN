@@ -763,6 +763,7 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
             columns_size--;
         }
         assert(columns_size == 0);
+        columns = jksn_swap_columns_free(columns);
         return JKSN_EOK;
     }
 }

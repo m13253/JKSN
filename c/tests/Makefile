@@ -3,7 +3,7 @@ RM=rm -f
 CFLAGS=-fPIC -Wall -O1 -g3 -I.. -fno-omit-frame-pointer -fsanitize=memory -fsanitize-memory-track-origins -g3
 LDFLAGS=../libjksn.a
 
-OBJ=test_int test_utf test_object test_array test_swap_array
+OBJ=test_int test_utf test_object test_array test_swap_array test_delta
 
 .PHONY: all clean
 

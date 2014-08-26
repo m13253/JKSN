@@ -116,6 +116,7 @@ jksn_cache *jksn_cache_free(jksn_cache *cache) {
                 free(cache->blobhash[i].buf);
                 cache->blobhash[i].buf = NULL;
             }
+        free(cache);
     }
     return NULL;
 }

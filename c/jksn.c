@@ -882,6 +882,7 @@ static void jksn_optimize(jksn_value *object, jksn_cache *cache) {
                     }
                     if(new_control != 0 && new_data.size < object->data.size) {
                         object->control = new_control;
+                        free(object->data.buf);
                         object->data = new_data;
                     }
                 }

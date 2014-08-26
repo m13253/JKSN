@@ -720,7 +720,7 @@ if __name__ == '__main__':
                 import os, msvcrt
                 msvcrt.setmode(sys.stdin.fileno(), os.O_BINARY)
         else:
-            stdout_buffer = sys.stdin.buffer
+            stdin_buffer = sys.stdin.buffer
         json.dump(loads(stdin_buffer.read(), ordered_dict=True), sys.stdout, indent=2)
         sys.stdout.write('\n')
     else:

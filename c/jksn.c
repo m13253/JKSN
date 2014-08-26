@@ -744,6 +744,13 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
                         }
                 }
             }
+            retval = jksn_dump_value(next_child, next_column->key, cache);
+            if(retval != JKSN_EOK) {
+                free(row_array);
+                columns = jksn_swap_columns_free(columns);
+                return retval;
+            }
+            next_child = &(*next_child)->next_child;
             retval = jksn_dump_array(next_child, row_array, cache);
             free(row_array);
             if(retval != JKSN_EOK) {

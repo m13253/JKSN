@@ -9,7 +9,7 @@ jksn_t key[] = {
     { JKSN_STRING, { .data_string = { 4, "name" } } },
     { JKSN_STRING, { .data_string = { 3, "age" } } },
     { JKSN_STRING, { .data_string = { 5, "email" } } },
-    { JKSN_STRING, { .data_string = { 4, "name" } } },
+    { JKSN_STRING, { .data_string = { 4, "phone" } } },
 };
 
 jksn_t value[] = {
@@ -28,7 +28,7 @@ jksn_keyvalue object_jason_kv[] = {
 };
 
 jksn_keyvalue object_jackson_kv[] = {
-    { &key[3], &value[3] }, { &key[4], &value[4] }, { &key[5], &value[5] }, { &key[6], &value[6]}
+    { &key[3], &value[3] }, { &key[4], &value[4] }, { &key[5], &value[5] }, { &key[6], &value[6] }
 };
 
 jksn_t object_jason_jackson[] = {

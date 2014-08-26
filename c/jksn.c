@@ -730,7 +730,7 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
                 return JKSN_ENOMEM;
             }
             for(row = 0; row < object->data_array.size; row++) {
-                row_array->data_array.children[row] = malloc(sizeof (jksn_t));
+                row_array->data_array.children[row] = alloca(sizeof (jksn_t));
                 if(!row_array->data_array.children[row]) {
                     free(row_array);
                     columns = jksn_swap_columns_free(columns);
@@ -748,12 +748,14 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
             }
             retval = jksn_dump_value(next_child, next_column->key, cache);
             if(retval != JKSN_EOK) {
+                free(row_array->data_array.children);
                 free(row_array);
                 columns = jksn_swap_columns_free(columns);
                 return retval;
             }
             next_child = &(*next_child)->next_child;
             retval = jksn_dump_array(next_child, row_array, cache);
+            free(row_array->data_array.children);
             free(row_array);
             if(retval != JKSN_EOK) {
                 columns = jksn_swap_columns_free(columns);
@@ -880,10 +882,13 @@ static void jksn_optimize(jksn_value *object, jksn_cache *cache) {
                             new_data.size = jksn_encode_int(new_data.buf, (uint64_t) -delta, 0);
                         }
                     }
-                    if(new_control != 0 && new_data.size < object->data.size) {
-                        object->control = new_control;
-                        free(object->data.buf);
-                        object->data = new_data;
+                    if(new_control != 0) {
+                        if(new_data.size < object->data.size) {
+                            object->control = new_control;
+                            free(object->data.buf);
+                            object->data = new_data;
+                        } else
+                            free(new_data.buf);
                     }
                 }
             } else

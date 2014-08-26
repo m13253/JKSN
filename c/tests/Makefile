@@ -12,5 +12,5 @@ all: $(OBJ)
 clean:
 	$(RM) $(OBJ)
 
-%: %.c
-	$(CC) -o $@ $(CFLAGS) $^ $(LDFLAGS)
+%: %.c ../libjksn.a
+	$(CC) -o $@ $(CFLAGS) $< $(LDFLAGS)

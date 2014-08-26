@@ -255,13 +255,13 @@ int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int heade
                         (*result)->buf[1] = 'k';
                         (*result)->buf[2] = '!';
                         output_end = jksn_value_output((*result)->buf + 3, result_value);
-                        assert(output_end - ((*result)->buf + 3) == (*result)->size);
+                        assert(output_end - (*result)->buf == (*result)->size);
                     } else {
                         const char *output_end;
                         (*result)->size = jksn_value_size(result_value, 0);
                         (*result)->buf = malloc((*result)->size);
                         output_end = jksn_value_output((*result)->buf, result_value);
-                        assert(output_end - ((*result)->buf) == (*result)->size);
+                        assert(output_end - (*result)->buf == (*result)->size);
                     }
                 }
             }

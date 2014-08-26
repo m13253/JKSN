@@ -86,7 +86,7 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
 static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *object, jksn_cache *cache);
 static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *object, jksn_cache *cache);
 static jksn_error_message_no jksn_dump_object(jksn_value **result, const jksn_t *object, jksn_cache *cache);
-static jksn_error_message_no jksn_optimize(jksn_value *object, jksn_cache *cache);
+static void jksn_optimize(jksn_value *object, jksn_cache *cache);
 static size_t jksn_encode_int(char result[], uint64_t object, size_t size);
 static struct jksn_swap_columns *jksn_swap_columns_free(struct jksn_swap_columns *columns);
 static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size, int strict);
@@ -94,6 +94,7 @@ static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t
 static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2);
 static uint8_t jksn_djbhash(const jksn_blobstring *buf);
 static uint16_t jksn_uint16_to_le(uint16_t n);
+static inline uint64_t jksn_int64abs(int64_t x) { return x >= 0 ? x : -x; };
 
 jksn_cache *jksn_cache_new(void) {
     return calloc(1, sizeof (struct jksn_cache));
@@ -244,8 +245,8 @@ int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int heade
             jksn_value *result_value = NULL;
             jksn_error_message_no retval = jksn_dump_value(&result_value, object, cache);
             if(retval == JKSN_EOK) {
-                retval = jksn_optimize(result_value, cache);
-                if(retval == JKSN_EOK && result) {
+                jksn_optimize(result_value, cache);
+                if(result) {
                     *result = malloc(sizeof (jksn_blobstring));
                     if(header) {
                         const char *output_end;
@@ -828,8 +829,118 @@ static jksn_error_message_no jksn_dump_object(jksn_value **result, const jksn_t 
     }
 }
 
-static jksn_error_message_no jksn_optimize(jksn_value *result, jksn_cache *cache) {
-    return JKSN_EOK;
+static void jksn_optimize(jksn_value *object, jksn_cache *cache) {
+    while(object) {
+        uint8_t control = object->control & 0xf0;
+        switch(control) {
+        case 0x10:
+            if(cache->haslastint) {
+                int64_t delta = object->origin->data_int - cache->lastint;
+                if(jksn_int64abs(delta) < jksn_int64abs(object->origin->data_int)) {
+                    uint8_t new_control = 0;
+                    jksn_blobstring new_data = {0, NULL};
+                    if(delta >= 0 && delta <= 0x5)
+                        new_control = 0xb0 | delta;
+                    else if(delta >= -0x5 && delta <= -0x1)
+                        new_control = 0xb0 | (delta + 11);
+                    else if(delta >= -0x80 && delta <= 0x7f) {
+                        new_data.size = 1;
+                        new_data.buf = malloc(1);
+                        if(new_data.buf) {
+                            new_control = 0xbd;
+                            jksn_encode_int(new_data.buf, (uint64_t) delta, 1);
+                        }
+                    } else if(delta >= -0x8000 && delta <= 0x7fff) {
+                        new_data.size = 2;
+                        new_data.buf = malloc(2);
+                        if(new_data.buf) {
+                            new_control = 0xbc;
+                            jksn_encode_int(new_data.buf, (uint64_t) delta, 2);
+                        }
+                    } else if((delta >= -0x80000000L && delta <= -0x200000L) ||
+                              (delta >= 0x200000L && delta <= 0x7fffffffL)) {
+                        new_data.size = 4;
+                        new_data.buf = malloc(4);
+                        if(new_data.buf) {
+                            new_control = 0xbb;
+                            jksn_encode_int(new_data.buf, (uint64_t) delta, 4);
+                        }
+                    } else if(delta >= 0) {
+                        new_data.buf = malloc(10);
+                        if(new_data.buf) {
+                            new_control = 0xbf;
+                            new_data.size = jksn_encode_int(new_data.buf, (uint64_t) delta, 0);
+                        }
+                    } else {
+                        new_data.buf = malloc(10);
+                        if(new_data.buf) {
+                            new_control = 0xbe;
+                            new_data.size = jksn_encode_int(new_data.buf, (uint64_t) -delta, 0);
+                        }
+                    }
+                    if(new_control != 0 && new_data.size < object->data.size) {
+                        object->control = new_control;
+                        object->data = new_data;
+                    }
+                }
+            } else
+                cache->haslastint = 1;
+            cache->lastint = object->origin->data_int;
+            break;
+        case 0x30:
+        case 0x40:
+            if(object->buf.size > 1) {
+                if(cache->texthash[object->hash].size == object->origin->data_string.size &&
+                   !memcmp(cache->texthash[object->hash].str, object->origin->data_string.str, object->origin->data_string.size)) {
+                    jksn_blobstring new_data = {1, malloc(1)};
+                    if(new_data.buf) {
+                        new_data.buf[0] = (char) object->hash;
+                        object->control = 0x3c;
+                        object->data = new_data;
+                        object->buf.size = 0;
+                        free(object->buf.buf);
+                        object->buf.buf = NULL;
+                    }
+                } else {
+                    free(cache->texthash[object->hash].str);
+                    cache->texthash[object->hash].str = malloc(object->origin->data_string.size);
+                    if(cache->texthash[object->hash].str) {
+                        cache->texthash[object->hash].size = object->origin->data_string.size;
+                        memcpy(cache->texthash[object->hash].str, object->origin->data_string.str, object->origin->data_string.size);
+                    } else
+                        cache->texthash[object->hash].size = 0;
+                }
+            }
+            break;
+        case 0x50:
+            if(object->buf.size > 1) {
+                if(cache->blobhash[object->hash].size == object->origin->data_blob.size &&
+                   !memcmp(cache->blobhash[object->hash].buf, object->origin->data_blob.buf, object->origin->data_blob.size)) {
+                    jksn_blobstring new_data = {1, malloc(1)};
+                    if(new_data.buf) {
+                        new_data.buf[0] = (char) object->hash;
+                        object->control = 0x5c;
+                        object->data = new_data;
+                        object->buf.size = 0;
+                        free(object->buf.buf);
+                        object->buf.buf = NULL;
+                    }
+                } else {
+                    free(cache->blobhash[object->hash].buf);
+                    cache->blobhash[object->hash].buf = malloc(object->origin->data_blob.size);
+                    if(cache->blobhash[object->hash].buf) {
+                        cache->blobhash[object->hash].size = object->origin->data_blob.size;
+                        memcpy(cache->blobhash[object->hash].buf, object->origin->data_blob.buf, object->origin->data_blob.size);
+                    } else
+                        cache->blobhash[object->hash].size = 0;
+                }
+            }
+            break;
+        default:
+            jksn_optimize(object->first_child, cache);
+        }
+        object = object->next_child;
+    }
 }
 
 static size_t jksn_encode_int(char result[], uint64_t number, size_t size) {

@@ -1388,6 +1388,121 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 }
                 return JKSN_EOK;
             }
+        case 0x70:
+            {
+                jksn_error_message_no retval;
+                uint64_t value_len;
+                size_t varint_size;
+                size_t i;
+                switch(control) {
+                case 0x70:
+                    for(i = 0; i < 256; i++) {
+                        cache->texthash[i].size = 0;
+                        free(cache->texthash[i].str);
+                        cache->texthash[i].str = NULL;
+                    }
+                    for(i = 0; i < 256; i++) {
+                        cache->blobhash[i].size = 0;
+                        free(cache->blobhash[i].buf);
+                        cache->blobhash[i].buf = NULL;
+                    }
+                    return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                case 0x7d:
+                    retval = jksn_decode_int(&value_len, buffer, size, 2, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer += 2;
+                    size -= 2;
+                    break;
+                case 0x7e:
+                    retval = jksn_decode_int(&value_len, buffer, size, 1, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer++;
+                    size--;
+                    break;
+                case 0x7f:
+                    retval = jksn_decode_int(&value_len, buffer, size, 0, &varint_size);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer += varint_size;
+                    size -= varint_size;
+                    if(bytes_parsed)
+                        *bytes_parsed += varint_size;
+                    break;
+                default:
+                    value_len = control & 0xf;
+                }
+                while(value_len--) {
+                    jksn_t *tmp = NULL;
+                    size_t bytes_skipped = 0;
+                    retval = jksn_parse_value(&tmp, buffer, size, &bytes_skipped, cache);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    jksn_free(tmp);
+                    buffer += bytes_skipped;
+                    size -= bytes_skipped;
+                    if(bytes_parsed)
+                        *bytes_parsed += bytes_skipped;
+                }
+                return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+            }
+        case 0x80:
+            {
+                jksn_error_message_no retval;
+                uint64_t array_len;
+                size_t varint_size;
+                size_t i;
+                switch(control) {
+                case 0x8d:
+                    retval = jksn_decode_int(&array_len, buffer, size, 2, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer += 2;
+                    size -= 2;
+                    break;
+                case 0x7e:
+                    retval = jksn_decode_int(&array_len, buffer, size, 1, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer++;
+                    size--;
+                    break;
+                case 0x7f:
+                    retval = jksn_decode_int(&array_len, buffer, size, 0, &varint_size);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer += varint_size;
+                    size -= varint_size;
+                    if(bytes_parsed)
+                        *bytes_parsed += varint_size;
+                    break;
+                default:
+                    array_len = control & 0xf;
+                }
+                *result = malloc(sizeof (jksn_t));
+                if(!*result)
+                    return JKSN_ENOMEM;
+                (*result)->data_type = JKSN_ARRAY;
+                (*result)->data_array.size = array_len;
+                (*result)->data_array.children = calloc(array_len, sizeof (jksn_t *));
+                if(!(*result)->data_array.children) {
+                    free(*result);
+                    *result = NULL;
+                    return JKSN_ENOMEM;
+                }
+                for(i = 0; i < array_len; i++) {
+                    size_t child_size = 0;
+                    retval = jksn_parse_value(&(*result)->data_array.children[i], buffer, size, &child_size, cache);
+                    if(retval != JKSN_EOK) {
+                        *result = jksn_free(*result);
+                        return JKSN_ENOMEM;
+                    }
+                    buffer += child_size;
+                    size -= child_size;
+                }
+                return JKSN_EOK;
+            }
         }
         return JKSN_ECONTROL;
     }

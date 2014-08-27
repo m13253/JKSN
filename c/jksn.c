@@ -1156,6 +1156,159 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
     }
 }
 
+static jksn_error_message_no jksn_parse_float(jksn_t **result, const char *buffer, size_t size, size_t *bytes_parsed) {
+    assert(sizeof (float) == 4);
+    if(size < 4)
+        return JKSN_ETRUNC;
+    else {
+        union {
+            uint32_t data_int;
+            float data_float;
+        } conv = {
+            ((uint32_t) buffer[0]) << 24 |
+            ((uint32_t) buffer[1]) << 16 |
+            ((uint32_t) buffer[2]) << 8 |
+            ((uint32_t) buffer[3])
+        };
+        *result = malloc(sizeof (jksn_t));
+        if(!*result)
+            return JKSN_ENOMEM;
+        (*result)->data_type = JKSN_FLOAT;
+        (*result)->data_float = conv.data_float;
+        if(bytes_parsed)
+            *bytes_parsed += 4;
+        return JKSN_EOK;
+    }
+}
+
+static jksn_error_message_no jksn_parse_double(jksn_t **result, const char *buffer, size_t size, size_t *bytes_parsed) {
+    assert(sizeof (double) == 8);
+    if(size < 8)
+        return JKSN_ETRUNC;
+    else {
+        union {
+            uint64_t data_int;
+            double data_double;
+        } conv = {
+            ((uint64_t) buffer[0]) << 56 |
+            ((uint64_t) buffer[1]) << 48 |
+            ((uint64_t) buffer[2]) << 40 |
+            ((uint64_t) buffer[3]) << 32 |
+            ((uint64_t) buffer[4]) << 24 |
+            ((uint64_t) buffer[5]) << 16 |
+            ((uint64_t) buffer[6]) << 8 |
+            ((uint64_t) buffer[7])
+        };
+        *result = malloc(sizeof (jksn_t));
+        if(!*result)
+            return JKSN_ENOMEM;
+        (*result)->data_type = JKSN_DOUBLE;
+        (*result)->data_double = conv.data_double;
+        if(bytes_parsed)
+            *bytes_parsed += 8;
+        return JKSN_EOK;
+    }
+}
+
+static jksn_error_message_no jksn_parse_longdouble(jksn_t **result, const char *buffer, size_t size, size_t *bytes_parsed) {
+    if(size < 10)
+        return JKSN_ETRUNC;
+    else if(sizeof (long double) == 12) {
+        union {
+            uint8_t data_int[12];
+            long double data_long_double;
+            uint8_t endiantest;
+        } conv = {{1, 0}};
+        int little_endian = (conv.endiantest == 1);
+        *result = malloc(sizeof (jksn_t));
+        if(!*result)
+            return JKSN_ENOMEM;
+        if(little_endian) {
+            conv.data_int[0] = (uint8_t) buffer[9];
+            conv.data_int[1] = (uint8_t) buffer[8];
+            conv.data_int[2] = (uint8_t) buffer[7];
+            conv.data_int[3] = (uint8_t) buffer[6];
+            conv.data_int[4] = (uint8_t) buffer[5];
+            conv.data_int[5] = (uint8_t) buffer[4];
+            conv.data_int[6] = (uint8_t) buffer[3];
+            conv.data_int[7] = (uint8_t) buffer[2];
+            conv.data_int[8] = (uint8_t) buffer[1];
+            conv.data_int[9] = (uint8_t) buffer[0];
+            conv.data_int[10] = 0;
+            conv.data_int[11] = 0;
+        } else {
+            conv.data_int[0] = 0;
+            conv.data_int[1] = 0;
+            conv.data_int[2] = (uint8_t) buffer[0];
+            conv.data_int[3] = (uint8_t) buffer[1];
+            conv.data_int[4] = (uint8_t) buffer[2];
+            conv.data_int[5] = (uint8_t) buffer[3];
+            conv.data_int[6] = (uint8_t) buffer[4];
+            conv.data_int[7] = (uint8_t) buffer[5];
+            conv.data_int[8] = (uint8_t) buffer[6];
+            conv.data_int[9] = (uint8_t) buffer[7];
+            conv.data_int[10] = (uint8_t) buffer[8];
+            conv.data_int[11] = (uint8_t) buffer[9];
+        }
+        (*result)->data_type = JKSN_LONG_DOUBLE;
+        (*result)->data_long_double = conv.data_long_double;
+        if(bytes_parsed)
+            *bytes_parsed += 10;
+        return JKSN_EOK;
+    } else if(sizeof (long double) == 16) {
+        union {
+            uint8_t data_int[16];
+            long double data_long_double;
+            uint8_t endiantest;
+        } conv = {{1, 0}};
+        int little_endian = (conv.endiantest == 1);
+        *result = malloc(sizeof (jksn_t));
+        if(!*result)
+            return JKSN_ENOMEM;
+        if(little_endian) {
+            conv.data_int[0] = (uint8_t) buffer[9];
+            conv.data_int[1] = (uint8_t) buffer[8];
+            conv.data_int[2] = (uint8_t) buffer[7];
+            conv.data_int[3] = (uint8_t) buffer[6];
+            conv.data_int[4] = (uint8_t) buffer[5];
+            conv.data_int[5] = (uint8_t) buffer[4];
+            conv.data_int[6] = (uint8_t) buffer[3];
+            conv.data_int[7] = (uint8_t) buffer[2];
+            conv.data_int[8] = (uint8_t) buffer[1];
+            conv.data_int[9] = (uint8_t) buffer[0];
+            conv.data_int[10] = 0;
+            conv.data_int[11] = 0;
+            conv.data_int[12] = 0;
+            conv.data_int[13] = 0;
+            conv.data_int[14] = 0;
+            conv.data_int[15] = 0;
+        } else {
+            conv.data_int[0] = 0;
+            conv.data_int[1] = 0;
+            conv.data_int[2] = 0;
+            conv.data_int[3] = 0;
+            conv.data_int[4] = 0;
+            conv.data_int[5] = 0;
+            conv.data_int[6] = (uint8_t) buffer[0];
+            conv.data_int[7] = (uint8_t) buffer[1];
+            conv.data_int[8] = (uint8_t) buffer[2];
+            conv.data_int[9] = (uint8_t) buffer[3];
+            conv.data_int[10] = (uint8_t) buffer[4];
+            conv.data_int[11] = (uint8_t) buffer[5];
+            conv.data_int[12] = (uint8_t) buffer[6];
+            conv.data_int[13] = (uint8_t) buffer[7];
+            conv.data_int[14] = (uint8_t) buffer[8];
+            conv.data_int[15] = (uint8_t) buffer[9];
+        }
+        (*result)->data_type = JKSN_LONG_DOUBLE;
+        (*result)->data_long_double = conv.data_long_double;
+        if(bytes_parsed)
+            *bytes_parsed += 10;
+        return JKSN_EOK;
+    } else
+        return JKSN_ELONGDOUBLE;
+}
+
 static jksn_error_message_no jksn_decode_int(uint64_t *result, const char *buffer, size_t bufsize, size_t size, size_t *bytes_parsed) {
     switch(size) {
     case 1:

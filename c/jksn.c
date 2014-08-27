@@ -97,7 +97,7 @@ static jksn_error_message_no jksn_decode_int(uint64_t *result, const char *buffe
 static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size, int strict);
 static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size);
 static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2);
-static uint8_t jksn_djbhash(const jksn_blobstring *buf);
+static uint8_t jksn_djbhash(const char *buf, size_t size);
 static uint16_t jksn_uint16_to_le(uint16_t n);
 static inline uint64_t jksn_int64abs(int64_t x) { return x >= 0 ? x : -x; };
 
@@ -574,7 +574,7 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
         }
     }
     if(*result) {
-        (*result)->hash = jksn_djbhash(&(*result)->buf);
+        (*result)->hash = jksn_djbhash((*result)->buf.buf, (*result)->buf.size);
         return JKSN_EOK;
     } else
         return JKSN_ENOMEM;
@@ -607,7 +607,7 @@ static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *o
         *result = jksn_value_new(object, 0x5f, &data, &object->data_blob);
     }
     if(*result) {
-        (*result)->hash = jksn_djbhash(&(*result)->buf);
+        (*result)->hash = jksn_djbhash((*result)->buf.buf, (*result)->buf.size);
         return JKSN_EOK;
     } else
         return JKSN_ENOMEM;
@@ -1119,6 +1119,11 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     (*result)->data_type = JKSN_INT;
                     (*result)->data_int = -(int64_t) resint;
                     return JKSN_EOK;
+                default:
+                    *result = malloc(sizeof (jksn_t));
+                    (*result)->data_type = JKSN_INT;
+                    (*result)->data_int = (int64_t) (control | 0xf);
+                    return JKSN_EOK;
                 }
             }
         case 0x20:
@@ -1151,8 +1156,240 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 (*result)->data_double = INFINITY;
                 return JKSN_EOK;
             }
+        case 0x30:
+            {
+                jksn_error_message_no retval;
+                uint64_t str_size;
+                size_t varint_size;
+                uint16_t *utf16str;
+                size_t i;
+                uint8_t hashvalue;
+                switch(control) {
+                case 0x3c:
+                    if(!size--)
+                        return JKSN_ETRUNC;
+                    hashvalue = (uint8_t) (buffer++)[0];
+                    if(bytes_parsed)
+                        (*bytes_parsed)++;
+                    if(cache->texthash[hashvalue].size == 0)
+                        return JKSN_EHASH;
+                    *result = malloc(sizeof (jksn_t));
+                    if(!*result)
+                        return JKSN_ENOMEM;
+                    (*result)->data_type = JKSN_STRING;
+                    (*result)->data_string.str = malloc(cache->texthash[hashvalue].size + 1);
+                    (*result)->data_string.size = cache->texthash[hashvalue].size;
+                    if(!(*result)->data_string.str) {
+                        free(*result);
+                        *result = NULL;
+                        return JKSN_ENOMEM;
+                    }
+                    memcpy(cache->texthash[hashvalue].str, (*result)->data_string.str, cache->texthash[hashvalue].size);
+                    (*result)->data_string.str[cache->texthash[hashvalue].size] = '\0';
+                    return JKSN_EOK;
+                case 0x3d:
+                    retval = jksn_decode_int(&str_size, buffer, size, 2, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer += 2;
+                    size -= 2;
+                    break;
+                case 0x3e:
+                    retval = jksn_decode_int(&str_size, buffer, size, 1, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer++;
+                    size--;
+                    break;
+                case 0x3f:
+                    retval = jksn_decode_int(&str_size, buffer, size, 0, &varint_size);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer += varint_size;
+                    size -= varint_size;
+                    if(bytes_parsed)
+                        *bytes_parsed += varint_size;
+                    break;
+                default:
+                    str_size = control & 0xf;
+                }
+                if(size < str_size*2)
+                    return JKSN_ETRUNC;
+                utf16str = malloc(str_size*2);
+                if(!utf16str)
+                    return JKSN_ENOMEM;
+                memcpy((char *) utf16str, buffer, str_size*2);
+                for(i = 0; i < str_size; i++)
+                    utf16str[i] = jksn_uint16_to_le(utf16str[i]);
+                *result = malloc(sizeof (jksn_t));
+                if(!*result)
+                    return JKSN_ENOMEM;
+                (*result)->data_type = JKSN_STRING;
+                (*result)->data_string.size = jksn_utf16_to_utf8(NULL, utf16str, str_size);
+                (*result)->data_string.str = malloc((*result)->data_string.size + 1);
+                if(!(*result)->data_string.str) {
+                    free(utf16str);
+                    free(*result);
+                    *result = NULL;
+                    return JKSN_ENOMEM;
+                }
+                jksn_utf16_to_utf8((*result)->data_string.str, utf16str, str_size);
+                free(utf16str);
+                utf16str = NULL;
+                (*result)->data_string.str[(*result)->data_string.size] = '\0';
+                buffer += str_size*2;
+                size -= str_size*2;
+                if(bytes_parsed)
+                    *bytes_parsed += str_size*2;
+                hashvalue = jksn_djbhash((*result)->data_string.str, (*result)->data_string.size);
+                free(cache->texthash[hashvalue].str);
+                cache->texthash[hashvalue].str = malloc((*result)->data_string.size);
+                if(cache->texthash[hashvalue].str) {
+                    cache->texthash[hashvalue].size = (*result)->data_string.size;
+                    memcpy(cache->texthash[hashvalue].str, (*result)->data_string.str, (*result)->data_string.size);
+                } else {
+                    cache->texthash[hashvalue].size = 0;
+                    free((*result)->data_string.str);
+                    free(*result);
+                    *result = NULL;
+                    return JKSN_ENOMEM;
+                }
+                return JKSN_EOK;
+            }
+        case 0x40:
+            {
+                jksn_error_message_no retval;
+                uint64_t str_size;
+                size_t varint_size;
+                uint8_t hashvalue;
+                switch(control) {
+                case 0x4d:
+                    retval = jksn_decode_int(&str_size, buffer, size, 2, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer += 2;
+                    size -= 2;
+                    break;
+                case 0x4e:
+                    retval = jksn_decode_int(&str_size, buffer, size, 1, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer++;
+                    size--;
+                case 0x4f:
+                    retval = jksn_decode_int(&str_size, buffer, size, 0, &varint_size);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer += varint_size;
+                    size -= varint_size;
+                    if(bytes_parsed)
+                        bytes_parsed += varint_size;
+                    break;
+                default:
+                    str_size = control & 0xf;
+                }
+                if(size < str_size)
+                    return JKSN_ETRUNC;
+                *result = malloc(sizeof (jksn_t));
+                if(!*result)
+                    return JKSN_ENOMEM;
+                (*result)->data_type = JKSN_STRING;
+                (*result)->data_string.size = str_size;
+                (*result)->data_string.str = malloc(str_size + 1);
+                if(!(*result)->data_string.str) {
+                    free(*result);
+                    *result = NULL;
+                    return JKSN_ENOMEM;
+                }
+                memcpy((*result)->data_string.str, buffer, str_size);
+                (*result)->data_string.str[str_size] = '\0';
+                buffer += str_size;
+                size -= str_size;
+                if(bytes_parsed)
+                    *bytes_parsed += str_size;
+                hashvalue = jksn_djbhash((*result)->data_string.str, str_size);
+                free(cache->texthash[hashvalue].str);
+                cache->texthash[hashvalue].str = malloc(str_size);
+                if(cache->texthash[hashvalue].str) {
+                    cache->texthash[hashvalue].size = str_size;
+                    memcpy(cache->texthash[hashvalue].str, (*result)->data_string.str, str_size);
+                } else {
+                    cache->texthash[hashvalue].size = 0;
+                    free((*result)->data_string.str);
+                    free(*result);
+                    *result = NULL;
+                    return JKSN_ENOMEM;
+                }
+                return JKSN_EOK;
+            }
+        case 0x50:
+            {
+                jksn_error_message_no retval;
+                uint64_t blob_size;
+                size_t varint_size;
+                uint8_t hashvalue;
+                switch(control) {
+                case 0x5d:
+                    retval = jksn_decode_int(&blob_size, buffer, size, 2, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer += 2;
+                    size -= 2;
+                    break;
+                case 0x5e:
+                    retval = jksn_decode_int(&blob_size, buffer, size, 1, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer++;
+                    size--;
+                case 0x5f:
+                    retval = jksn_decode_int(&blob_size, buffer, size, 0, &varint_size);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer += varint_size;
+                    size -= varint_size;
+                    if(bytes_parsed)
+                        bytes_parsed += varint_size;
+                    break;
+                default:
+                    blob_size = control & 0xf;
+                }
+                if(size < blob_size)
+                    return JKSN_ETRUNC;
+                *result = malloc(sizeof (jksn_t));
+                if(!*result)
+                    return JKSN_ENOMEM;
+                (*result)->data_type = JKSN_BLOB;
+                (*result)->data_blob.size = blob_size;
+                (*result)->data_blob.buf = malloc(blob_size + 1);
+                if(!(*result)->data_blob.buf) {
+                    free(*result);
+                    *result = NULL;
+                    return JKSN_ENOMEM;
+                }
+                memcpy((*result)->data_blob.buf, buffer, blob_size);
+                (*result)->data_blob.buf[blob_size] = '\0';
+                buffer += blob_size;
+                size -= blob_size;
+                if(bytes_parsed)
+                    *bytes_parsed += blob_size;
+                hashvalue = jksn_djbhash((*result)->data_blob.buf, blob_size);
+                free(cache->blobhash[hashvalue].buf);
+                cache->blobhash[hashvalue].buf = malloc(blob_size);
+                if(cache->blobhash[hashvalue].buf) {
+                    cache->blobhash[hashvalue].size = blob_size;
+                    memcpy(cache->blobhash[hashvalue].buf, (*result)->data_blob.buf, blob_size);
+                } else {
+                    cache->blobhash[hashvalue].size = 0;
+                    free((*result)->data_blob.buf);
+                    free(*result);
+                    *result = NULL;
+                    return JKSN_ENOMEM;
+                }
+                return JKSN_EOK;
+            }
         }
-        return JKSN_EOK;
+        return JKSN_ECONTROL;
     }
 }
 
@@ -1515,11 +1752,11 @@ static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2) {
     }
 }
 
-static uint8_t jksn_djbhash(const jksn_blobstring *buf) {
+static uint8_t jksn_djbhash(const char *buf, size_t size) {
     unsigned int result = 0;
     size_t i;
-    for(i = 0; i < buf->size; i++)
-        result += (result << 5) + (uint8_t) buf->buf[i];
+    for(i = 0; i < size; i++)
+        result += (result << 5) + (uint8_t) buf[i];
     return (uint8_t) result;
 }
 

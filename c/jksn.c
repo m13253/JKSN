@@ -1633,7 +1633,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         *result = jksn_free(*result);
                         return retval;
                     }
-                    retval = jksn_parse_value(&column_name, buffer, size, &child_size, cache);
+                    retval = jksn_parse_value(&column_values, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK) {
                         column_name = jksn_free(column_name);
                         *result = jksn_free(*result);

@@ -193,6 +193,7 @@ jksn_t *jksn_free(jksn_t *object) {
         default:
             break;
         }
+        free(object);
     }
     return NULL;
 }

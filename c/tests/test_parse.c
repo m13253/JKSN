@@ -16,6 +16,7 @@ int main(int argc, char *argv[]) {
         return retval;
     }
     retval = jksn_dump(&bufout, result, 0, NULL);
+    result = jksn_free(result);
     if(retval != 0) {
         fprintf(stderr, "Dump error %d: %s\n", retval, jksn_errcode(retval));
         return retval;

@@ -100,6 +100,7 @@ static jksn_error_message_no jksn_decode_int(uint64_t *result, const char *buffe
 static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size, int strict);
 static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size);
 static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2);
+static jksn_t *jksn_duplicate(const jksn_t *object);
 static uint8_t jksn_djbhash(const char *buf, size_t size);
 static uint16_t jksn_uint16_to_le(uint16_t n);
 static inline uint64_t jksn_int64abs(int64_t x) { return x >= 0 ? x : -x; };
@@ -1575,16 +1576,16 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
             }
         case 0xa0:
             {
-                jksn_error_message retval;
+                jksn_error_message_no retval;
                 uint64_t column_len;
                 size_t varint_size;
-                size_t i;
+                size_t column_id;
                 switch(control) {
                 case 0xa0:
                     *result = jksn_malloc(sizeof (jksn_t));
                     if(!*result)
                         return JKSN_ENOMEM;
-                    *result.data_type = JKSN_UNSPECIFIED;
+                    (*result)->data_type = JKSN_UNSPECIFIED;
                     return JKSN_EOK;
                 case 0xad:
                     retval = jksn_decode_int(&column_len, buffer, size, 2, bytes_parsed);
@@ -1604,7 +1605,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     retval = jksn_decode_int(&column_len, buffer, size, 0, &varint_size);
                     if(retval != JKSN_EOK)
                         return retval;
-                    buffer += varint_size
+                    buffer += varint_size;
                     size -= varint_size;
                     if(bytes_parsed)
                         *bytes_parsed += varint_size;
@@ -1618,15 +1619,85 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 (*result)->data_type = JKSN_ARRAY;
                 (*result)->data_array.size = 0;
                 (*result)->data_array.children = NULL;
-                for(i = 0; i < column_len; i++) {
-                    jksn_t *column = NULL;
+                for(column_id = 0; column_id < column_len; column_id++) {
+                    jksn_t *column_name = NULL;
+                    jksn_t *column_values = NULL;
                     size_t child_size = 0;
-                    retval = jksn_parse_value(&column, buffer, size, &child_size, cache);
+                    size_t row;
+                    retval = jksn_parse_value(&column_name, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK) {
                         *result = jksn_free(*result);
                         return retval;
                     }
+                    retval = jksn_parse_value(&column_name, buffer, size, &child_size, cache);
+                    if(retval != JKSN_EOK) {
+                        column_name = jksn_free(column_name);
+                        *result = jksn_free(*result);
+                        return retval;
+                    }
+                    buffer += child_size;
+                    size -= child_size;
+                    if(bytes_parsed)
+                        *bytes_parsed += child_size;
+                    if(column_values->data_type != JKSN_ARRAY) {
+                        column_name = jksn_free(column_name);
+                        column_values = jksn_free(column_values);
+                        *result = jksn_free(*result);
+                        return JKSN_ESWAPARRAY;
+                    }
+                    if((*result)->data_array.size < column_values->data_array.size) {
+                        jksn_t **tmpptr = jksn_realloc((*result)->data_array.children, column_values->data_array.size * sizeof (jksn_t *));
+                        if(tmpptr) {
+                            size_t i;
+                            size_t oldsize = (*result)->data_array.size;
+                            (*result)->data_array.size = column_values->data_array.size;
+                            (*result)->data_array.children = tmpptr;
+                            for(i = oldsize; i < column_values->data_array.size; i++)
+                                tmpptr[i] = NULL;
+                            for(i = oldsize; i < column_values->data_array.size; i++) {
+                                tmpptr[i] = jksn_malloc(sizeof (jksn_t));
+                                if(!tmpptr[i]) {
+                                    column_name = jksn_free(column_name);
+                                    column_values = jksn_free(column_values);
+                                    *result = jksn_free(*result);
+                                    return JKSN_ENOMEM;
+                                }
+                                tmpptr[i]->data_type = JKSN_OBJECT;
+                                tmpptr[i]->data_object.size = 0;
+                                tmpptr[i]->data_object.children = NULL;
+                            }
+                        } else {
+                            *result = jksn_free(*result);
+                            return JKSN_ENOMEM;
+                        }
+                    }
+                    for(row = 0; row < column_values->data_array.size; row++)
+                        if(column_values->data_array.children[row]->data_type != JKSN_UNSPECIFIED) {
+                            size_t oldsize = (*result)->data_array.children[row]->data_object.size;
+                            jksn_keyvalue *tmpptr = jksn_realloc((*result)->data_array.children[row]->data_object.children, oldsize + 1);
+                            if(!tmpptr) {
+                                column_name = jksn_free(column_name);
+                                column_values = jksn_free(column_values);
+                                *result = jksn_free(*result);
+                                return JKSN_ENOMEM;
+                            }
+                            tmpptr[oldsize].key = jksn_duplicate(column_name);
+                            if(!tmpptr[oldsize].key) {
+                                tmpptr[oldsize].value = NULL;
+                                column_name = jksn_free(column_name);
+                                column_values = jksn_free(column_values);
+                                *result = jksn_free(*result);
+                                return JKSN_ENOMEM;
+                            }
+                            tmpptr[oldsize].value = column_values->data_array.children[row];
+                            column_values->data_array.children[row] = NULL;
+                            (*result)->data_array.children[row]->data_object.children = tmpptr;
+                            (*result)->data_array.children[row]->data_object.size++;
+                        }
+                    jksn_free(column_name);
+                    jksn_free(column_values);
                 }
+                return JKSN_EOK;
             }
         case 0xb0:
             {
@@ -2191,6 +2262,66 @@ static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2) {
         default:
             return 1;
     }
+}
+
+static jksn_t *jksn_duplicate(const jksn_t *object) {
+    jksn_t *result = object ? jksn_malloc(sizeof (jksn_t)) : NULL;
+    if(result) {
+        size_t i;
+        *result = *object;
+        switch(object->data_type) {
+        case JKSN_STRING:
+            result->data_string.str = jksn_malloc(object->data_string.size + 1);
+            if(!result->data_string.str) {
+                free(result);
+                result = NULL;
+            }
+            memcpy(result->data_string.str, object->data_string.str, object->data_string.size);
+            result->data_string.str[object->data_string.size] = '\0';
+            break;
+        case JKSN_BLOB:
+            result->data_blob.buf = jksn_malloc(object->data_blob.size + 1);
+            if(!result->data_blob.buf) {
+                free(result);
+                result = NULL;
+            }
+            memcpy(result->data_blob.buf, object->data_blob.buf, object->data_blob.size);
+            result->data_blob.buf[object->data_blob.size] = '\0';
+            break;
+        case JKSN_ARRAY:
+            result->data_array.children = jksn_calloc(object->data_array.size, sizeof (jksn_t *));
+            if(!result->data_array.children) {
+                free(result);
+                result = NULL;
+            }
+            for(i = 0; i < object->data_array.size; i++)
+                if(!(result->data_array.children[i] = jksn_duplicate(object->data_array.children[i]))) {
+                    result = jksn_free(result);
+                    break;
+                }
+            break;
+        case JKSN_OBJECT:
+            result->data_object.children = jksn_calloc(object->data_object.size, sizeof (jksn_keyvalue));
+            if(!result->data_object.children) {
+                free(result);
+                result = NULL;
+            }
+            for(i = 0; i < object->data_object.size; i++) {
+                if(!(result->data_object.children[i].key = jksn_duplicate(object->data_object.children[i].key))) {
+                    result = jksn_free(result);
+                    break;
+                }
+                if(!(result->data_object.children[i].value = jksn_duplicate(object->data_object.children[i].value))) {
+                    result = jksn_free(result);
+                    break;
+                }
+            }
+            break;
+        default:
+            break;
+        }
+    }
+    return result;
 }
 
 static uint8_t jksn_djbhash(const char *buf, size_t size) {

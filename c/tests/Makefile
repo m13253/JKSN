@@ -1,6 +1,7 @@
 CC=clang
 RM=rm -f
-CFLAGS=-fPIC -Wall -O1 -g3 -I.. -fno-omit-frame-pointer -fsanitize=memory -fsanitize-memory-track-origins -g3
+#CFLAGS=-fPIC -Wall -O1 -g3 -I.. -fno-omit-frame-pointer -fsanitize=memory -fsanitize-memory-track-origins
+CFLAGS=-fPIC -Wall -O1 -g3 -I..
 LDFLAGS=../libjksn.a
 
 OBJ=test_int test_float test_utf test_object test_array test_swap_array test_delta test_parse

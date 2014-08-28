@@ -1076,68 +1076,51 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
         case 0x10:
             {
                 jksn_error_message_no retval;
-                uint64_t resint;
+                uint64_t uresint;
+                int64_t resint;
                 switch(control) {
                 case 0x1b:
-                    retval = jksn_decode_int(&resint, buffer, size, 4, bytes_parsed);
+                    retval = jksn_decode_int(&uresint, buffer, size, 4, bytes_parsed);
                     if(retval != JKSN_EOK)
                         return retval;
-                    *result = jksn_malloc(sizeof (jksn_t));
-                    if(!*result)
-                        return JKSN_ENOMEM;
-                    (*result)->data_type = JKSN_INT;
-                    (*result)->data_int = (int64_t) (int32_t) resint;
-                    return JKSN_EOK;
+                    resint = (int64_t) (int32_t) uresint;
+                    break;
                 case 0x1c:
-                    retval = jksn_decode_int(&resint, buffer, size, 2, bytes_parsed);
+                    retval = jksn_decode_int(&uresint, buffer, size, 2, bytes_parsed);
                     if(retval != JKSN_EOK)
                         return retval;
-                    *result = jksn_malloc(sizeof (jksn_t));
-                    if(!*result)
-                        return JKSN_ENOMEM;
-                    (*result)->data_type = JKSN_INT;
-                    (*result)->data_int = (int64_t) (int16_t) resint;
-                    return JKSN_EOK;
+                    resint = (int64_t) (int16_t) uresint;
                 case 0x1d:
-                    retval = jksn_decode_int(&resint, buffer, size, 1, bytes_parsed);
+                    retval = jksn_decode_int(&uresint, buffer, size, 1, bytes_parsed);
                     if(retval != JKSN_EOK)
                         return retval;
-                    *result = jksn_malloc(sizeof (jksn_t));
-                    if(!*result)
-                        return JKSN_ENOMEM;
-                    (*result)->data_type = JKSN_INT;
-                    (*result)->data_int = (int64_t) (int8_t) resint;
-                    return JKSN_EOK;
+                    resint = (int64_t) (int8_t) uresint;
+                    break;
                 case 0x1e:
-                    retval = jksn_decode_int(&resint, buffer, size, 0, bytes_parsed);
+                    retval = jksn_decode_int(&uresint, buffer, size, 0, bytes_parsed);
                     if(retval != JKSN_EOK)
                         return retval;
-                    if((int64_t) resint < 0)
+                    if((int64_t) uresint < 0)
                         return JKSN_EVARINT;
-                    *result = jksn_malloc(sizeof (jksn_t));
-                    if(!*result)
-                        return JKSN_ENOMEM;
-                    (*result)->data_type = JKSN_INT;
-                    (*result)->data_int = (int64_t) resint;
-                    return JKSN_EOK;
+                    resint = -(int64_t) uresint;
+                    break;
                 case 0x1f:
-                    retval = jksn_decode_int(&resint, buffer, size, 0, bytes_parsed);
+                    retval = jksn_decode_int(&uresint, buffer, size, 0, bytes_parsed);
                     if(retval != JKSN_EOK)
                         return retval;
-                    if((int64_t) resint < 0)
+                    if((int64_t) uresint < 0)
                         return JKSN_EVARINT;
-                    *result = jksn_malloc(sizeof (jksn_t));
-                    if(!*result)
-                        return JKSN_ENOMEM;
-                    (*result)->data_type = JKSN_INT;
-                    (*result)->data_int = -(int64_t) resint;
-                    return JKSN_EOK;
+                    resint = (int64_t) uresint;
+                    break;
                 default:
-                    *result = jksn_malloc(sizeof (jksn_t));
-                    (*result)->data_type = JKSN_INT;
-                    (*result)->data_int = (int64_t) (control | 0xf);
-                    return JKSN_EOK;
+                    resint = (int64_t) (control & 0xf);
                 }
+                *result = jksn_malloc(sizeof (jksn_t));
+                if(!*result)
+                    return JKSN_ENOMEM;
+                (*result)->data_type = JKSN_INT;
+                (*result)->data_int = resint;
+                return JKSN_EOK;
             }
         case 0x20:
             switch(control) {
@@ -1583,6 +1566,74 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     if(bytes_parsed)
                         *bytes_parsed += child_size;
                 }
+                return JKSN_EOK;
+            }
+        case 0xb0:
+            {
+                jksn_error_message_no retval;
+                uint64_t delta;
+                switch(control) {
+                case 0xb0: case 0xb1: case 0xb2: case 0xb3: case 0xb4: case 0xb5:
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint += (int64_t) (control & 0xf);
+                    break;
+                case 0xb6: case 0xb7: case 0xb8: case 0xb9: case 0xba:
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint += ((int64_t) (control & 0xf)) - 11;
+                    break;
+                case 0xbb:
+                    retval = jksn_decode_int(&delta, buffer, size, 4, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint += (int32_t) delta;
+                    break;
+                case 0xbc:
+                    retval = jksn_decode_int(&delta, buffer, size, 2, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint += (int16_t) delta;
+                    break;
+                case 0xbd:
+                    retval = jksn_decode_int(&delta, buffer, size, 1, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint += (int8_t) delta;
+                    break;
+                case 0xbe:
+                    retval = jksn_decode_int(&delta, buffer, size, 0, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if((int64_t) delta < 0)
+                        return JKSN_EVARINT;
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint -= delta;
+                    break;
+                case 0xbf:
+                    retval = jksn_decode_int(&delta, buffer, size, 0, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if((int64_t) delta < 0)
+                        return JKSN_EVARINT;
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint += delta;
+                    break;
+                }
+                cache->haslastint = 1;
+                *result = jksn_malloc(sizeof (jksn_t));
+                if(!*result)
+                    return JKSN_ENOMEM;
+                (*result)->data_type = JKSN_INT;
+                (*result)->data_int = cache->lastint;
                 return JKSN_EOK;
             }
         }

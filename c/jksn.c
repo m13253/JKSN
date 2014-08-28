@@ -1162,7 +1162,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
             {
                 jksn_error_message_no retval;
                 uint64_t str_size;
-                size_t varint_size;
+                size_t varint_size = 0;
                 uint16_t *utf16str;
                 size_t i;
                 uint8_t hashvalue;
@@ -1262,7 +1262,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
             {
                 jksn_error_message_no retval;
                 uint64_t str_size;
-                size_t varint_size;
+                size_t varint_size = 0;
                 uint8_t hashvalue;
                 switch(control) {
                 case 0x4d:
@@ -1328,7 +1328,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
             {
                 jksn_error_message_no retval;
                 uint64_t blob_size;
-                size_t varint_size;
+                size_t varint_size = 0;
                 uint8_t hashvalue;
                 switch(control) {
                 case 0x5d:
@@ -1394,7 +1394,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
             {
                 jksn_error_message_no retval;
                 uint64_t value_len;
-                size_t varint_size;
+                size_t varint_size = 0;
                 size_t i;
                 switch(control) {
                 case 0x70:
@@ -1453,7 +1453,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
             {
                 jksn_error_message_no retval;
                 uint64_t array_len;
-                size_t varint_size;
+                size_t varint_size = 0;
                 size_t i;
                 switch(control) {
                 case 0x8d:
@@ -1511,7 +1511,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
             {
                 jksn_error_message_no retval;
                 uint64_t object_len;
-                size_t varint_size;
+                size_t varint_size = 0;
                 size_t i;
                 switch(control) {
                 case 0x9d:
@@ -1578,7 +1578,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
             {
                 jksn_error_message_no retval;
                 uint64_t column_len;
-                size_t varint_size;
+                size_t varint_size = 0;
                 size_t column_id;
                 switch(control) {
                 case 0xa0:
@@ -1840,8 +1840,8 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         return JKSN_ETRUNC;
                     buffer += 16;
                     size -= 16;
-                    if(&child_size)
-                        *&child_size += 16;
+                    if(bytes_parsed)
+                        *bytes_parsed += 16;
                     return JKSN_EOK;
                 case 0xfa:
                     retval = jksn_parse_value(result, buffer, size, &child_size, cache);
@@ -1855,8 +1855,8 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         return JKSN_ETRUNC;
                     buffer += 20;
                     size -= 20;
-                    if(&child_size)
-                        *&child_size += 20;
+                    if(bytes_parsed)
+                        *bytes_parsed += 20;
                     return JKSN_EOK;
                 case 0xfb:
                     retval = jksn_parse_value(result, buffer, size, &child_size, cache);
@@ -1870,8 +1870,8 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         return JKSN_ETRUNC;
                     buffer += 32;
                     size -= 32;
-                    if(&child_size)
-                        *&child_size += 32;
+                    if(bytes_parsed)
+                        *bytes_parsed += 32;
                     return JKSN_EOK;
                 case 0xfc:
                     retval = jksn_parse_value(result, buffer, size, &child_size, cache);
@@ -1885,8 +1885,8 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         return JKSN_ETRUNC;
                     buffer += 64;
                     size -= 64;
-                    if(&child_size)
-                        *&child_size += 64;
+                    if(bytes_parsed)
+                        *bytes_parsed += 64;
                     return JKSN_EOK;
                 case 0xff:
                     retval = jksn_parse_value(&tmp, buffer, size, &child_size, cache);

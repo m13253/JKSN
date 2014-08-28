@@ -1686,7 +1686,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     for(row = 0; row < column_values->data_array.size; row++)
                         if(column_values->data_array.children[row]->data_type != JKSN_UNSPECIFIED) {
                             size_t oldsize = (*result)->data_array.children[row]->data_object.size;
-                            jksn_keyvalue *tmpptr = jksn_realloc((*result)->data_array.children[row]->data_object.children, oldsize + 1);
+                            jksn_keyvalue *tmpptr = jksn_realloc((*result)->data_array.children[row]->data_object.children, (oldsize + 1) * sizeof (jksn_keyvalue));
                             if(!tmpptr) {
                                 column_name = jksn_free(column_name);
                                 column_values = jksn_free(column_values);

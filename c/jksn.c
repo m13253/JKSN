@@ -378,13 +378,13 @@ static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *ob
         if(!data.buf)
             return JKSN_ENOMEM;
         data.size = jksn_encode_int(data.buf, (uint64_t) object->data_int, 0);
-        *result = jksn_value_new(object, 0x1e, &data, NULL);
+        *result = jksn_value_new(object, 0x1f, &data, NULL);
     } else {
         jksn_blobstring data = {0, jksn_malloc(10)};
         if(!data.buf)
             return JKSN_ENOMEM;
         data.size = jksn_encode_int(data.buf, (uint64_t) -object->data_int, 0);
-        *result = jksn_value_new(object, 0x1f, &data, NULL);
+        *result = jksn_value_new(object, 0x1e, &data, NULL);
     }
     return *result ? JKSN_EOK : JKSN_ENOMEM;
 }

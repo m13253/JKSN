@@ -75,6 +75,7 @@ typedef enum {
 
 static inline void *jksn_malloc(size_t size);
 static inline void *jksn_calloc(size_t nmemb, size_t size);
+static inline void *jksn_realloc(void *ptr, size_t size);
 static jksn_value *jksn_value_new(const jksn_t *origin, uint8_t control, const jksn_blobstring *data, const jksn_blobstring *buf);
 static jksn_value *jksn_value_free(jksn_value *object);
 static size_t jksn_value_size(const jksn_value *object, int depth);
@@ -112,6 +113,10 @@ static inline void *jksn_calloc(size_t nmemb, size_t size) {
         return calloc(nmemb, size);
     else
         return malloc(1);
+}
+
+static inline void* jksn_realloc(void *ptr, size_t size) {
+    return realloc(ptr, size != 0 ? size : 1);
 }
 
 jksn_cache *jksn_cache_new(void) {
@@ -1492,7 +1497,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     retval = jksn_parse_value(&(*result)->data_array.children[i], buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK) {
                         *result = jksn_free(*result);
-                        return JKSN_ENOMEM;
+                        return retval;
                     }
                     buffer += child_size;
                     size -= child_size;
@@ -1550,7 +1555,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     retval = jksn_parse_value(&(*result)->data_object.children[i].key, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK) {
                         *result = jksn_free(*result);
-                        return JKSN_ENOMEM;
+                        return retval;
                     }
                     buffer += child_size;
                     size -= child_size;
@@ -1559,7 +1564,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     retval = jksn_parse_value(&(*result)->data_object.children[i].value, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK) {
                         *result = jksn_free(*result);
-                        return JKSN_ENOMEM;
+                        return retval;
                     }
                     buffer += child_size;
                     size -= child_size;
@@ -1567,6 +1572,61 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         *bytes_parsed += child_size;
                 }
                 return JKSN_EOK;
+            }
+        case 0xa0:
+            {
+                jksn_error_message retval;
+                uint64_t column_len;
+                size_t varint_size;
+                size_t i;
+                switch(control) {
+                case 0xa0:
+                    *result = jksn_malloc(sizeof (jksn_t));
+                    if(!*result)
+                        return JKSN_ENOMEM;
+                    *result.data_type = JKSN_UNSPECIFIED;
+                    return JKSN_EOK;
+                case 0xad:
+                    retval = jksn_decode_int(&column_len, buffer, size, 2, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer += 2;
+                    size -= 2;
+                    break;
+                case 0xa3:
+                    retval = jksn_decode_int(&column_len, buffer, size, 1, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer++;
+                    size--;
+                    break;
+                case 0xa4:
+                    retval = jksn_decode_int(&column_len, buffer, size, 0, &varint_size);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    buffer += varint_size
+                    size -= varint_size;
+                    if(bytes_parsed)
+                        *bytes_parsed += varint_size;
+                    break;
+                default:
+                    column_len = control & 0xf;
+                }
+                *result = jksn_malloc(sizeof (jksn_t));
+                if(!*result)
+                    return JKSN_ENOMEM;
+                (*result)->data_type = JKSN_ARRAY;
+                (*result)->data_array.size = 0;
+                (*result)->data_array.children = NULL;
+                for(i = 0; i < column_len; i++) {
+                    jksn_t *column = NULL;
+                    size_t child_size = 0;
+                    retval = jksn_parse_value(&column, buffer, size, &child_size, cache);
+                    if(retval != JKSN_EOK) {
+                        *result = jksn_free(*result);
+                        return retval;
+                    }
+                }
             }
         case 0xb0:
             {
@@ -1639,6 +1699,8 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
         case 0xf0:
             {
                 jksn_error_message_no retval;
+                jksn_t *tmp;
+                size_t child_size = 0;
                 switch(control) {
                 case 0xf0:
                     if(size < 4)
@@ -1681,9 +1743,13 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         *bytes_parsed += 64;
                     return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
                 case 0xf8:
-                    retval = jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                    retval = jksn_parse_value(result, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK)
                         return retval;
+                    buffer += child_size;
+                    size -= child_size;
+                    if(bytes_parsed)
+                        *bytes_parsed += child_size;
                     if(size < 4)
                         return JKSN_ETRUNC;
                     buffer += 4;
@@ -1692,53 +1758,74 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         *bytes_parsed += 4;
                     return JKSN_EOK;
                 case 0xf9:
-                    retval = jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                    retval = jksn_parse_value(result, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK)
                         return retval;
+                    buffer += child_size;
+                    size -= child_size;
+                    if(bytes_parsed)
+                        *bytes_parsed += child_size;
                     if(size < 16)
                         return JKSN_ETRUNC;
                     buffer += 16;
                     size -= 16;
-                    if(bytes_parsed)
-                        *bytes_parsed += 16;
+                    if(&child_size)
+                        *&child_size += 16;
                     return JKSN_EOK;
                 case 0xfa:
-                    retval = jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                    retval = jksn_parse_value(result, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK)
                         return retval;
+                    buffer += child_size;
+                    size -= child_size;
+                    if(bytes_parsed)
+                        *bytes_parsed += child_size;
                     if(size < 20)
                         return JKSN_ETRUNC;
                     buffer += 20;
                     size -= 20;
-                    if(bytes_parsed)
-                        *bytes_parsed += 20;
+                    if(&child_size)
+                        *&child_size += 20;
                     return JKSN_EOK;
                 case 0xfb:
-                    retval = jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                    retval = jksn_parse_value(result, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK)
                         return retval;
+                    buffer += child_size;
+                    size -= child_size;
+                    if(bytes_parsed)
+                        *bytes_parsed += child_size;
                     if(size < 32)
                         return JKSN_ETRUNC;
                     buffer += 32;
                     size -= 32;
-                    if(bytes_parsed)
-                        *bytes_parsed += 32;
+                    if(&child_size)
+                        *&child_size += 32;
                     return JKSN_EOK;
                 case 0xfc:
-                    retval = jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                    retval = jksn_parse_value(result, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK)
                         return retval;
+                    buffer += child_size;
+                    size -= child_size;
+                    if(bytes_parsed)
+                        *bytes_parsed += child_size;
                     if(size < 64)
                         return JKSN_ETRUNC;
                     buffer += 64;
                     size -= 64;
-                    if(bytes_parsed)
-                        *bytes_parsed += 64;
+                    if(&child_size)
+                        *&child_size += 64;
                     return JKSN_EOK;
                 case 0xff:
-                    retval = jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                    retval = jksn_parse_value(&tmp, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK)
                         return retval;
+                    tmp = jksn_free(tmp);
+                    buffer += child_size;
+                    size -= child_size;
+                    if(bytes_parsed)
+                        *bytes_parsed += child_size;
                     return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
                 }
             }

@@ -1400,7 +1400,6 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 uint64_t value_len;
                 size_t varint_size = 0;
                 size_t i;
-                size_t bytes_skipped = 0;
                 switch(control) {
                 case 0x70:
                     for(i = 0; i < 256; i++) {
@@ -1442,15 +1441,16 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 }
                 while(value_len--) {
                     jksn_t *tmp = NULL;
+                    size_t bytes_skipped = 0;
                     retval = jksn_parse_value(&tmp, buffer, size, &bytes_skipped, cache);
                     if(retval != JKSN_EOK)
                         return retval;
                     jksn_free(tmp);
                     buffer += bytes_skipped;
                     size -= bytes_skipped;
+                    if(bytes_parsed)
+                        *bytes_parsed += bytes_skipped;
                 }
-                if(bytes_parsed)
-                    *bytes_parsed += bytes_skipped;
                 return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
             }
         case 0x80:
@@ -1566,6 +1566,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     size -= child_size;
                     if(bytes_parsed)
                         *bytes_parsed += child_size;
+                    child_size = 0;
                     retval = jksn_parse_value(&(*result)->data_object.children[i].value, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK) {
                         *result = jksn_free(*result);
@@ -1633,6 +1634,11 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         *result = jksn_free(*result);
                         return retval;
                     }
+                    buffer += child_size;
+                    size -= child_size;
+                    if(bytes_parsed)
+                        *bytes_parsed += child_size;
+                    child_size = 0;
                     retval = jksn_parse_value(&column_values, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK) {
                         column_name = jksn_free(column_name);

@@ -4,12 +4,15 @@ RM=rm -f
 override CFLAGS:=-fPIC -Wall -O3 $(CFLAGS)
 override LDFLAGS:=-lm $(LDFLAGS)
 
-.PHONY: all clean
+.PHONY: all clean tests
 
 all: libjksn.a libjksn.so
 
 clean:
 	$(RM) libjksn.so libjksn.a jksn.o
+
+tests: libjksn.a
+	$(MAKE) -C tests
 
 libjksn.a: jksn.o
 	$(AR) crs $@ $^

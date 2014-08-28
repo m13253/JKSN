@@ -1282,6 +1282,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         return retval;
                     buffer++;
                     size--;
+                    break;
                 case 0x4f:
                     retval = jksn_decode_int(&str_size, buffer, size, 0, &varint_size);
                     if(retval != JKSN_EOK)
@@ -1348,6 +1349,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         return retval;
                     buffer++;
                     size--;
+                    break;
                 case 0x5f:
                     retval = jksn_decode_int(&blob_size, buffer, size, 0, &varint_size);
                     if(retval != JKSN_EOK)

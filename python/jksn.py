@@ -144,7 +144,7 @@ class JKSNEncoder:
         result = self.dumpobj(obj, check_circular=check_circular)
         if header:
             fp.write(b'jk!')
-        result.write(fp)
+        result.output(fp)
 
     def dumpobj(self, obj, check_circular=True):
         try:

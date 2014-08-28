@@ -1636,6 +1636,112 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 (*result)->data_int = cache->lastint;
                 return JKSN_EOK;
             }
+        case 0xf0:
+            {
+                jksn_error_message_no retval;
+                switch(control) {
+                case 0xf0:
+                    if(size < 4)
+                        return JKSN_ETRUNC;
+                    buffer += 4;
+                    size -= 4;
+                    if(bytes_parsed)
+                        *bytes_parsed += 4;
+                    return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                case 0xf1:
+                    if(size < 16)
+                        return JKSN_ETRUNC;
+                    buffer += 16;
+                    size -= 16;
+                    if(bytes_parsed)
+                        *bytes_parsed += 16;
+                    return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                case 0xf2:
+                    if(size < 20)
+                        return JKSN_ETRUNC;
+                    buffer += 20;
+                    size -= 20;
+                    if(bytes_parsed)
+                        *bytes_parsed += 20;
+                    return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                case 0xf3:
+                    if(size < 32)
+                        return JKSN_ETRUNC;
+                    buffer += 32;
+                    size -= 32;
+                    if(bytes_parsed)
+                        *bytes_parsed += 32;
+                    return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                case 0xf4:
+                    if(size < 64)
+                        return JKSN_ETRUNC;
+                    buffer += 64;
+                    size -= 64;
+                    if(bytes_parsed)
+                        *bytes_parsed += 64;
+                    return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                case 0xf8:
+                    retval = jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if(size < 4)
+                        return JKSN_ETRUNC;
+                    buffer += 4;
+                    size -= 4;
+                    if(bytes_parsed)
+                        *bytes_parsed += 4;
+                    return JKSN_EOK;
+                case 0xf9:
+                    retval = jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if(size < 16)
+                        return JKSN_ETRUNC;
+                    buffer += 16;
+                    size -= 16;
+                    if(bytes_parsed)
+                        *bytes_parsed += 16;
+                    return JKSN_EOK;
+                case 0xfa:
+                    retval = jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if(size < 20)
+                        return JKSN_ETRUNC;
+                    buffer += 20;
+                    size -= 20;
+                    if(bytes_parsed)
+                        *bytes_parsed += 20;
+                    return JKSN_EOK;
+                case 0xfb:
+                    retval = jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if(size < 32)
+                        return JKSN_ETRUNC;
+                    buffer += 32;
+                    size -= 32;
+                    if(bytes_parsed)
+                        *bytes_parsed += 32;
+                    return JKSN_EOK;
+                case 0xfc:
+                    retval = jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if(size < 64)
+                        return JKSN_ETRUNC;
+                    buffer += 64;
+                    size -= 64;
+                    if(bytes_parsed)
+                        *bytes_parsed += 64;
+                    return JKSN_EOK;
+                case 0xff:
+                    retval = jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
+                }
+            }
         }
         return JKSN_ECONTROL;
     }

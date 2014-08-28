@@ -1096,6 +1096,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     if(retval != JKSN_EOK)
                         return retval;
                     resint = (int64_t) (int16_t) uresint;
+                    break;
                 case 0x1d:
                     retval = jksn_decode_int(&uresint, buffer, size, 1, bytes_parsed);
                     if(retval != JKSN_EOK)

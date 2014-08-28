@@ -1186,7 +1186,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         *result = NULL;
                         return JKSN_ENOMEM;
                     }
-                    memcpy(cache->texthash[hashvalue].str, (*result)->data_string.str, cache->texthash[hashvalue].size);
+                    memcpy((*result)->data_string.str, cache->texthash[hashvalue].str, cache->texthash[hashvalue].size);
                     (*result)->data_string.str[cache->texthash[hashvalue].size] = '\0';
                     return JKSN_EOK;
                 case 0x3d:

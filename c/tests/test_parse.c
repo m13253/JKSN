@@ -10,17 +10,17 @@ int main(int argc, char *argv[]) {
     jksn_t *result;
     size_t bytes_parsed = 0xcccccccc;
     bufin.size = fread(bufin.buf, 1, 4096, stdin);
-    retval = jksn_parse(&result, &buf, &bytes_parsed, NULL);
+    retval = jksn_parse(&result, &bufin, &bytes_parsed, NULL);
     if(retval != 0) {
-        fprintf(stderr, "Parse error %d: %s", jksn_error(retval));
+        fprintf(stderr, "Parse error %d: %s\n", retval, jksn_errcode(retval));
         return retval;
     }
-    retval = jksn_dump(&bufout, &bufin, 0, NULL);
+    retval = jksn_dump(&bufout, result, 0, NULL);
     if(retval != 0) {
-        fprintf(stderr, "Dump error %d: %s", jksn_error(retval));
+        fprintf(stderr, "Dump error %d: %s\n", retval, jksn_errcode(retval));
         return retval;
     }
-    fwrite(bufout.buf, 1, bufout.size, stdout);
-    bufout = jksn_free(bufout);
+    fwrite(bufout->buf, 1, bufout->size, stdout);
+    bufout = jksn_blobstring_free(bufout);
     return retval;
 }

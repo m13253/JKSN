@@ -1,7 +1,7 @@
 AR=ar
 CC=gcc
 RM=rm -f
-override CFLAGS:=-fPIC -Wall -O3 $(CFLAGS)
+override CFLAGS:=-fPIC -Wall -Wextra -O3 $(CFLAGS)
 override LDFLAGS:=-lm $(LDFLAGS)
 
 .PHONY: all clean tests

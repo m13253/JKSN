@@ -85,8 +85,8 @@ static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *ob
 static jksn_error_message_no jksn_dump_float(jksn_value **result, const jksn_t *object);
 static jksn_error_message_no jksn_dump_double(jksn_value **result, const jksn_t *object);
 static jksn_error_message_no jksn_dump_longdouble(jksn_value **result, const jksn_t *object);
-static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t *object, jksn_cache *cache);
-static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *object, jksn_cache *cache);
+static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t *object);
+static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *object);
 static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *object, jksn_cache *cache);
 static jksn_error_message_no jksn_dump_object(jksn_value **result, const jksn_t *object, jksn_cache *cache);
 static void jksn_optimize(jksn_value *object, jksn_cache *cache);
@@ -281,13 +281,13 @@ int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int heade
                         (*result)->buf[1] = 'k';
                         (*result)->buf[2] = '!';
                         output_end = jksn_value_output((*result)->buf + 3, result_value);
-                        assert(output_end - (*result)->buf == (*result)->size);
+                        assert((size_t) (output_end - (*result)->buf) == (*result)->size);
                     } else {
                         const char *output_end;
                         (*result)->size = jksn_value_size(result_value, 0);
                         (*result)->buf = jksn_malloc((*result)->size);
                         output_end = jksn_value_output((*result)->buf, result_value);
-                        assert(output_end - (*result)->buf == (*result)->size);
+                        assert((size_t) (output_end - (*result)->buf) == (*result)->size);
                     }
                 }
             }
@@ -328,10 +328,10 @@ static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *
         retval = jksn_dump_longdouble(result, object);
         break;
     case JKSN_STRING:
-        retval = jksn_dump_string(result, object, cache);
+        retval = jksn_dump_string(result, object);
         break;
     case JKSN_BLOB:
-        retval = jksn_dump_blob(result, object, cache);
+        retval = jksn_dump_blob(result, object);
         break;
     case JKSN_ARRAY:
         retval = jksn_dump_array(result, object, cache);
@@ -526,7 +526,7 @@ static jksn_error_message_no jksn_dump_longdouble(jksn_value **result, const jks
         return JKSN_ELONGDOUBLE;
 }
 
-static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t *object) {
     size_t utf16size = jksn_utf8_to_utf16(NULL, object->data_string.str, object->data_string.size, 1);
     if(utf16size != (size_t) (ptrdiff_t) -1 && utf16size*2 < object->data_string.size) {
         uint16_t *utf16str = jksn_malloc(utf16size*2);
@@ -599,7 +599,7 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
         return JKSN_ENOMEM;
 }
 
-static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *object) {
     jksn_blobstring buf = {object->data_blob.size, jksn_malloc(object->data_blob.size)};
     if(!buf.buf)
         return JKSN_ENOMEM;
@@ -754,7 +754,7 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
                 return JKSN_ENOMEM;
             }
             for(row = 0; row < object->data_array.size; row++) {
-                static jksn_t unspecified_value = {JKSN_UNSPECIFIED};
+                static jksn_t unspecified_value = { .data_type = JKSN_UNSPECIFIED };
                 size_t i;
                 row_array->data_array.children[row] = &unspecified_value;
                 for(i = object->data_array.children[row]->data_object.size; i--; )
@@ -2346,7 +2346,7 @@ static uint16_t jksn_uint16_to_le(uint16_t n) {
 }
 
 const char *jksn_errcode(int errcode) {
-    if(errcode >= 0 && errcode < sizeof jksn_error_messages/sizeof jksn_error_messages[0])
+    if(errcode >= 0 && (size_t) errcode < sizeof jksn_error_messages/sizeof jksn_error_messages[0])
         return jksn_error_messages[errcode];
     else
         return NULL;

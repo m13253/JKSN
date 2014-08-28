@@ -1221,6 +1221,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 if(!utf16str)
                     return JKSN_ENOMEM;
                 memcpy((char *) utf16str, buffer, str_size*2);
+                hashvalue = jksn_djbhash((char *) utf16str, str_size*2);
                 for(i = 0; i < str_size; i++)
                     utf16str[i] = jksn_uint16_to_le(utf16str[i]);
                 *result = jksn_malloc(sizeof (jksn_t));
@@ -1243,7 +1244,6 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 size -= str_size*2;
                 if(bytes_parsed)
                     *bytes_parsed += str_size*2;
-                hashvalue = jksn_djbhash((*result)->data_string.str, (*result)->data_string.size);
                 free(cache->texthash[hashvalue].str);
                 cache->texthash[hashvalue].str = jksn_malloc((*result)->data_string.size);
                 if(cache->texthash[hashvalue].str) {

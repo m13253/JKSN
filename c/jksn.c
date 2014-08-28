@@ -1126,6 +1126,8 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     return JKSN_ENOMEM;
                 (*result)->data_type = JKSN_INT;
                 (*result)->data_int = resint;
+                cache->lastint = resint;
+                cache->haslastint = 1;
                 return JKSN_EOK;
             }
         case 0x20:

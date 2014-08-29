@@ -4,7 +4,7 @@
 
 char buf[4096];
 
-int main(int argc, char *argv[]) {
+int main(void) {
     int retval;
     jksn_blobstring bufin = { .size = 0, .buf = buf };
     jksn_blobstring *bufout;

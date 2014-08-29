@@ -6,7 +6,7 @@ jksn_t object = {
     { .data_int = 42 }
 };
 
-int main(int argc, char *argv[]) {
+int main(void) {
     jksn_blobstring *result;
     int retval = jksn_dump(&result, &object, 1, NULL);
     fprintf(stderr, "retval = %d (%s)\n", retval, jksn_errcode(retval));

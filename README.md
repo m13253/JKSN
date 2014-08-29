@@ -136,16 +136,18 @@ An Integer is followed after `0xbb` `0xbc` `0xbd` `0xbe` `0xbf`, representing an
 
 #### Checksums:
 
-    0xf0: a CRC32 checksum will be immediately followed
-    0xf1: an MD5 checksum will be immediately followed
-    0xf2: a SHA-1 checksum will be immediately followed
-    0xf3: a SHA-256 checksum will be immediately followed
-    0xf4: a SHA-512 checksum will be immediately followed
-    0xf8: a delayed CRC32 checksum will be present at the end of the stream
-    0xf9: a delayed MD5 checksum will be present at the end of the stream
-    0xfa: a delayed SHA-1 checksum will be present at the end of the stream
-    0xfb: a delayed SHA-256 checksum will be present at the end of the stream
-    0xfc: a delayed SHA-512 checksum will be present at the end of the stream
+    0xf0: a DJBHash checksum will be immediately followed
+    0xf1: a CRC32 checksum will be immediately followed
+    0xf2: an MD5 checksum will be immediately followed
+    0xf3: a SHA-1 checksum will be immediately followed
+    0xf4: a SHA-256 checksum will be immediately followed
+    0xf5: a SHA-512 checksum will be immediately followed
+    0xf8: a delayed DJBHash checksum will be present at the end of the stream
+    0xf9: a delayed CRC32 checksum will be present at the end of the stream
+    0xfa: a delayed MD5 checksum will be present at the end of the stream
+    0xfb: a delayed SHA-1 checksum will be present at the end of the stream
+    0xfc: a delayed SHA-256 checksum will be present at the end of the stream
+    0xfd: a delayed SHA-512 checksum will be present at the end of the stream
 
 #### Pragmas:
 
@@ -232,7 +234,7 @@ Checksum indicates the checksum from the position immediately after the checksum
 
 A delayed checksum rearranges the form of JKSN, which puts the checksum to the end of JKSN stream, as the following format:
 
-    [magic header] [0xf8/0xf9/0xfa/0xfb/0xfc] [control byte] [data bytes] ... [control byte] [data bytes] [checksum]
+    [magic header] [0xf8..0xfd] [control byte] [data bytes] ... [control byte] [data bytes] [checksum]
 
 ### Representation decision
 

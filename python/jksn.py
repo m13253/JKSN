@@ -565,18 +565,21 @@ class JKSNDecoder:
                 # Checksums
                 if control <= 0xf4:
                     if control == 0xf0:
+                        checksum = fp.read(1)
+                        fp = _hashed_file(fp, _djb_hasher)
+                    elif control == 0xf1:
                         checksum = fp.read(4)
                         fp = _hashed_file(fp, _crc32_hasher)
-                    elif control == 0xf1:
+                    elif control == 0xf2:
                         checksum = fp.read(16)
                         fp = _hashed_file(fp, hashlib.md5)
-                    elif control == 0xf2:
+                    elif control == 0xf3:
                         checksum = fp.read(20)
                         fp = _hashed_file(fp, hashlib.sha1)
-                    elif control == 0xf3:
+                    elif control == 0xf4:
                         checksum = fp.read(32)
                         fp = _hashed_file(fp, hashlib.sha256)
-                    elif control == 0xf4:
+                    elif control == 0xf5:
                         checksum = fp.read(64)
                         fp = _hashed_file(fp, hashlib.sha512)
                     result = self._load_value(fp)
@@ -584,24 +587,28 @@ class JKSNDecoder:
                         return result
                     else:
                         return JKSNChecksumError('checksum mismatch')
-                elif 0xf8 <= control <= 0xfc:
+                elif 0xf8 <= control <= 0xfd:
                     if control == 0xf8:
+                        hashed_fp = _hashed_file(fp, _djb_hasher)
+                        result = self._load_value(hashed_fp)
+                        checksum = fp.read(1)
+                    elif control == 0xf9:
                         hashed_fp = _hashed_file(fp, _crc32_hasher)
                         result = self._load_value(hashed_fp)
                         checksum = fp.read(4)
-                    elif control == 0xf9:
+                    elif control == 0xfa:
                         hashed_fp = _hashed_file(fp, hashlib.md5)
                         result = self._load_value(hashed_fp)
                         checksum = fp.read(16)
-                    elif control == 0xfa:
+                    elif control == 0xfb:
                         hashed_fp = _hashed_file(fp, hashlib.sha1)
                         result = self._load_value(hashed_fp)
                         checksum = fp.read(20)
-                    elif control == 0xfb:
+                    elif control == 0xfc:
                         hashed_fp = _hashed_file(fp, hashlib.sha256)
                         result = self._load_value(hashed_fp)
                         checksum = fp.read(32)
-                    elif control == 0xfc:
+                    elif control == 0xfd:
                         hashed_fp = _hashed_file(fp, hashlib.sha512)
                         result = self._load_value(hashed_fp)
                         checksum = fp.read(64)
@@ -662,15 +669,17 @@ class JKSNDecoder:
         return x - ((x >> (bits - 1)) << bits)
 
 
-def _djb_hash(obj):
-    result = 0
+def _djb_hash(obj, iv=0):
+    result = iv
     if sys.version_info < (3,):
         for i in obj:
             result += (result << 5) + ord(i)
+            result &= 0xff
     else:
         for i in obj:
             result += (result << 5) + i
-    return result & 0xff
+            result &= 0xff
+    return result
 
 
 class _crc32_hasher:
@@ -682,6 +691,17 @@ class _crc32_hasher:
 
     def digest(self):
         return struct.pack('>L', self.value & 0xffffffff)
+
+
+class _djb_hasher:
+    def __init__(self, data=b''):
+        self.value = _djb_hash(data)
+
+    def update(self, data=b''):
+        self.value = _djb_hash(data, self.value)
+
+    def digest(self):
+        return bytechr(self.value)
 
 
 class _file_check_eof:

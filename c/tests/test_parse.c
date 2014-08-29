@@ -15,6 +15,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Parse error %d: %s\n", retval, jksn_errcode(retval));
         return retval;
     }
+    assert(bufin.size == bytes_parsed);
     retval = jksn_dump(&bufout, result, 0, NULL);
     result = jksn_free(result);
     if(retval != 0) {

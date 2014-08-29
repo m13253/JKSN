@@ -1926,10 +1926,10 @@ static jksn_error_message_no jksn_parse_float(jksn_t **result, const char *buffe
             uint32_t data_int;
             float data_float;
         } conv = {
-            ((uint32_t) buffer[0]) << 24 |
-            ((uint32_t) buffer[1]) << 16 |
-            ((uint32_t) buffer[2]) << 8 |
-            ((uint32_t) buffer[3])
+            ((uint32_t) (uint8_t) buffer[0]) << 24 |
+            ((uint32_t) (uint8_t) buffer[1]) << 16 |
+            ((uint32_t) (uint8_t) buffer[2]) << 8 |
+            ((uint32_t) (uint8_t) buffer[3])
         };
         *result = jksn_malloc(sizeof (jksn_t));
         if(!*result)
@@ -1951,14 +1951,14 @@ static jksn_error_message_no jksn_parse_double(jksn_t **result, const char *buff
             uint64_t data_int;
             double data_double;
         } conv = {
-            ((uint64_t) buffer[0]) << 56 |
-            ((uint64_t) buffer[1]) << 48 |
-            ((uint64_t) buffer[2]) << 40 |
-            ((uint64_t) buffer[3]) << 32 |
-            ((uint64_t) buffer[4]) << 24 |
-            ((uint64_t) buffer[5]) << 16 |
-            ((uint64_t) buffer[6]) << 8 |
-            ((uint64_t) buffer[7])
+            ((uint64_t) (uint8_t) buffer[0]) << 56 |
+            ((uint64_t) (uint8_t) buffer[1]) << 48 |
+            ((uint64_t) (uint8_t) buffer[2]) << 40 |
+            ((uint64_t) (uint8_t) buffer[3]) << 32 |
+            ((uint64_t) (uint8_t) buffer[4]) << 24 |
+            ((uint64_t) (uint8_t) buffer[5]) << 16 |
+            ((uint64_t) (uint8_t) buffer[6]) << 8 |
+            ((uint64_t) (uint8_t) buffer[7])
         };
         *result = jksn_malloc(sizeof (jksn_t));
         if(!*result)

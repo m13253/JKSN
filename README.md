@@ -5,7 +5,7 @@ JKSN, prononced as "Jackson", is an abbreviation of "JKSN Compressed Serialize N
 
 JKSN is suitable for the situation that network bandwidth is expensive but processing time is cheap.
 
-JKSN stream may be further compressed with GZIP to get better results.
+JKSN stream may be further compressed with GZIP to get better results. It does not conflict with GZIP. Instead, since GZIP compresses better if similar data are not 32 KiB far apart, JKSN rearranges your data so that similar data are put together.
 
 File formats
 ------------

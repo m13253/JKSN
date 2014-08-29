@@ -24,15 +24,15 @@
 #define _JKSN_PRIVATE
 #include "jksn.h"
 
-typedef struct jksn_value {
+typedef struct jksn_proxy {
     const jksn_t *origin;
     uint8_t control;
     jksn_blobstring data;
     jksn_blobstring buf;
     uint8_t hash;
-    struct jksn_value *first_child;
-    struct jksn_value *next_child;
-} jksn_value;
+    struct jksn_proxy *first_child;
+    struct jksn_proxy *next_child;
+} jksn_proxy;
 
 struct jksn_cache {
     int haslastint;
@@ -76,20 +76,20 @@ typedef enum {
 static inline void *jksn_malloc(size_t size);
 static inline void *jksn_calloc(size_t nmemb, size_t size);
 static inline void *jksn_realloc(void *ptr, size_t size);
-static jksn_value *jksn_value_new(const jksn_t *origin, uint8_t control, const jksn_blobstring *data, const jksn_blobstring *buf);
-static jksn_value *jksn_value_free(jksn_value *object);
-static size_t jksn_value_size(const jksn_value *object, int depth);
-static char *jksn_value_output(char output[], const jksn_value *object);
-static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache *cache);
-static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *object, jksn_cache *cache);
-static jksn_error_message_no jksn_dump_float(jksn_value **result, const jksn_t *object);
-static jksn_error_message_no jksn_dump_double(jksn_value **result, const jksn_t *object);
-static jksn_error_message_no jksn_dump_longdouble(jksn_value **result, const jksn_t *object);
-static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t *object);
-static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *object);
-static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *object, jksn_cache *cache);
-static jksn_error_message_no jksn_dump_object(jksn_value **result, const jksn_t *object, jksn_cache *cache);
-static void jksn_optimize(jksn_value *object, jksn_cache *cache);
+static jksn_proxy *jksn_proxy_new(const jksn_t *origin, uint8_t control, const jksn_blobstring *data, const jksn_blobstring *buf);
+static jksn_proxy *jksn_proxy_free(jksn_proxy *object);
+static size_t jksn_proxy_size(const jksn_proxy *object, int depth);
+static char *jksn_proxy_output(char output[], const jksn_proxy *object);
+static jksn_error_message_no jksn_dump_value(jksn_proxy **result, const jksn_t *object, jksn_cache *cache);
+static jksn_error_message_no jksn_dump_int(jksn_proxy **result, const jksn_t *object, jksn_cache *cache);
+static jksn_error_message_no jksn_dump_float(jksn_proxy **result, const jksn_t *object);
+static jksn_error_message_no jksn_dump_double(jksn_proxy **result, const jksn_t *object);
+static jksn_error_message_no jksn_dump_longdouble(jksn_proxy **result, const jksn_t *object);
+static jksn_error_message_no jksn_dump_string(jksn_proxy **result, const jksn_t *object);
+static jksn_error_message_no jksn_dump_blob(jksn_proxy **result, const jksn_t *object);
+static jksn_error_message_no jksn_dump_array(jksn_proxy **result, const jksn_t *object, jksn_cache *cache);
+static jksn_error_message_no jksn_dump_object(jksn_proxy **result, const jksn_t *object, jksn_cache *cache);
+static void jksn_optimize(jksn_proxy *object, jksn_cache *cache);
 static size_t jksn_encode_int(char result[], uint64_t object, size_t size);
 static struct jksn_swap_columns *jksn_swap_columns_free(struct jksn_swap_columns *columns);
 static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffer, size_t size, size_t *bytes_parsed, jksn_cache *cache);
@@ -198,8 +198,8 @@ jksn_t *jksn_free(jksn_t *object) {
     return NULL;
 }
 
-static jksn_value *jksn_value_new(const jksn_t *origin, uint8_t control, const jksn_blobstring *data, const jksn_blobstring *buf) {
-    jksn_value *result = jksn_calloc(1, sizeof (jksn_value));
+static jksn_proxy *jksn_proxy_new(const jksn_t *origin, uint8_t control, const jksn_blobstring *data, const jksn_blobstring *buf) {
+    jksn_proxy *result = jksn_calloc(1, sizeof (jksn_proxy));
     if(result) {
         result->origin = origin;
         result->control = control;
@@ -211,9 +211,9 @@ static jksn_value *jksn_value_new(const jksn_t *origin, uint8_t control, const j
     return result;
 }
 
-static jksn_value *jksn_value_free(jksn_value *object) {
+static jksn_proxy *jksn_proxy_free(jksn_proxy *object) {
     while(object) {
-        jksn_value *this_object = object;
+        jksn_proxy *this_object = object;
         object->data.size = 0;
         free(object->data.buf);
         object->data.buf = NULL;
@@ -221,7 +221,7 @@ static jksn_value *jksn_value_free(jksn_value *object) {
         free(object->buf.buf);
         object->buf.buf = NULL;
         if(object->first_child) {
-            jksn_value_free(object->first_child);
+            jksn_proxy_free(object->first_child);
             object->first_child = NULL;
         }
         object = object->next_child;
@@ -230,18 +230,18 @@ static jksn_value *jksn_value_free(jksn_value *object) {
     return NULL;
 }
 
-static size_t jksn_value_size(const jksn_value *object, int depth) {
+static size_t jksn_proxy_size(const jksn_proxy *object, int depth) {
     size_t result = 0;
     if(object) {
         result = 1 + object->data.size + object->buf.size;
         if(depth != 1)
             for(object = object->first_child; object; object = object->next_child)
-                result += jksn_value_size(object, depth-1);
+                result += jksn_proxy_size(object, depth-1);
     }
     return result;
 }
 
-static char *jksn_value_output(char output[], const jksn_value *object) {
+static char *jksn_proxy_output(char output[], const jksn_proxy *object) {
     while(object) {
         *(output++) = (char) object->control;
         if(object->data.size != 0) {
@@ -253,7 +253,7 @@ static char *jksn_value_output(char output[], const jksn_value *object) {
             output += object->buf.size;
         }
         if(object->first_child)
-            output = jksn_value_output(output, object->first_child);
+            output = jksn_proxy_output(output, object->first_child);
         object = object->next_child;
     }
     return output;
@@ -268,7 +268,7 @@ int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int heade
         if(!cache)
             return JKSN_ENOMEM;
         else {
-            jksn_value *result_value = NULL;
+            jksn_proxy *result_value = NULL;
             jksn_error_message_no retval = jksn_dump_value(&result_value, object, cache);
             if(retval == JKSN_EOK) {
                 jksn_optimize(result_value, cache);
@@ -276,23 +276,23 @@ int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int heade
                     *result = jksn_malloc(sizeof (jksn_blobstring));
                     if(header) {
                         const char *output_end;
-                        (*result)->size = jksn_value_size(result_value, 0) + 3;
+                        (*result)->size = jksn_proxy_size(result_value, 0) + 3;
                         (*result)->buf = jksn_malloc((*result)->size);
                         (*result)->buf[0] = 'j';
                         (*result)->buf[1] = 'k';
                         (*result)->buf[2] = '!';
-                        output_end = jksn_value_output((*result)->buf + 3, result_value);
+                        output_end = jksn_proxy_output((*result)->buf + 3, result_value);
                         assert((size_t) (output_end - (*result)->buf) == (*result)->size);
                     } else {
                         const char *output_end;
-                        (*result)->size = jksn_value_size(result_value, 0);
+                        (*result)->size = jksn_proxy_size(result_value, 0);
                         (*result)->buf = jksn_malloc((*result)->size);
-                        output_end = jksn_value_output((*result)->buf, result_value);
+                        output_end = jksn_proxy_output((*result)->buf, result_value);
                         assert((size_t) (output_end - (*result)->buf) == (*result)->size);
                     }
                 }
             }
-            jksn_value_free(result_value);
+            jksn_proxy_free(result_value);
             if(cache != cache_)
                 jksn_cache_free(cache);
             return retval;
@@ -300,20 +300,20 @@ int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int heade
     }
 }
 
-static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+static jksn_error_message_no jksn_dump_value(jksn_proxy **result, const jksn_t *object, jksn_cache *cache) {
     jksn_error_message_no retval = JKSN_EOK;
     *result = NULL;
     switch(object->data_type) {
     case JKSN_UNDEFINED:
-        *result = jksn_value_new(object, 0x00, NULL, NULL);
+        *result = jksn_proxy_new(object, 0x00, NULL, NULL);
         retval = *result ? JKSN_EOK : JKSN_ENOMEM;
         break;
     case JKSN_NULL:
-        *result = jksn_value_new(object, 0x01, NULL, NULL);
+        *result = jksn_proxy_new(object, 0x01, NULL, NULL);
         retval = *result ? JKSN_EOK : JKSN_ENOMEM;
         break;
     case JKSN_BOOL:
-        *result = jksn_value_new(object, object->data_bool ? 0x03 : 0x02, NULL, NULL);
+        *result = jksn_proxy_new(object, object->data_bool ? 0x03 : 0x02, NULL, NULL);
         retval = *result ? JKSN_EOK : JKSN_ENOMEM;
         break;
     case JKSN_INT:
@@ -341,7 +341,7 @@ static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *
         retval = jksn_dump_object(result, object, cache);
         break;
     case JKSN_UNSPECIFIED:
-        *result = jksn_value_new(object, 0xa0, NULL, NULL);
+        *result = jksn_proxy_new(object, 0xa0, NULL, NULL);
         retval = *result ? JKSN_EOK : JKSN_ENOMEM;
         break;
     default:
@@ -350,51 +350,51 @@ static jksn_error_message_no jksn_dump_value(jksn_value **result, const jksn_t *
     return retval;
 }
 
-static jksn_error_message_no jksn_dump_int(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+static jksn_error_message_no jksn_dump_int(jksn_proxy **result, const jksn_t *object, jksn_cache *cache) {
     cache->lastint = object->data_int;
     if(object->data_int >= 0 && object->data_int <= 0xa)
-        *result = jksn_value_new(object, 0x10 | object->data_int, NULL, NULL);
+        *result = jksn_proxy_new(object, 0x10 | object->data_int, NULL, NULL);
     else if(object->data_int >= -0x80 && object->data_int <= 0x7f) {
         jksn_blobstring data = {1, jksn_malloc(1)};
         if(!data.buf)
             return JKSN_ENOMEM;
         jksn_encode_int(data.buf, (uint64_t) object->data_int, 1);
-        *result = jksn_value_new(object, 0x1d, &data, NULL);
+        *result = jksn_proxy_new(object, 0x1d, &data, NULL);
     } else if(object->data_int >= -0x8000 && object->data_int <= 0x7fff) {
         jksn_blobstring data = {2, jksn_malloc(2)};
         if(!data.buf)
             return JKSN_ENOMEM;
         jksn_encode_int(data.buf, (uint64_t) object->data_int, 2);
-        *result = jksn_value_new(object, 0x1c, &data, NULL);
+        *result = jksn_proxy_new(object, 0x1c, &data, NULL);
     } else if((object->data_int >= -0x80000000L && object->data_int <= -0x200000L) ||
               (object->data_int >= 0x200000L && object->data_int <= 0x7fffffffL)) {
         jksn_blobstring data = {4, jksn_malloc(4)};
         if(!data.buf)
             return JKSN_ENOMEM;
         jksn_encode_int(data.buf, (uint64_t) object->data_int, 4);
-        *result = jksn_value_new(object, 0x1b, &data, NULL);
+        *result = jksn_proxy_new(object, 0x1b, &data, NULL);
     } else if(object->data_int >= 0) {
         jksn_blobstring data = {0, jksn_malloc(10)};
         if(!data.buf)
             return JKSN_ENOMEM;
         data.size = jksn_encode_int(data.buf, (uint64_t) object->data_int, 0);
-        *result = jksn_value_new(object, 0x1f, &data, NULL);
+        *result = jksn_proxy_new(object, 0x1f, &data, NULL);
     } else {
         jksn_blobstring data = {0, jksn_malloc(10)};
         if(!data.buf)
             return JKSN_ENOMEM;
         data.size = jksn_encode_int(data.buf, (uint64_t) -object->data_int, 0);
-        *result = jksn_value_new(object, 0x1e, &data, NULL);
+        *result = jksn_proxy_new(object, 0x1e, &data, NULL);
     }
     return *result ? JKSN_EOK : JKSN_ENOMEM;
 }
 
-static jksn_error_message_no jksn_dump_float(jksn_value **result, const jksn_t *object) {
+static jksn_error_message_no jksn_dump_float(jksn_proxy **result, const jksn_t *object) {
     if(isnan(object->data_float)) {
-        *result = jksn_value_new(object, 0x20, NULL, NULL);
+        *result = jksn_proxy_new(object, 0x20, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else if(isinf(object->data_float)) {
-        *result = jksn_value_new(object, object->data_float >= 0.0f ? 0x2f : 0x2e, NULL, NULL);
+        *result = jksn_proxy_new(object, object->data_float >= 0.0f ? 0x2f : 0x2e, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else {
         union {
@@ -405,19 +405,19 @@ static jksn_error_message_no jksn_dump_float(jksn_value **result, const jksn_t *
         assert(sizeof (float) == 4);
         if(data.buf) {
             jksn_encode_int(data.buf, conv.data_int, 4);
-            *result = jksn_value_new(object, 0x2d, &data, NULL);
+            *result = jksn_proxy_new(object, 0x2d, &data, NULL);
             return *result ? JKSN_EOK : JKSN_ENOMEM;
         } else
             return JKSN_ENOMEM;
     }
 }
 
-static jksn_error_message_no jksn_dump_double(jksn_value **result, const jksn_t *object) {
+static jksn_error_message_no jksn_dump_double(jksn_proxy **result, const jksn_t *object) {
     if(isnan(object->data_double)) {
-        *result = jksn_value_new(object, 0x20, NULL, NULL);
+        *result = jksn_proxy_new(object, 0x20, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else if(isinf(object->data_double)) {
-        *result = jksn_value_new(object, object->data_double >= 0.0 ? 0x2f : 0x2e, NULL, NULL);
+        *result = jksn_proxy_new(object, object->data_double >= 0.0 ? 0x2f : 0x2e, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else {
         union {
@@ -437,19 +437,19 @@ static jksn_error_message_no jksn_dump_double(jksn_value **result, const jksn_t 
                 jksn_encode_int(data.buf, conv.data_int[0], 4);
                 jksn_encode_int(data.buf+4, conv.data_int[1], 4);
             }
-            *result = jksn_value_new(object, 0x2c, &data, NULL);
+            *result = jksn_proxy_new(object, 0x2c, &data, NULL);
             return *result ? JKSN_EOK : JKSN_ENOMEM;
         } else
             return JKSN_ENOMEM;
     }
 }
 
-static jksn_error_message_no jksn_dump_longdouble(jksn_value **result, const jksn_t *object) {
+static jksn_error_message_no jksn_dump_longdouble(jksn_proxy **result, const jksn_t *object) {
     if(isnan(object->data_long_double)) {
-        *result = jksn_value_new(object, 0x20, NULL, NULL);
+        *result = jksn_proxy_new(object, 0x20, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else if(isinf(object->data_long_double)) {
-        *result = jksn_value_new(object, object->data_long_double >= 0.0L ? 0x2f : 0x2e, NULL, NULL);
+        *result = jksn_proxy_new(object, object->data_long_double >= 0.0L ? 0x2f : 0x2e, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else if(sizeof (long double) == 12) {
         union {
@@ -485,7 +485,7 @@ static jksn_error_message_no jksn_dump_longdouble(jksn_value **result, const jks
             data.buf[8] = (char) conv.data_int[10];
             data.buf[9] = (char) conv.data_int[11];
         }
-        *result = jksn_value_new(object, 0x2b, &data, NULL);
+        *result = jksn_proxy_new(object, 0x2b, &data, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else if(sizeof (long double) == 16) {
         union {
@@ -521,13 +521,13 @@ static jksn_error_message_no jksn_dump_longdouble(jksn_value **result, const jks
             data.buf[8] = (char) conv.data_int[14];
             data.buf[9] = (char) conv.data_int[15];
         }
-        *result = jksn_value_new(object, 0x2b, &data, NULL);
+        *result = jksn_proxy_new(object, 0x2b, &data, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else
         return JKSN_ELONGDOUBLE;
 }
 
-static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t *object) {
+static jksn_error_message_no jksn_dump_string(jksn_proxy **result, const jksn_t *object) {
     size_t utf16size = jksn_utf8_to_utf16(NULL, object->data_string.str, object->data_string.size, 1);
     if(utf16size != (size_t) (ptrdiff_t) -1 && utf16size*2 < object->data_string.size) {
         uint16_t *utf16str = jksn_malloc(utf16size*2);
@@ -540,7 +540,7 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
         for(i = 0; i < utf16size; i++)
             utf16str[i] = jksn_uint16_to_le(utf16str[i]);
         if(utf16size <= 0xb)
-            *result = jksn_value_new(object, 0x30 | utf16size, NULL, &buf);
+            *result = jksn_proxy_new(object, 0x30 | utf16size, NULL, &buf);
         else if(utf16size <= 0xff) {
             jksn_blobstring data = {1, jksn_malloc(1)};
             if(!data.buf) {
@@ -548,7 +548,7 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
                 return JKSN_ENOMEM;
             }
             jksn_encode_int(data.buf, utf16size, 1);
-            *result = jksn_value_new(object, 0x3e, &data, &buf);
+            *result = jksn_proxy_new(object, 0x3e, &data, &buf);
         } else if(utf16size <= 0xffff) {
             jksn_blobstring data = {2, jksn_malloc(2)};
             if(!data.buf) {
@@ -556,7 +556,7 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
                 return JKSN_ENOMEM;
             }
             jksn_encode_int(data.buf, utf16size, 2);
-            *result = jksn_value_new(object, 0x3d, &data, &buf);
+            *result = jksn_proxy_new(object, 0x3d, &data, &buf);
         } else {
             jksn_blobstring data = {0, jksn_malloc(10)};
             if(!data.buf) {
@@ -564,7 +564,7 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
                 return JKSN_ENOMEM;
             }
             data.size = jksn_encode_int(data.buf, utf16size, 0);
-            *result = jksn_value_new(object, 0x3f, &data, &buf);
+            *result = jksn_proxy_new(object, 0x3f, &data, &buf);
         }
     } else {
         jksn_blobstring buf = {object->data_string.size, jksn_malloc(object->data_string.size)};
@@ -572,25 +572,25 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
             return JKSN_ENOMEM;
         memcpy(buf.buf, object->data_string.str, object->data_string.size);
         if(buf.size <= 0xc)
-            *result = jksn_value_new(object, 0x40 | buf.size, NULL, &buf);
+            *result = jksn_proxy_new(object, 0x40 | buf.size, NULL, &buf);
         else if(buf.size <= 0xff) {
             jksn_blobstring data = {1, jksn_malloc(1)};
             if(!data.buf)
                 return JKSN_ENOMEM;
             jksn_encode_int(data.buf, buf.size, 1);
-            *result = jksn_value_new(object, 0x4e, &data, &buf);
+            *result = jksn_proxy_new(object, 0x4e, &data, &buf);
         } else if(buf.size <= 0xffff) {
             jksn_blobstring data = {2, jksn_malloc(2)};
             if(!data.buf)
                 return JKSN_ENOMEM;
             jksn_encode_int(data.buf, buf.size, 2);
-            *result = jksn_value_new(object, 0x4d, &data, &buf);
+            *result = jksn_proxy_new(object, 0x4d, &data, &buf);
         } else {
             jksn_blobstring data = {0, jksn_malloc(10)};
             if(!data.buf)
                 return JKSN_ENOMEM;
             data.size = jksn_encode_int(data.buf, buf.size, 0);
-            *result = jksn_value_new(object, 0x4f, &data, &buf);
+            *result = jksn_proxy_new(object, 0x4f, &data, &buf);
         }
     }
     if(*result) {
@@ -600,31 +600,31 @@ static jksn_error_message_no jksn_dump_string(jksn_value **result, const jksn_t 
         return JKSN_ENOMEM;
 }
 
-static jksn_error_message_no jksn_dump_blob(jksn_value **result, const jksn_t *object) {
+static jksn_error_message_no jksn_dump_blob(jksn_proxy **result, const jksn_t *object) {
     jksn_blobstring buf = {object->data_blob.size, jksn_malloc(object->data_blob.size)};
     if(!buf.buf)
         return JKSN_ENOMEM;
     memcpy(buf.buf, object->data_blob.buf, object->data_blob.size);
     if(object->data_blob.size <= 0xb)
-        *result = jksn_value_new(object, 0x50 | object->data_blob.size, NULL, &object->data_blob);
+        *result = jksn_proxy_new(object, 0x50 | object->data_blob.size, NULL, &object->data_blob);
     else if(object->data_blob.size <= 0xff) {
         jksn_blobstring data = {1, jksn_malloc(1)};
         if(!data.buf)
             return JKSN_ENOMEM;
         jksn_encode_int(data.buf, object->data_blob.size, 1);
-        *result = jksn_value_new(object, 0x5e, &data, &object->data_blob);
+        *result = jksn_proxy_new(object, 0x5e, &data, &object->data_blob);
     } else if(object->data_blob.size <= 0xffff) {
         jksn_blobstring data = {2, jksn_malloc(2)};
         if(!data.buf)
             return JKSN_ENOMEM;
         jksn_encode_int(data.buf, object->data_blob.size, 2);
-        *result = jksn_value_new(object, 0x5d, &data, &object->data_blob);
+        *result = jksn_proxy_new(object, 0x5d, &data, &object->data_blob);
     } else {
         jksn_blobstring data = {0, jksn_malloc(10)};
         if(!data.buf)
             return JKSN_ENOMEM;
         data.size = jksn_encode_int(data.buf, object->data_blob.size, 0);
-        *result = jksn_value_new(object, 0x5f, &data, &object->data_blob);
+        *result = jksn_proxy_new(object, 0x5f, &data, &object->data_blob);
     }
     if(*result) {
         (*result)->hash = jksn_djbhash((*result)->buf.buf, (*result)->buf.size);
@@ -644,33 +644,33 @@ static int jksn_test_swap_availability(const jksn_t *object) {
     return columns;
 }
 
-static jksn_error_message_no jksn_encode_straight_array(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+static jksn_error_message_no jksn_encode_straight_array(jksn_proxy **result, const jksn_t *object, jksn_cache *cache) {
     if(object->data_array.size <= 0xc)
-        *result = jksn_value_new(object, 0x80 | object->data_array.size, NULL, NULL);
+        *result = jksn_proxy_new(object, 0x80 | object->data_array.size, NULL, NULL);
     else if(object->data_array.size <= 0xff) {
         jksn_blobstring data = {1, jksn_malloc(1)};
         if(!data.buf)
             return JKSN_ENOMEM;
         jksn_encode_int(data.buf, object->data_array.size, 1);
-        *result = jksn_value_new(object, 0x8e, &data, NULL);
+        *result = jksn_proxy_new(object, 0x8e, &data, NULL);
     } else if(object->data_array.size <= 0xffff) {
         jksn_blobstring data = {2, jksn_malloc(2)};
         if(!data.buf)
             return JKSN_ENOMEM;
         jksn_encode_int(data.buf, object->data_array.size, 2);
-        *result = jksn_value_new(object, 0x8d, &data, NULL);
+        *result = jksn_proxy_new(object, 0x8d, &data, NULL);
     } else {
         jksn_blobstring data = {0, jksn_malloc(10)};
         if(!data.buf)
             return JKSN_ENOMEM;
         data.size = jksn_encode_int(data.buf, object->data_array.size, 0);
-        *result = jksn_value_new(object, 0x8f, &data, NULL);
+        *result = jksn_proxy_new(object, 0x8f, &data, NULL);
     }
     if(!*result)
         return JKSN_ENOMEM;
     else {
         size_t i;
-        jksn_value **next_child = &(*result)->first_child;
+        jksn_proxy **next_child = &(*result)->first_child;
         for(i = 0; i < object->data_array.size; i++) {
             jksn_error_message_no retval = jksn_dump_value(next_child, object->data_array.children[i], cache);
             if(retval != JKSN_EOK)
@@ -681,7 +681,7 @@ static jksn_error_message_no jksn_encode_straight_array(jksn_value **result, con
     }
 }
 
-static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+static jksn_error_message_no jksn_encode_swapped_array(jksn_proxy **result, const jksn_t *object, jksn_cache *cache) {
     struct jksn_swap_columns *columns = NULL;
     size_t columns_size = 0;
     size_t row;
@@ -706,7 +706,7 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
         }
     }
     if(columns_size <= 0xc)
-        *result = jksn_value_new(object, 0xa0 | columns_size, NULL, NULL);
+        *result = jksn_proxy_new(object, 0xa0 | columns_size, NULL, NULL);
     else if(columns_size <= 0xff) {
         jksn_blobstring data = {1, jksn_malloc(1)};
         if(!data.buf) {
@@ -714,7 +714,7 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
             return JKSN_ENOMEM;
         }
         jksn_encode_int(data.buf, columns_size, 1);
-        *result = jksn_value_new(object, 0xae, &data, NULL);
+        *result = jksn_proxy_new(object, 0xae, &data, NULL);
     } else if(columns_size <= 0xffff) {
         jksn_blobstring data = {2, jksn_malloc(2)};
         if(!data.buf) {
@@ -722,7 +722,7 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
             return JKSN_ENOMEM;
         }
         jksn_encode_int(data.buf, columns_size, 2);
-        *result = jksn_value_new(object, 0xad, &data, NULL);
+        *result = jksn_proxy_new(object, 0xad, &data, NULL);
     } else {
         jksn_blobstring data = {0, jksn_malloc(10)};
         if(!data.buf) {
@@ -730,13 +730,13 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
             return JKSN_ENOMEM;
         }
         data.size = jksn_encode_int(data.buf, columns_size, 0);
-        *result = jksn_value_new(object, 0xaf, &data, NULL);
+        *result = jksn_proxy_new(object, 0xaf, &data, NULL);
     }
     if(!*result) {
         columns = jksn_swap_columns_free(columns);
         return JKSN_ENOMEM;
     } else {
-        jksn_value **next_child = &(*result)->first_child;
+        jksn_proxy **next_child = &(*result)->first_child;
         struct jksn_swap_columns *next_column = columns;
         while(next_column) {
             jksn_error_message_no retval;
@@ -789,60 +789,60 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_value **result, cons
     }
 }
 
-static jksn_error_message_no jksn_dump_array(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+static jksn_error_message_no jksn_dump_array(jksn_proxy **result, const jksn_t *object, jksn_cache *cache) {
     jksn_error_message_no retval = jksn_encode_straight_array(result, object, cache);
     if(retval != JKSN_EOK)
         return retval;
     if(jksn_test_swap_availability(object)) {
-        jksn_value *result_swapped = NULL;
+        jksn_proxy *result_swapped = NULL;
         retval = jksn_encode_swapped_array(&result_swapped, object, cache);
         assert(retval == JKSN_EOK);
-        if(retval == JKSN_EOK && jksn_value_size(result_swapped, 3) < jksn_value_size(*result, 3)) {
-            jksn_value_free(*result);
+        if(retval == JKSN_EOK && jksn_proxy_size(result_swapped, 3) < jksn_proxy_size(*result, 3)) {
+            jksn_proxy_free(*result);
             *result = result_swapped;
         } else
-            result_swapped = jksn_value_free(result_swapped);
+            result_swapped = jksn_proxy_free(result_swapped);
     }
     return JKSN_EOK;
 }
 
-static jksn_error_message_no jksn_dump_object(jksn_value **result, const jksn_t *object, jksn_cache *cache) {
+static jksn_error_message_no jksn_dump_object(jksn_proxy **result, const jksn_t *object, jksn_cache *cache) {
     if(object->data_object.size <= 0xc)
-        *result = jksn_value_new(object, 0x90 | object->data_object.size, NULL, NULL);
+        *result = jksn_proxy_new(object, 0x90 | object->data_object.size, NULL, NULL);
     else if(object->data_object.size <= 0xff) {
         jksn_blobstring data = {1, jksn_malloc(1)};
         if(!data.buf)
             return JKSN_ENOMEM;
         jksn_encode_int(data.buf, object->data_object.size, 1);
-        *result = jksn_value_new(object, 0x9e, &data, NULL);
+        *result = jksn_proxy_new(object, 0x9e, &data, NULL);
     } else if(object->data_object.size <= 0xffff) {
         jksn_blobstring data = {2, jksn_malloc(2)};
         if(!data.buf)
             return JKSN_ENOMEM;
         jksn_encode_int(data.buf, object->data_object.size, 2);
-        *result = jksn_value_new(object, 0x9d, &data, NULL);
+        *result = jksn_proxy_new(object, 0x9d, &data, NULL);
     } else {
         jksn_blobstring data = {0, jksn_malloc(10)};
         if(!data.buf)
             return JKSN_ENOMEM;
         data.size = jksn_encode_int(data.buf, object->data_object.size, 0);
-        *result = jksn_value_new(object, 0x9f, &data, NULL);
+        *result = jksn_proxy_new(object, 0x9f, &data, NULL);
     }
     if(!*result)
         return JKSN_ENOMEM;
     else {
         size_t i;
-        jksn_value **next_child = &(*result)->first_child;
+        jksn_proxy **next_child = &(*result)->first_child;
         for(i = 0; i < object->data_object.size; i++) {
             jksn_error_message_no retval = jksn_dump_value(next_child, object->data_object.children[i].key, cache);
             if(retval != JKSN_EOK) {
-                *result = jksn_value_free(*result);
+                *result = jksn_proxy_free(*result);
                 return retval;
             }
             next_child = &(*next_child)->next_child;
             retval = jksn_dump_value(next_child, object->data_object.children[i].value, cache);
             if(retval != JKSN_EOK) {
-                *result = jksn_value_free(*result);
+                *result = jksn_proxy_free(*result);
                 return retval;
             }
             next_child = &(*next_child)->next_child;
@@ -851,7 +851,7 @@ static jksn_error_message_no jksn_dump_object(jksn_value **result, const jksn_t 
     }
 }
 
-static void jksn_optimize(jksn_value *object, jksn_cache *cache) {
+static void jksn_optimize(jksn_proxy *object, jksn_cache *cache) {
     while(object) {
         uint8_t control = object->control & 0xf0;
         switch(control) {

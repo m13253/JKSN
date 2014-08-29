@@ -27,7 +27,7 @@ function JKSNEncoder() {
     var lastint = null;
     var texthash = new Array(256);
     var blobhash = new Array(256);
-    function JKSNValue(origin, control, data, buf) {
+    function JKSNProxy(origin, control, data, buf) {
         if(!(control >= 0 && control <= 255))
             throw "Assertion failed: control >= 0 && control <= 255";
         return {
@@ -70,15 +70,15 @@ function JKSNEncoder() {
     }
     function dumpValue(obj) {
         if(obj === undefined)
-            return JKSNValue(obj, 0x00);
+            return JKSNProxy(obj, 0x00);
         else if(obj === null)
-            return JKSNValue(obj, 0x01);
+            return JKSNProxy(obj, 0x01);
         else if(obj === false)
-            return JKSNValue(obj, 0x02);
+            return JKSNProxy(obj, 0x02);
         else if(obj === true)
-            return JKSNValue(obj, 0x03);
+            return JKSNProxy(obj, 0x03);
         else if(obj instanceof unspecifiedValue)
-            return JKSNValue(obj, 0xa0);
+            return JKSNProxy(obj, 0xa0);
         else if(typeof obj === "number")
             return dumpNumber(obj);
         else if(typeof obj === "string")
@@ -92,26 +92,26 @@ function JKSNEncoder() {
     }
     function dumpNumber(obj) {
         if(isNaN(obj))
-            return JKSNValue(obj, 0x20);
+            return JKSNProxy(obj, 0x20);
         else if(!isFinite(obj))
-            return JKSNValue(obj, obj >= 0 ? 0x2f : 0x2e);
+            return JKSNProxy(obj, obj >= 0 ? 0x2f : 0x2e);
         else if((obj | 0) === obj)
             if(obj >= 0 && obj <= 0xa)
-                return JKSNValue(obj, 0x10 | obj);
+                return JKSNProxy(obj, 0x10 | obj);
             else if(obj >= -0x80 && obj <= 0x7f)
-                return JKSNValue(obj, 0x1d, encodeInt(obj, 1));
+                return JKSNProxy(obj, 0x1d, encodeInt(obj, 1));
             else if(obj >= -0x8000 && obj <= 0x7fff)
-                return JKSNValue(obj, 0x1c, encodeInt(obj, 2));
+                return JKSNProxy(obj, 0x1c, encodeInt(obj, 2));
             else if((obj >= -0x80000000 && obj <= -0x200000) || (obj >= 0x200000 && obj <= 0x7fffffff))
-                return JKSNValue(obj, 0x1b, encodeInt(obj, 4));
+                return JKSNProxy(obj, 0x1b, encodeInt(obj, 4));
             else if(obj >= 0)
-                return JKSNValue(obj, 0x1f, encodeInt(obj, 0));
+                return JKSNProxy(obj, 0x1f, encodeInt(obj, 0));
             else
-                return JKSNValue(obj, 0x1e, -encodeInt(obj, 0));
+                return JKSNProxy(obj, 0x1e, -encodeInt(obj, 0));
         else {
             var f64buf = new DataView(new ArrayBuffer(8));
             f64buf.setFloat64(0, obj, false);
-            return JKSNValue(obj, 0x2c, encodeInt(f64buf.getUint32(0, false), 4)+encodeInt(f64buf.getUint32(4, false), 4));
+            return JKSNProxy(obj, 0x2c, encodeInt(f64buf.getUint32(0, false), 4)+encodeInt(f64buf.getUint32(4, false), 4));
         }
     }
     function dumpString(obj) {
@@ -133,13 +133,13 @@ function JKSNEncoder() {
             var strlen = obj_utf8.length;
         }
         if(strlen <= (control == 0x40 ? 0xc : 0xb))
-            var result = JKSNValue(obj, control | strlen, "", obj_short);
+            var result = JKSNProxy(obj, control | strlen, "", obj_short);
         else if(strlen <= 0xff)
-            var result = JKSNValue(obj, control | 0xe, encodeInt(strlen, 1), obj_short);
+            var result = JKSNProxy(obj, control | 0xe, encodeInt(strlen, 1), obj_short);
         else if(strlen <= 0xffff)
-            var result = JKSNValue(obj, control | 0xd, encodeInt(strlen, 2), obj_short);
+            var result = JKSNProxy(obj, control | 0xd, encodeInt(strlen, 2), obj_short);
         else
-            var result = JKSNValue(obj, control | 0xf, encodeInt(strlen, 0), obj_short);
+            var result = JKSNProxy(obj, control | 0xf, encodeInt(strlen, 0), obj_short);
         result.hash = DJBHash(obj_short);
         return result;
     }
@@ -148,13 +148,13 @@ function JKSNEncoder() {
         var str = String.fromCharCode.apply(null, strbuf);
         var strlen = str.length;
         if(strlen <= 0xb)
-            var result = JKSNValue(obj, 0x50 | strlen, "", str);
+            var result = JKSNProxy(obj, 0x50 | strlen, "", str);
         else if(strlen <= 0xff)
-            var result = JKSNValue(obj, 0x5e, encodeInt(strlen, 1), str);
+            var result = JKSNProxy(obj, 0x5e, encodeInt(strlen, 1), str);
         else if(strlen <= 0xffff)
-            var result = JKSNValue(obj, 0x5e, encodeInt(strlen, 2), str);
+            var result = JKSNProxy(obj, 0x5e, encodeInt(strlen, 2), str);
         else
-            var result = JKSNValue(obj, 0x5e, encodeInt(strlen, 0), str);
+            var result = JKSNProxy(obj, 0x5e, encodeInt(strlen, 0), str);
         result.hash = DJBHash(strbuf);
         return result;
     }
@@ -174,13 +174,13 @@ function JKSNEncoder() {
         function encodeStraightArray(obj) {
             var objlen = obj.length;
             if(objlen <= 0xc)
-                var result = JKSNValue(obj, 0x80 | objlen);
+                var result = JKSNProxy(obj, 0x80 | objlen);
             else if(objlen <= 0xff)
-                var result = JKSNValue(obj, 0x8e, encodeInt(objlen, 1));
+                var result = JKSNProxy(obj, 0x8e, encodeInt(objlen, 1));
             else if(objlen <= 0xffff)
-                var result = JKSNValue(obj, 0x8d, encodeInt(objlen, 2));
+                var result = JKSNProxy(obj, 0x8d, encodeInt(objlen, 2));
             else
-                var result = JKSNValue(obj, 0x8f, encodeInt(objlen, 0));
+                var result = JKSNProxy(obj, 0x8f, encodeInt(objlen, 0));
             result.children = obj.map(dumpValue);
             if(result.children.length != objlen)
                 throw "Assertion failed: result.children.length == objlen";
@@ -197,13 +197,13 @@ function JKSNEncoder() {
                     }
             var collen = columns.length;
             if(collen <= 0xc)
-                var result = JKSNValue(obj, 0xa0 | collen);
+                var result = JKSNProxy(obj, 0xa0 | collen);
             else if(collen <= 0xff)
-                var result = JKSNValue(obj, 0xae, encodeInt(collen, 1));
+                var result = JKSNProxy(obj, 0xae, encodeInt(collen, 1));
             else if(collen <= 0xffff)
-                var result = JKSNValue(obj, 0xad, encodeInt(collen, 2));
+                var result = JKSNProxy(obj, 0xad, encodeInt(collen, 2));
             else
-                var result = JKSNValue(obj, 0xaf, encodeInt(collen, 0));
+                var result = JKSNProxy(obj, 0xaf, encodeInt(collen, 0));
             for(var column = 0; column < collen; column++) {
                 var columns_value = new Array(obj.length);
                 for(var row = 0; row < obj.length; row++)
@@ -230,13 +230,13 @@ function JKSNEncoder() {
             children.push(dumpValue(key), dumpValue(obj[key]));
         }
         if(objlen <= 0xc)
-            var result = JKSNValue(obj, 0x90 | objlen);
+            var result = JKSNProxy(obj, 0x90 | objlen);
         else if(objlen <= 0xff)
-            var result = JKSNValue(obj, 0x9e, encodeInt(objlen, 1));
+            var result = JKSNProxy(obj, 0x9e, encodeInt(objlen, 1));
         else if(objlen <= 0xffff)
-            var result = JKSNValue(obj, 0x9d, encodeInt(objlen, 2));
+            var result = JKSNProxy(obj, 0x9d, encodeInt(objlen, 2));
         else
-            var result = JKSNValue(obj, 0x9f, encodeInt(objlen, 0));
+            var result = JKSNProxy(obj, 0x9f, encodeInt(objlen, 0));
         result.children = children;
         return result;
     }

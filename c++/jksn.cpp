@@ -10,9 +10,9 @@ struct JKSNObjectImpl {
         float data_float;
         double data_double;
         long double data_long_double;
-        std::string &data_string;
-        std::vector<JKSNObject> &data_array;
-        std::map<JKSNObject, JKSNObject> &data_object;
+        std::string *data_string;
+        std::vector<JKSNObject> *data_array;
+        std::map<JKSNObject, JKSNObject> *data_object;
     };
 };
 
@@ -36,55 +36,55 @@ void JKSNObject::init() {
 
 JKSNObject::JKSNObject() {
     this->init();
-    this->data_type = JKSN_UNDEFINED;
+    this->impl->data_type = JKSN_UNDEFINED;
 }
 
 JKSNObject::JKSNObject(bool data) {
     this->init();
-    this->data_type = JKSN_BOOL;
-    this->data_bool = data;
+    this->impl->data_type = JKSN_BOOL;
+    this->impl->data_bool = data;
 }
 
 JKSNObject::JKSNObject(int64_t data) {
     this->init();
-    this->data_type = JKSN_INT;
-    this->data_int = data;
+    this->impl->data_type = JKSN_INT;
+    this->impl->data_int = data;
 }
 
 JKSNObject::JKSNObject(float data) {
     this->init();
-    this->data_type = JKSN_FLOAT;
-    this->data_float = data;
+    this->impl->data_type = JKSN_FLOAT;
+    this->impl->data_float = data;
 }
 
 JKSNObject::JKSNObject(double data) {
     this->init();
-    this->data_type = JKSN_DOUBLE;
-    this->data_double = data;
+    this->impl->data_type = JKSN_DOUBLE;
+    this->impl->data_double = data;
 }
 
 JKSNObject::JKSNObject(long double data) {
     this->init();
-    this->data_type = JKSN_LONG_DOUBLE;
-    this->data_long_double = data;
+    this->impl->data_type = JKSN_LONG_DOUBLE;
+    this->impl->data_long_double = data;
 }
 
-JKSNObject::JKSNObject(std::string &data, bool isblob = false) {
+JKSNObject::JKSNObject(std::string &data, bool isblob) {
     this->init();
-    this->data_type = isblob ? JKSN_BLOB : JKSN_STRING;
-    this->data_string = data;
+    this->impl->data_type = isblob ? JKSN_BLOB : JKSN_STRING;
+    this->impl->data_string = &data;
 }
 
 JKSNObject::JKSNObject(std::vector<JKSNObject> &data) {
     this->init();
-    this->data_type = JKSN_ARRAY;
-    this->data_array = data;
+    this->impl->data_type = JKSN_ARRAY;
+    this->impl->data_array = &data;
 }
 
 JKSNObject::JKSNObject(std::map<JKSNObject, JKSNObject> &data) {
     this->init();
-    this->data_type = JKSN_OBJECT;
-    this->data_object = data;
+    this->impl->data_type = JKSN_OBJECT;
+    this->impl->data_object = &data;
 }
 
 JKSNObject::~JKSNObject() {

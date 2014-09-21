@@ -58,6 +58,8 @@ public:
     std::vector<JKSNObject> &toArray() const;
     std::map<JKSNObject, JKSNObject> &toObject() const;
     JKSNObject &operator [](JKSNObject &key) const;
+private:
+    class JKSNObjectImpl *impl;
 };
 
 class JKSNEncoder {
@@ -67,6 +69,8 @@ public:
     ~JKSNEncoder();
     std::string &dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);
     std::stringstream &dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
+private:
+    class JKSNEncoderImpl *impl;
 };
 
 class JKSNDecoder {
@@ -76,6 +80,8 @@ public:
     ~JKSNDecoder();
     JKSNObject &parsestr(const std::string &s, bool header = true);
     JKSNObject &parse(const std::istream &fp, bool header = true);
+private:
+    class JKSNDecoderImpl *impl;
 };
 
 std::string &dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);

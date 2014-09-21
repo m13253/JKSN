@@ -119,4 +119,19 @@ bool JKSNObject::toBool() const {
     }
 }
 
+int64_t JKSNObject::toInt() const {
+    switch(this->getType()) {
+    case JKSN_INT:
+        return this->impl->data_int;
+    case JKSN_FLOAT:
+        return int64_t(this->impl->data_float);
+    case JKSN_DOUBLE:
+        return int64_t(this->impl->data_double);
+    case JKSN_LONG_DOUBLE:
+        return int64_t(this->impl->data_long_double);
+    default:
+        return 0;
+    }
+}
+
 }

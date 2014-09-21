@@ -14,11 +14,9 @@ private:
     const char *reason;
 };
 
-class JKSNEncodeError: public JKSNError {
-};
+class JKSNEncodeError: public JKSNError {};
 
-class JKSNDecodeError: public JKSNError {
-};
+class JKSNDecodeError: public JKSNError {};
 
 typedef enum {
     JKSN_UNDEFINED,
@@ -35,8 +33,7 @@ typedef enum {
     JKSN_UNSPECIFIED
 } jksn_data_type;
 
-class JKSNUnspecified{
-};
+class JKSNUnspecified{};
 
 class JKSNObject {
 public:

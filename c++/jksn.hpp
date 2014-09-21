@@ -43,14 +43,14 @@ public:
     JKSNObject(float data);
     JKSNObject(double data);
     JKSNObject(long double data);
-    JKSNObject(std::string &data, bool isblob);
+    JKSNObject(std::string &data, bool isblob = false);
     JKSNObject(std::vector<JKSNObject> &data);
     JKSNObject(std::map<JKSNObject, JKSNObject> &data);
     JKSNObject(JKSNUnspecified &data);
     ~JKSNObject();
     jksn_data_type getType() const;
     bool toBool() const;
-    int64_t toInt64() const;
+    int64_t toInt() const;
     float toFloat() const;
     double toDouble() const;
     long double toLongDouble() const;
@@ -91,4 +91,4 @@ std::stringstream &dump(const JKSNObject &obj, bool header = true, bool check_ci
 JKSNObject &parsestr(const std::string &s, bool header = true);
 JKSNObject &parse(const std::istream &fp, bool header = true);
 
-};
+}

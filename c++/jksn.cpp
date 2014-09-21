@@ -1,3 +1,4 @@
+#include <cmath>
 #include "jksn.hpp"
 
 namespace JKSN {
@@ -133,5 +134,51 @@ int64_t JKSNObject::toInt() const {
         return 0;
     }
 }
+
+float JKSNObject::toFloat() const {
+    switch(this->getType()) {
+    case JKSN_INT:
+        return float(this->impl->data_int);
+    case JKSN_FLOAT:
+        return this->impl->data_float;
+    case JKSN_DOUBLE:
+        return float(this->impl->data_double);
+    case JKSN_LONG_DOUBLE:
+        return float(this->impl->data_long_double);
+    default:
+        return NAN;
+    }
+}
+
+double JKSNObject::toDouble() const {
+    switch(this->getType()) {
+    case JKSN_INT:
+        return double(this->impl->data_int);
+    case JKSN_FLOAT:
+        return double(this->impl->data_float);
+    case JKSN_DOUBLE:
+        return this->impl->data_double;
+    case JKSN_LONG_DOUBLE:
+        return double(this->impl->data_long_double);
+    default:
+        return NAN;
+    }
+}
+
+long double JKSNObject::toLongDouble() const {
+    switch(this->getType()) {
+    case JKSN_INT:
+        return (long double) this->impl->data_int;
+    case JKSN_FLOAT:
+        return (long double) this->impl->data_float;
+    case JKSN_DOUBLE:
+        return (long double) this->impl->data_double;
+    case JKSN_LONG_DOUBLE:
+        return this->impl->data_long_double;
+    default:
+        return NAN;
+    }
+}
+
 
 }

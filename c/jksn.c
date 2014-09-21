@@ -102,7 +102,7 @@ static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t
 static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2);
 static jksn_t *jksn_duplicate(const jksn_t *object);
 static uint8_t jksn_djbhash(const char *buf, size_t size);
-static uint16_t jksn_uint16_to_le(uint16_t n);
+static inline int jksn_is_little_endian(void);
 static inline uint64_t jksn_int64abs(int64_t x) { return x >= 0 ? x : -x; };
 
 static inline void *jksn_malloc(size_t size) {
@@ -397,7 +397,7 @@ static jksn_error_message_no jksn_dump_float(jksn_proxy **result, const jksn_t *
         *result = jksn_proxy_new(object, object->data_float >= 0.0f ? 0x2f : 0x2e, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else {
-        union {
+        const union {
             float data_float;
             uint32_t data_int;
         } conv = {object->data_float};
@@ -420,17 +420,14 @@ static jksn_error_message_no jksn_dump_double(jksn_proxy **result, const jksn_t 
         *result = jksn_proxy_new(object, object->data_double >= 0.0 ? 0x2f : 0x2e, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else {
-        union {
-            uint32_t data_int[2];
+        const union {
             double data_double;
-            uint8_t endiantest;
-        } conv = {{1, 0}};
+            uint32_t data_int[2];
+        } conv = {object->data_double};
         jksn_blobstring data = {8, jksn_malloc(8)};
         assert(sizeof (double) == 8);
         if(data.buf) {
-            int little_endian = (conv.endiantest == 1);
-            conv.data_double = object->data_double;
-            if(little_endian) {
+            if(jksn_is_little_endian()) {
                 jksn_encode_int(data.buf, conv.data_int[1], 4);
                 jksn_encode_int(data.buf+4, conv.data_int[0], 4);
             } else {
@@ -452,17 +449,14 @@ static jksn_error_message_no jksn_dump_longdouble(jksn_proxy **result, const jks
         *result = jksn_proxy_new(object, object->data_long_double >= 0.0L ? 0x2f : 0x2e, NULL, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else if(sizeof (long double) == 12) {
-        union {
-            uint8_t data_int[12];
+        const union {
             long double data_long_double;
-            uint8_t endiantest;
-        } conv = {{1, 0}};
+            uint8_t data_int[12];
+        } conv = {object->data_long_double};
         jksn_blobstring data = {10, jksn_malloc(10)};
-        int little_endian = (conv.endiantest == 1);
         if(!data.buf)
             return JKSN_ENOMEM;
-        conv.data_long_double = object->data_long_double;
-        if(little_endian) {
+        if(jksn_is_little_endian()) {
             data.buf[0] = (char) conv.data_int[9];
             data.buf[1] = (char) conv.data_int[8];
             data.buf[2] = (char) conv.data_int[7];
@@ -488,17 +482,14 @@ static jksn_error_message_no jksn_dump_longdouble(jksn_proxy **result, const jks
         *result = jksn_proxy_new(object, 0x2b, &data, NULL);
         return *result ? JKSN_EOK : JKSN_ENOMEM;
     } else if(sizeof (long double) == 16) {
-        union {
-            uint8_t data_int[16];
+        const union {
             long double data_long_double;
-            uint8_t endiantest;
-        } conv = {{1, 0}};
+            uint8_t data_int[16];
+        } conv = {object->data_long_double};
         jksn_blobstring data = {10, jksn_malloc(10)};
-        int little_endian = (conv.endiantest == 1);
         if(!data.buf)
             return JKSN_ENOMEM;
-        conv.data_long_double = object->data_long_double;
-        if(little_endian) {
+        if(jksn_is_little_endian()) {
             data.buf[0] = (char) conv.data_int[9];
             data.buf[1] = (char) conv.data_int[8];
             data.buf[2] = (char) conv.data_int[7];
@@ -537,8 +528,9 @@ static jksn_error_message_no jksn_dump_string(jksn_proxy **result, const jksn_t 
             return JKSN_ENOMEM;
         buf.size = jksn_utf8_to_utf16(utf16str, object->data_string.str, object->data_string.size, 1) * 2;
         assert(buf.size == utf16size * 2);
-        for(i = 0; i < utf16size; i++)
-            utf16str[i] = jksn_uint16_to_le(utf16str[i]);
+        if(!jksn_is_little_endian())
+            for(i = 0; i < utf16size; i++)
+                utf16str[i] = (utf16str[i] << 8) | (utf16str[i] >> 8);
         if(utf16size <= 0xb)
             *result = jksn_proxy_new(object, 0x30 | utf16size, NULL, &buf);
         else if(utf16size <= 0xff) {
@@ -1226,8 +1218,9 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     return JKSN_ENOMEM;
                 memcpy((char *) utf16str, buffer, str_size*2);
                 hashvalue = jksn_djbhash((char *) utf16str, str_size*2);
-                for(i = 0; i < str_size; i++)
-                    utf16str[i] = jksn_uint16_to_le(utf16str[i]);
+                if(!jksn_is_little_endian())
+                    for(i = 0; i < str_size; i++)
+                        utf16str[i] = (utf16str[i] << 8) | (utf16str[i] >> 8);
                 *result = jksn_malloc(sizeof (jksn_t));
                 if(!*result)
                     return JKSN_ENOMEM;
@@ -1945,7 +1938,7 @@ static jksn_error_message_no jksn_parse_float(jksn_t **result, const char *buffe
     if(size < 4)
         return JKSN_ETRUNC;
     else {
-        union {
+        const union {
             uint32_t data_int;
             float data_float;
         } conv = {
@@ -1970,7 +1963,7 @@ static jksn_error_message_no jksn_parse_double(jksn_t **result, const char *buff
     if(size < 8)
         return JKSN_ETRUNC;
     else {
-        union {
+        const union {
             uint64_t data_int;
             double data_double;
         } conv = {
@@ -2001,13 +1994,11 @@ static jksn_error_message_no jksn_parse_longdouble(jksn_t **result, const char *
         union {
             uint8_t data_int[12];
             long double data_long_double;
-            uint8_t endiantest;
-        } conv = {{1, 0}};
-        int little_endian = (conv.endiantest == 1);
+        } conv;
         *result = jksn_malloc(sizeof (jksn_t));
         if(!*result)
             return JKSN_ENOMEM;
-        if(little_endian) {
+        if(jksn_is_little_endian()) {
             conv.data_int[0] = (uint8_t) buffer[9];
             conv.data_int[1] = (uint8_t) buffer[8];
             conv.data_int[2] = (uint8_t) buffer[7];
@@ -2044,12 +2035,11 @@ static jksn_error_message_no jksn_parse_longdouble(jksn_t **result, const char *
             uint8_t data_int[16];
             long double data_long_double;
             uint8_t endiantest;
-        } conv = {{1, 0}};
-        int little_endian = (conv.endiantest == 1);
+        } conv;
         *result = jksn_malloc(sizeof (jksn_t));
         if(!*result)
             return JKSN_ENOMEM;
-        if(little_endian) {
+        if(jksn_is_little_endian()) {
             conv.data_int[0] = (uint8_t) buffer[9];
             conv.data_int[1] = (uint8_t) buffer[8];
             conv.data_int[2] = (uint8_t) buffer[7];
@@ -2367,15 +2357,12 @@ static uint8_t jksn_djbhash(const char *buf, size_t size) {
     return (uint8_t) result;
 }
 
-static uint16_t jksn_uint16_to_le(uint16_t n) {
-    union {
+static inline int jksn_is_little_endian(void) {
+    static const union {
         uint16_t word;
         uint8_t byte;
     } endiantest = {1};
-    if(endiantest.byte == 1)
-        return n;
-    else
-        return (n << 8) | (n >> 8);
+    return endiantest.byte == 1;
 }
 
 const char *jksn_errcode(int errcode) {

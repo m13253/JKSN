@@ -2,7 +2,7 @@ AR=ar
 CC=gcc
 RM=rm -f
 override CFLAGS:=-fPIC -Wall -Wextra -O3 $(CFLAGS)
-override LDFLAGS:=-lm $(LDFLAGS)
+override LIB:=-lm $(LIB)
 
 .PHONY: all clean tests
 
@@ -18,4 +18,4 @@ libjksn.a: jksn.o
 	$(AR) crs $@ $^
 
 libjksn.so: jksn.o
-	$(CC) $(CFLAGS) -shared -o $@ $^ $(LDFLAGS)
+	$(CC) $(CFLAGS) -shared -o $@ ${LDLAGS} $^ $(LIB)

@@ -67,16 +67,21 @@ class JKSNEncoder {
 public:
     JKSNEncoder();
     ~JKSNEncoder();
-    std::string &dumps(JKSNObject &obj, bool header = true, bool check_circular = true);
-    std::stringstream &dump(JKSNObject &obj, bool header = true, bool check_circular = true);
+    std::string &dumps(const JKSNObject &obj, bool header = true, bool check_circular = true);
+    std::stringstream &dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
 };
 
 class JKSNDecoder {
 public:
     JKSNDecoder();
     ~JKSNDecoder();
-    JKSNObject &loads(std::string &s, bool header = true);
-    JKSNObject &load(std::istream &fp, bool header = true);
+    JKSNObject &loads(const std::string &s, bool header = true);
+    JKSNObject &load(const std::istream &fp, bool header = true);
 };
+
+std::string &dumps(const JKSNObject &obj, bool header = true, bool check_circular = true);
+std::stringstream &dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
+JKSNObject &loads(const std::string &s, bool header = true);
+JKSNObject &load(const std::istream &fp, bool header = true);
 
 };

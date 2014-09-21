@@ -64,24 +64,26 @@ public:
 };
 
 class JKSNEncoder {
+/* Note: With a certain JKSN encoder, the hashtable is preserved during each dump */
 public:
     JKSNEncoder();
     ~JKSNEncoder();
-    std::string &dumps(const JKSNObject &obj, bool header = true, bool check_circular = true);
+    std::string &dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);
     std::stringstream &dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
 };
 
 class JKSNDecoder {
+/* Note: With a certain JKSN decoder, the hashtable is preserved during each parse */
 public:
     JKSNDecoder();
     ~JKSNDecoder();
-    JKSNObject &loads(const std::string &s, bool header = true);
-    JKSNObject &load(const std::istream &fp, bool header = true);
+    JKSNObject &parsestr(const std::string &s, bool header = true);
+    JKSNObject &parse(const std::istream &fp, bool header = true);
 };
 
-std::string &dumps(const JKSNObject &obj, bool header = true, bool check_circular = true);
+std::string &dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);
 std::stringstream &dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
-JKSNObject &loads(const std::string &s, bool header = true);
-JKSNObject &load(const std::istream &fp, bool header = true);
+JKSNObject &parsestr(const std::string &s, bool header = true);
+JKSNObject &parse(const std::istream &fp, bool header = true);
 
 };

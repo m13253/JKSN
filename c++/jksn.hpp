@@ -6,7 +6,7 @@
 
 namespace JKSN {
 
-class JKSNError: public std::exception {
+class JKSNError : public std::exception {
 public:
     JKSNError(const char *reason) throw();
     const char *what() const throw();
@@ -14,9 +14,9 @@ private:
     const char *reason;
 };
 
-class JKSNEncodeError: public JKSNError {};
+class JKSNEncodeError : public JKSNError {};
 
-class JKSNDecodeError: public JKSNError {};
+class JKSNDecodeError : public JKSNError {};
 
 typedef enum {
     JKSN_UNDEFINED,

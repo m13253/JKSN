@@ -180,5 +180,4 @@ long double JKSNObject::toLongDouble() const {
     }
 }
 
-
 }

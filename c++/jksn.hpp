@@ -47,6 +47,7 @@ public:
     JKSNObject(std::vector<JKSNObject> &data);
     JKSNObject(std::map<JKSNObject, JKSNObject> &data);
     JKSNObject(JKSNUnspecified &data);
+    ~JKSNObject();
     jksn_data_type getType() const;
     bool toBool() const;
     int64_t toInt64() const;
@@ -59,7 +60,8 @@ public:
     std::map<JKSNObject, JKSNObject> &toObject() const;
     JKSNObject &operator [](JKSNObject &key) const;
 private:
-    class JKSNObjectImpl *impl;
+    void init();
+    struct JKSNObjectImpl *impl;
 };
 
 class JKSNEncoder {
@@ -70,7 +72,7 @@ public:
     std::string &dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);
     std::stringstream &dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
 private:
-    class JKSNEncoderImpl *impl;
+    struct JKSNEncoderImpl *impl;
 };
 
 class JKSNDecoder {
@@ -81,7 +83,7 @@ public:
     JKSNObject &parsestr(const std::string &s, bool header = true);
     JKSNObject &parse(const std::istream &fp, bool header = true);
 private:
-    class JKSNDecoderImpl *impl;
+    struct JKSNDecoderImpl *impl;
 };
 
 std::string &dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);

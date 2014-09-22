@@ -68,9 +68,9 @@ private:
         float data_float;
         double data_double;
         long double data_long_double;
-        std::shared_ptr<std::string> data_string;
-        std::shared_ptr<std::vector<JKSNObject>> data_array;
-        std::shared_ptr<std::map<JKSNObject, JKSNObject>> data_object;
+        std::shared_ptr<std::string> *data_string;
+        std::shared_ptr<std::vector<JKSNObject>> *data_array;
+        std::shared_ptr<std::map<JKSNObject, JKSNObject>> *data_object;
     };
 };
 

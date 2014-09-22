@@ -48,21 +48,34 @@ JKSNObject::JKSNObject(long double data) {
 
 JKSNObject::JKSNObject(std::shared_ptr<std::string> data, bool isblob) {
     this->data_type = isblob ? JKSN_BLOB : JKSN_STRING;
-    this->data_string = data;
+    *(this->data_string = new std::shared_ptr<std::string>) = data;
 }
 
 JKSNObject::JKSNObject(std::shared_ptr<std::vector<JKSNObject>> data) {
     this->data_type = JKSN_ARRAY;
-    this->data_array = data;
+    *(this->data_array = new std::shared_ptr<std::vector<JKSNObject>>) = data;
 }
 
 JKSNObject::JKSNObject(std::shared_ptr<std::map<JKSNObject, JKSNObject>> data) {
     this->data_type = JKSN_OBJECT;
-    this->data_object = data;
+    *(this->data_object = new std::shared_ptr<std::map<JKSNObject, JKSNObject>>) = data;
 }
 
 JKSNObject::~JKSNObject() {
-    delete this;
+    switch(this->getType()) {
+    case JKSN_STRING:
+    case JKSN_BLOB:
+        delete this->data_string;
+        break;
+    case JKSN_ARRAY:
+        delete this->data_array;
+        break;
+    case JKSN_OBJECT:
+        delete this->data_object;
+        break;
+    default:
+        break;
+    }
 }
 
 jksn_data_type JKSNObject::getType() const {
@@ -87,7 +100,7 @@ bool JKSNObject::toBool() const {
         return this->data_long_double != 0.0L;
     case JKSN_STRING:
     case JKSN_BLOB:
-        return !this->data_string->empty();
+        return !(*this->data_string)->empty();
     default:
         return true;
     }

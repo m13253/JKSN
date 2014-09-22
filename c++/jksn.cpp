@@ -109,6 +109,12 @@ bool JKSNObject::toBool() const {
 
 int64_t JKSNObject::toInt() const {
     switch(this->getType()) {
+    case JKSN_UNDEFINED:
+    case JKSN_NULL:
+    case JKSN_UNSPECIFIED:
+        return 0;
+    case JKSN_BOOL:
+        return this->data_bool ? 1 : 0;
     case JKSN_INT:
         return this->data_int;
     case JKSN_FLOAT:
@@ -126,6 +132,8 @@ int64_t JKSNObject::toInt() const {
 
 float JKSNObject::toFloat() const {
     switch(this->getType()) {
+    case JKSN_BOOL:
+        return this->data_bool ? 1.0f : 0.0f;
     case JKSN_INT:
         return float(this->data_int);
     case JKSN_FLOAT:
@@ -149,6 +157,8 @@ float JKSNObject::toFloat() const {
 
 double JKSNObject::toDouble() const {
     switch(this->getType()) {
+    case JKSN_BOOL:
+        return this->data_bool ? 1.0 : 0.0;
     case JKSN_INT:
         return double(this->data_int);
     case JKSN_FLOAT:
@@ -172,6 +182,8 @@ double JKSNObject::toDouble() const {
 
 long double JKSNObject::toLongDouble() const {
     switch(this->getType()) {
+    case JKSN_BOOL:
+        return this->data_bool ? 1.0L : 0.0L;
     case JKSN_INT:
         return (long double) this->data_int;
     case JKSN_FLOAT:
@@ -255,6 +267,76 @@ std::shared_ptr<std::map<JKSNObject, JKSNObject>> JKSNObject::toObject() const {
     default:
         throw std::invalid_argument("Cannot convert data to the specified type");
     }
+}
+
+bool JKSNObject::operator==(const JKSNObject &that) const {
+    if(this->getType() != that.getType())
+        switch(this->getType()) {
+        case JKSN_UNDEFINED:
+        case JKSN_NULL:
+        case JKSN_UNSPECIFIED:
+            return true;
+        case JKSN_BOOL:
+            return this->toBool() == that.toBool();
+        case JKSN_INT:
+            return this->toInt() == that.toInt();
+        case JKSN_FLOAT:
+            return this->toFloat() == that.toFloat();
+        case JKSN_DOUBLE:
+            return this->toDouble() == that.toDouble();
+        case JKSN_LONG_DOUBLE:
+            return this->toLongDouble() == that.toLongDouble();
+        case JKSN_STRING:
+            return this->toString() == that.toString();
+        case JKSN_BLOB:
+            return this->toBlob() == that.toBlob();
+        case JKSN_ARRAY:
+            return this->toArray() == that.toArray();
+        case JKSN_OBJECT:
+            return this->toObject() == that.toObject();
+        default:
+            throw std::invalid_argument("Invalid data type");
+        }
+    else if((this->getType() == JKSN_FLOAT || this->getType() == JKSN_DOUBLE || this->getType() == JKSN_LONG_DOUBLE) &&
+            (that.getType() == JKSN_FLOAT || that.getType() == JKSN_DOUBLE || that.getType() == JKSN_LONG_DOUBLE))
+        return this->toLongDouble() == that.toLongDouble();
+    else
+        return false;
+}
+
+bool JKSNObject::operator<(const JKSNObject &that) const {
+    if(this->getType() != that.getType())
+        switch(this->getType()) {
+        case JKSN_UNDEFINED:
+        case JKSN_NULL:
+        case JKSN_UNSPECIFIED:
+            return true;
+        case JKSN_BOOL:
+            return this->toBool() < that.toBool();
+        case JKSN_INT:
+            return this->toInt() < that.toInt();
+        case JKSN_FLOAT:
+            return this->toFloat() < that.toFloat();
+        case JKSN_DOUBLE:
+            return this->toDouble() < that.toDouble();
+        case JKSN_LONG_DOUBLE:
+            return this->toLongDouble() < that.toLongDouble();
+        case JKSN_STRING:
+            return this->toString() < that.toString();
+        case JKSN_BLOB:
+            return this->toBlob() < that.toBlob();
+        case JKSN_ARRAY:
+            return this->toArray() < that.toArray();
+        case JKSN_OBJECT:
+            return this->toObject() < that.toObject();
+        default:
+            throw std::invalid_argument("Invalid data type");
+        }
+    else if((this->getType() == JKSN_FLOAT || this->getType() == JKSN_DOUBLE || this->getType() == JKSN_LONG_DOUBLE) &&
+            (that.getType() == JKSN_FLOAT || that.getType() == JKSN_DOUBLE || that.getType() == JKSN_LONG_DOUBLE))
+        return this->toLongDouble() < that.toLongDouble();
+    else
+        return this->getType() < that.getType();
 }
 
 }

@@ -49,8 +49,6 @@ public:
     JKSNObject(std::shared_ptr<std::map<JKSNObject, JKSNObject>> data);
     JKSNObject(JKSNUnspecified &data);
     ~JKSNObject();
-    bool operator==(const JKSNObject &that) const;
-    bool operator<(const JKSNObject &that) const;
     jksn_data_type getType() const;
     bool toBool() const;
     int64_t toInt() const;
@@ -61,6 +59,8 @@ public:
     std::shared_ptr<std::string> toBlob() const;
     std::shared_ptr<std::vector<JKSNObject>> toArray() const;
     std::shared_ptr<std::map<JKSNObject, JKSNObject>> toObject() const;
+    bool operator==(const JKSNObject &that) const;
+    bool operator<(const JKSNObject &that) const;
     std::shared_ptr<JKSNObject> operator [](const JKSNObject &key) const;
 private:
     jksn_data_type data_type;

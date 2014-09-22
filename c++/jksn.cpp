@@ -220,9 +220,40 @@ std::shared_ptr<std::string> JKSNObject::toString() const {
                     res.append(1, ',');
                 res += *(*this->data_array->get())[i].toString();
             }
+            return std::make_shared<std::string>(res);
         }
     default:
         return std::make_shared<std::string>(std::string("[object Object]"));
+    }
+}
+
+std::shared_ptr<std::string> JKSNObject::toBlob() const {
+    if(this->getType() == JKSN_BLOB)
+        return *this->data_string;
+    else
+        throw std::invalid_argument("Cannot convert data to the specified type");
+}
+
+std::shared_ptr<std::vector<JKSNObject>> JKSNObject::toArray() const {
+    if(this->getType() == JKSN_ARRAY)
+        return *this->data_array;
+    else
+        return std::make_shared<std::vector<JKSNObject>>(std::vector<JKSNObject>(1, *this));
+}
+
+std::shared_ptr<std::map<JKSNObject, JKSNObject>> JKSNObject::toObject() const {
+    switch(this->getType()) {
+    case JKSN_ARRAY:
+        {
+            std::map<JKSNObject, JKSNObject> res;
+            for(size_t i = 0; i < this->data_array->get()->size(); i++)
+                res[new JKSNObject(int64_t(i))] = (*this->data_array->get())[i];
+            return std::make_shared<std::map<JKSNObject, JKSNObject>>(res);
+        }
+    case JKSN_OBJECT:
+        return *this->data_object;
+    default:
+        throw std::invalid_argument("Cannot convert data to the specified type");
     }
 }
 

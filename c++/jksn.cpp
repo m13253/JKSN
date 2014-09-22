@@ -259,7 +259,7 @@ std::shared_ptr<std::map<JKSNObject, JKSNObject>> JKSNObject::toObject() const {
         {
             std::map<JKSNObject, JKSNObject> res;
             for(size_t i = 0; i < this->data_array->get()->size(); i++)
-                res[new JKSNObject(int64_t(i))] = (*this->data_array->get())[i];
+                res[JKSNObject(int64_t(i))] = (*this->data_array->get())[i];
             return std::make_shared<std::map<JKSNObject, JKSNObject>>(res);
         }
     case JKSN_OBJECT:
@@ -344,6 +344,21 @@ std::shared_ptr<JKSNObject> JKSNObject::operator[](const JKSNObject &key) const 
         return std::make_shared<JKSNObject>(&(*this->toObject())[key]);
     else
         return std::make_shared<JKSNObject>(&(*this->toArray())[key.toInt()]);
+}
+
+std::shared_ptr<JKSNObject> JKSNObject::operator[](size_t key) const {
+    if(this->getType() == JKSN_OBJECT)
+        return std::make_shared<JKSNObject>(&(*this->toObject())[JKSNObject(int64_t(key))]);
+    else
+        return std::make_shared<JKSNObject>(&(*this->toArray())[key]);
+}
+
+std::shared_ptr<JKSNObject> JKSNObject::operator[](const std::string &key) const {
+    return std::make_shared<JKSNObject>(&(*this->toObject())[JKSNObject(std::make_shared<std::string>(key))]);
+}
+
+std::shared_ptr<JKSNObject> JKSNObject::operator[](const char *key) const {
+    return (*this)[std::string(key)];
 }
 
 }

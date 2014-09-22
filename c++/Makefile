@@ -9,7 +9,7 @@ override LIB:=-lm $(LIB)
 all: libjksn++.a libjksn++.so
 
 clean:
-	$(RM) libjksn.so libjksn.a jksn.o
+	$(RM) libjksn++.so libjksn++.a jksn.o
 
 tests: libjksn++.a
 	$(MAKE) -C tests

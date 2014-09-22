@@ -66,12 +66,15 @@ JKSNObject::~JKSNObject() {
     switch(this->getType()) {
     case JKSN_STRING:
     case JKSN_BLOB:
+        this->data_string->reset();
         delete this->data_string;
         break;
     case JKSN_ARRAY:
+        this->data_array->reset();
         delete this->data_array;
         break;
     case JKSN_OBJECT:
+        this->data_object->reset();
         delete this->data_object;
         break;
     default:

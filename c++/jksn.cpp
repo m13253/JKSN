@@ -193,4 +193,37 @@ long double JKSNObject::toLongDouble() const {
     }
 }
 
+std::shared_ptr<std::string> JKSNObject::toString() const {
+    switch(this->getType()) {
+    case JKSN_UNDEFINED:
+        return std::make_shared<std::string>(std::string("undefined"));
+    case JKSN_NULL:
+        return std::make_shared<std::string>(std::string("null"));
+    case JKSN_BOOL:
+        return std::make_shared<std::string>(std::string(this->data_bool ? "true" : "false"));
+    case JKSN_INT:
+        return std::make_shared<std::string>(std::to_string(this->data_int));
+    case JKSN_FLOAT:
+        return std::make_shared<std::string>(std::to_string(this->data_float));
+    case JKSN_DOUBLE:
+        return std::make_shared<std::string>(std::to_string(this->data_double));
+    case JKSN_LONG_DOUBLE:
+        return std::make_shared<std::string>(std::to_string(this->data_long_double));
+    case JKSN_STRING:
+    case JKSN_BLOB:
+        return *this->data_string;
+    case JKSN_ARRAY:
+        {
+            std::string res;
+            for(size_t i = 0; i < this->data_array->get()->size(); i++) {
+                if(i != 0)
+                    res.append(1, ',');
+                res += *(*this->data_array->get())[i].toString();
+            }
+        }
+    default:
+        return std::make_shared<std::string>(std::string("[object Object]"));
+    }
+}
+
 }

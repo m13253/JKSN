@@ -61,7 +61,10 @@ public:
     std::shared_ptr<std::map<JKSNObject, JKSNObject>> toObject() const;
     bool operator==(const JKSNObject &that) const;
     bool operator<(const JKSNObject &that) const;
-    std::shared_ptr<JKSNObject> operator [](const JKSNObject &key) const;
+    std::shared_ptr<JKSNObject> operator[](const JKSNObject &key) const;
+    std::shared_ptr<JKSNObject> operator[](size_t key) const;
+    std::shared_ptr<JKSNObject> operator[](const std::string &key) const;
+    std::shared_ptr<JKSNObject> operator[](const char *key) const;
 private:
     jksn_data_type data_type;
     union {

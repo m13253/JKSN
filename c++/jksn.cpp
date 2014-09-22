@@ -339,4 +339,11 @@ bool JKSNObject::operator<(const JKSNObject &that) const {
         return this->getType() < that.getType();
 }
 
+std::shared_ptr<JKSNObject> JKSNObject::operator[](const JKSNObject &key) const {
+    if(this->getType() == JKSN_OBJECT || key.getType() != JKSN_INT)
+        return std::make_shared<JKSNObject>(&(*this->toObject())[key]);
+    else
+        return std::make_shared<JKSNObject>(&(*this->toArray())[key.toInt()]);
+}
+
 }

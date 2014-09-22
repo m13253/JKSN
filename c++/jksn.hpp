@@ -1,6 +1,7 @@
-#include <stdint.h>
+#include <cstdint>
 #include <exception>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -8,8 +9,8 @@ namespace JKSN {
 
 class JKSNError : public std::exception {
 public:
-    JKSNError(const char *reason) throw();
-    const char *what() const throw();
+    JKSNError(const char *reason) noexcept;
+    const char *what() const noexcept;
 private:
     const char *reason;
 };
@@ -33,7 +34,7 @@ typedef enum {
     JKSN_UNSPECIFIED
 } jksn_data_type;
 
-class JKSNUnspecified{};
+class JKSNUnspecified {};
 
 class JKSNObject {
 public:
@@ -43,9 +44,9 @@ public:
     JKSNObject(float data);
     JKSNObject(double data);
     JKSNObject(long double data);
-    JKSNObject(std::string &data, bool isblob = false);
-    JKSNObject(std::vector<JKSNObject> &data);
-    JKSNObject(std::map<JKSNObject, JKSNObject> &data);
+    JKSNObject(std::shared_ptr<std::string> data, bool isblob = false);
+    JKSNObject(std::shared_ptr<std::vector<JKSNObject>> data);
+    JKSNObject(std::shared_ptr<std::map<JKSNObject, JKSNObject>> data);
     JKSNObject(JKSNUnspecified &data);
     ~JKSNObject();
     jksn_data_type getType() const;
@@ -54,14 +55,23 @@ public:
     float toFloat() const;
     double toDouble() const;
     long double toLongDouble() const;
-    std::string &toString() const;
-    std::string &toBlob() const;
-    std::vector<JKSNObject> &toArray() const;
-    std::map<JKSNObject, JKSNObject> &toObject() const;
-    JKSNObject &operator [](JKSNObject &key) const;
+    std::shared_ptr<std::string> toString() const;
+    std::shared_ptr<std::string> toBlob() const;
+    std::shared_ptr<std::vector<JKSNObject>> &toArray() const;
+    std::shared_ptr<std::map<JKSNObject, JKSNObject>> &toObject() const;
+    std::shared_ptr<JKSNObject> operator [](const JKSNObject &key) const;
 private:
-    void init();
-    struct JKSNObjectImpl *impl;
+    jksn_data_type data_type;
+    union {
+        int data_bool;
+        int64_t data_int;
+        float data_float;
+        double data_double;
+        long double data_long_double;
+        std::shared_ptr<std::string> data_string;
+        std::shared_ptr<std::vector<JKSNObject>> data_array;
+        std::shared_ptr<std::map<JKSNObject, JKSNObject>> data_object;
+    };
 };
 
 class JKSNEncoder {
@@ -69,8 +79,8 @@ class JKSNEncoder {
 public:
     JKSNEncoder();
     ~JKSNEncoder();
-    std::string &dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);
-    std::stringstream &dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
+    std::unique_ptr<std::string> dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);
+    std::unique_ptr<std::stringstream> dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
 private:
     struct JKSNEncoderImpl *impl;
 };
@@ -80,15 +90,15 @@ class JKSNDecoder {
 public:
     JKSNDecoder();
     ~JKSNDecoder();
-    JKSNObject &parsestr(const std::string &s, bool header = true);
-    JKSNObject &parse(const std::istream &fp, bool header = true);
+    std::unique_ptr<JKSNObject> parsestr(const std::string &s, bool header = true);
+    std::unique_ptr<JKSNObject> parse(const std::istream &fp, bool header = true);
 private:
     struct JKSNDecoderImpl *impl;
 };
 
-std::string &dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);
-std::stringstream &dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
-JKSNObject &parsestr(const std::string &s, bool header = true);
-JKSNObject &parse(const std::istream &fp, bool header = true);
+std::unique_ptr<std::string> dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);
+std::unique_ptr<std::stringstream> dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
+std::unique_ptr<JKSNObject> parsestr(const std::string &s, bool header = true);
+std::unique_ptr<JKSNObject> parse(const std::istream &fp, bool header = true);
 
 }

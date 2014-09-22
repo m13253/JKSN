@@ -18,4 +18,4 @@ libjksn++.a: jksn.o
 	$(AR) crs $@ $^
 
 libjksn++.so: jksn.o
-	$(CXX) $(CFLAGS) -shared -o $@ ${LDLAGS} $^ $(LIB)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -shared -o $@ $^ $(LIB)

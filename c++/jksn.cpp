@@ -134,6 +134,14 @@ float JKSNObject::toFloat() const {
         return float(this->data_double);
     case JKSN_LONG_DOUBLE:
         return float(this->data_long_double);
+    case JKSN_STRING:
+        try {
+            return std::stof(*this->data_string->get());
+        } catch(std::invalid_argument) {
+            return NAN;
+        } catch(std::out_of_range) {
+            return NAN;
+        }
     default:
         return NAN;
     }
@@ -149,6 +157,14 @@ double JKSNObject::toDouble() const {
         return this->data_double;
     case JKSN_LONG_DOUBLE:
         return double(this->data_long_double);
+    case JKSN_STRING:
+        try {
+            return std::stod(*this->data_string->get());
+        } catch(std::invalid_argument) {
+            return NAN;
+        } catch(std::out_of_range) {
+            return NAN;
+        }
     default:
         return NAN;
     }
@@ -164,6 +180,14 @@ long double JKSNObject::toLongDouble() const {
         return (long double) this->data_double;
     case JKSN_LONG_DOUBLE:
         return this->data_long_double;
+    case JKSN_STRING:
+        try {
+            return std::stold(*this->data_string->get());
+        } catch(std::invalid_argument) {
+            return NAN;
+        } catch(std::out_of_range) {
+            return NAN;
+        }
     default:
         return NAN;
     }

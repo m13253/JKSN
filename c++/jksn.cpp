@@ -1,4 +1,5 @@
 #include <cmath>
+#include <string>
 #include "jksn.hpp"
 
 namespace JKSN {
@@ -100,7 +101,7 @@ bool JKSNObject::toBool() const {
         return this->data_long_double != 0.0L;
     case JKSN_STRING:
     case JKSN_BLOB:
-        return !(*this->data_string)->empty();
+        return !this->data_string->get()->empty();
     default:
         return true;
     }
@@ -116,8 +117,10 @@ int64_t JKSNObject::toInt() const {
         return int64_t(this->data_double);
     case JKSN_LONG_DOUBLE:
         return int64_t(this->data_long_double);
+    case JKSN_STRING:
+        return int64_t(std::stoll(*this->data_string->get()));
     default:
-        return 0;
+        throw std::invalid_argument("Cannot convert data to the specified type");
     }
 }
 

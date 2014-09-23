@@ -52,7 +52,7 @@ JKSNObject::~JKSNObject() {
     }
 }
 
-jksn_data_type JKSNObject::data_type const {
+jksn_data_type JKSNObject::getType() const {
     return data_type;
 }
 
@@ -116,8 +116,10 @@ float JKSNObject::toFloat() const {
     case JKSN_LONG_DOUBLE:
         return static_cast<float>(data_long_double);
     case JKSN_STRING: {
-        float re = std::strtof(data_string->c_str());
-        if(re == 0 || re == HUGE_VALF)
+        const char *start = (*data_string)->c_str();
+        char *end = nullptr;
+        float re = std::strtof(start, &end);
+        if(re == HUGE_VALF || end != start + (*data_string)->size())
             return NAN;
         else
             return re;
@@ -140,8 +142,10 @@ double JKSNObject::toDouble() const {
     case JKSN_LONG_DOUBLE:
         return static_cast<double>(data_long_double);
     case JKSN_STRING: {
-        double re = std::strtod(data_string->c_str());
-        if(re == 0 || re == HUGE_VAL)
+        const char *start = (*data_string)->c_str();
+        char *end = nullptr;
+        double re = std::strtod(start, &end);
+        if(re == HUGE_VAL || end != start + (*data_string)->size())
             return NAN;
         else
             return re;
@@ -163,12 +167,15 @@ long double JKSNObject::toLongDouble() const {
         return static_cast<long double>(data_double);
     case JKSN_LONG_DOUBLE:
         return data_long_double;
-    case JKSN_STRING:
-        long double re = std::strtold(data_string->c_str());
-        if(re == 0 || re == HUGE_VALL)
+    case JKSN_STRING: {
+        const char *start = (*data_string)->c_str();
+        char *end = nullptr;
+        long double re = std::strtof(start, &end);
+        if(re == HUGE_VALL || end != start + (*data_string)->size())
             return NAN;
         else
             return re;
+    }
     default:
         return NAN;
     }
@@ -217,7 +224,7 @@ std::shared_ptr<std::string> JKSNObject::toString() const {
 
 std::shared_ptr<std::string> JKSNObject::toBlob() const {
     if(data_type == JKSN_BLOB)
-        return data_string;
+        return *data_string;
     else
         throw JKSNError{"Cannot convert data to the specified type"};
 }

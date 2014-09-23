@@ -1,7 +1,7 @@
 #include <cstdint>
-#include <exception>
 #include <map>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -67,7 +67,7 @@ public:
     std::shared_ptr<JKSNObject> operator[](const JKSNObject &key) const;
     std::shared_ptr<JKSNObject> operator[](size_t key) const;
     std::shared_ptr<JKSNObject> operator[](const std::string &key) const;
-    std::shared_ptr<JKSNObject> operator[](const char *key) const;
+
 private:
     jksn_data_type data_type;
     union {

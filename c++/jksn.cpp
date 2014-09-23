@@ -1,7 +1,9 @@
-#include <cstdlib>
-#include <cmath>
-#include <string>
 #include "jksn.hpp"
+
+#include <cmath>
+#include <cstdlib>
+#include <sstream>
+#include <string>
 
 namespace JKSN {
 
@@ -338,10 +340,6 @@ std::shared_ptr<JKSNObject> JKSNObject::operator[](size_t key) const {
 
 std::shared_ptr<JKSNObject> JKSNObject::operator[](const std::string &key) const {
     return std::make_shared<JKSNObject>((*toObject())[JKSNObject(std::make_shared<std::string>(key))]);
-}
-
-std::shared_ptr<JKSNObject> JKSNObject::operator[](const char *key) const {
-    return (*this)[std::string(key)];
 }
 
 }

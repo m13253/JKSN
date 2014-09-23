@@ -7,17 +7,18 @@
 
 namespace JKSN {
 
-class JKSNError : public std::exception {
+class JKSNError : public std::runtime_error {
 public:
-    JKSNError(const char *reason) noexcept;
-    const char *what() const noexcept;
-private:
-    const char *reason;
+    using runtime_error::runtime_error;
 };
 
-class JKSNEncodeError : public JKSNError {};
+class JKSNEncodeError : public JKSNError {
+    using JKSNError::JKSNError;
+};
 
-class JKSNDecodeError : public JKSNError {};
+class JKSNDecodeError : public JKSNError {
+    using JKSNError::JKSNError;
+};
 
 typedef enum {
     JKSN_UNDEFINED,
@@ -49,6 +50,7 @@ public:
     JKSNObject(std::shared_ptr<std::map<JKSNObject, JKSNObject>> data);
     JKSNObject(JKSNUnspecified &data);
     ~JKSNObject();
+
     jksn_data_type getType() const;
     bool toBool() const;
     int64_t toInt() const;
@@ -59,6 +61,7 @@ public:
     std::shared_ptr<std::string> toBlob() const;
     std::shared_ptr<std::vector<JKSNObject>> toArray() const;
     std::shared_ptr<std::map<JKSNObject, JKSNObject>> toObject() const;
+
     bool operator==(const JKSNObject &that) const;
     bool operator<(const JKSNObject &that) const;
     std::shared_ptr<JKSNObject> operator[](const JKSNObject &key) const;
@@ -96,7 +99,7 @@ public:
     JKSNDecoder();
     ~JKSNDecoder();
     std::unique_ptr<JKSNObject> parsestr(const std::string &s, bool header = true);
-    std::unique_ptr<JKSNObject> parse(const std::istream &fp, bool header = true);
+    std::unique_ptr<JKSNObject> parse(std::istream &fp, bool header = true);
 private:
     struct JKSNDecoderImpl *impl;
 };
@@ -104,6 +107,6 @@ private:
 std::unique_ptr<std::string> dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);
 std::unique_ptr<std::stringstream> dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
 std::unique_ptr<JKSNObject> parsestr(const std::string &s, bool header = true);
-std::unique_ptr<JKSNObject> parse(const std::istream &fp, bool header = true);
+std::unique_ptr<JKSNObject> parse(std::istream &fp, bool header = true);
 
 }

@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <cmath>
 #include <string>
 #include "jksn.hpp"
@@ -10,354 +11,326 @@ struct JKSNEncoderImpl {
 struct JKSNDecoderImpl {
 };
 
-JKSNError::JKSNError(const char *reason) noexcept {
-    this->reason = reason;
-}
+JKSNObject::JKSNObject() : data_type{JKSN_UNDEFINED} {}
 
-const char *JKSNError::what() const noexcept {
-    return this->reason;
-}
+JKSNObject::JKSNObject(bool data) : data_type{JKSN_BOOL}, data_bool{data} {}
 
-JKSNObject::JKSNObject() {
-    this->data_type = JKSN_UNDEFINED;
-}
+JKSNObject::JKSNObject(int64_t data) : data_type{JKSN_INT}, data_int{data} {}
 
-JKSNObject::JKSNObject(bool data) {
-    this->data_type = JKSN_BOOL;
-    this->data_bool = data;
-}
+JKSNObject::JKSNObject(float data) : data_type{JKSN_FLOAT}, data_float{data} {}
 
-JKSNObject::JKSNObject(int64_t data) {
-    this->data_type = JKSN_INT;
-    this->data_int = data;
-}
+JKSNObject::JKSNObject(double data) : data_type{JKSN_DOUBLE}, data_double{data} {}
 
-JKSNObject::JKSNObject(float data) {
-    this->data_type = JKSN_FLOAT;
-    this->data_float = data;
-}
+JKSNObject::JKSNObject(long double data) : data_type{JKSN_LONG_DOUBLE}, data_long_double{data} {}
 
-JKSNObject::JKSNObject(double data) {
-    this->data_type = JKSN_DOUBLE;
-    this->data_double = data;
-}
+JKSNObject::JKSNObject(std::shared_ptr<std::string> data, bool isblob) :
+        data_type{isblob ? JKSN_BLOB : JKSN_STRING},
+        data_string{new auto{data}} {}
 
-JKSNObject::JKSNObject(long double data) {
-    this->data_type = JKSN_LONG_DOUBLE;
-    this->data_long_double = data;
-}
+JKSNObject::JKSNObject(std::shared_ptr<std::vector<JKSNObject>> data) :
+        data_type{JKSN_ARRAY},
+        data_array{new auto{data} {}
 
-JKSNObject::JKSNObject(std::shared_ptr<std::string> data, bool isblob) {
-    this->data_type = isblob ? JKSN_BLOB : JKSN_STRING;
-    *(this->data_string = new std::shared_ptr<std::string>) = data;
-}
-
-JKSNObject::JKSNObject(std::shared_ptr<std::vector<JKSNObject>> data) {
-    this->data_type = JKSN_ARRAY;
-    *(this->data_array = new std::shared_ptr<std::vector<JKSNObject>>) = data;
-}
-
-JKSNObject::JKSNObject(std::shared_ptr<std::map<JKSNObject, JKSNObject>> data) {
-    this->data_type = JKSN_OBJECT;
-    *(this->data_object = new std::shared_ptr<std::map<JKSNObject, JKSNObject>>) = data;
-}
+JKSNObject::JKSNObject(std::shared_ptr<std::map<JKSNObject, JKSNObject>> data) :
+        data_type{JKSN_OBJECT},
+        data_object{new auto{data} {}
 
 JKSNObject::~JKSNObject() {
-    switch(this->getType()) {
+    switch(data_type) {
     case JKSN_STRING:
     case JKSN_BLOB:
-        this->data_string->reset();
-        delete this->data_string;
+        delete data_string;
         break;
     case JKSN_ARRAY:
-        this->data_array->reset();
-        delete this->data_array;
+        delete data_array;
         break;
     case JKSN_OBJECT:
-        this->data_object->reset();
-        delete this->data_object;
+        delete data_object;
         break;
     default:
         break;
     }
 }
 
-jksn_data_type JKSNObject::getType() const {
-    return this->data_type;
+jksn_data_type JKSNObject::data_type const {
+    return data_type;
 }
 
 bool JKSNObject::toBool() const {
-    switch(this->getType()) {
+    switch(data_type) {
     case JKSN_UNDEFINED:
     case JKSN_NULL:
     case JKSN_UNSPECIFIED:
         return false;
     case JKSN_BOOL:
-        return this->data_bool;
+        return data_bool;
     case JKSN_INT:
-        return this->data_int != 0;
+        return data_int != 0;
     case JKSN_FLOAT:
-        return this->data_float != 0.0f;
+        return data_float != 0.0f;
     case JKSN_DOUBLE:
-        return this->data_double != 0.0;
+        return data_double != 0.0;
     case JKSN_LONG_DOUBLE:
-        return this->data_long_double != 0.0L;
+        return data_long_double != 0.0L;
     case JKSN_STRING:
     case JKSN_BLOB:
-        return !this->data_string->get()->empty();
+        return !(*data_string)->empty();
     default:
         return true;
     }
 }
 
 int64_t JKSNObject::toInt() const {
-    switch(this->getType()) {
+    switch(data_type) {
     case JKSN_UNDEFINED:
     case JKSN_NULL:
     case JKSN_UNSPECIFIED:
         return 0;
     case JKSN_BOOL:
-        return this->data_bool ? 1 : 0;
+        return data_bool ? 1 : 0;
     case JKSN_INT:
-        return this->data_int;
+        return data_int;
     case JKSN_FLOAT:
-        return int64_t(this->data_float);
+        return static_cast<int64_t>(data_float);
     case JKSN_DOUBLE:
-        return int64_t(this->data_double);
+        return static_cast<int64_t>(data_double);
     case JKSN_LONG_DOUBLE:
-        return int64_t(this->data_long_double);
+        return static_cast<int64_t>(data_long_double);
     case JKSN_STRING:
-        return int64_t(std::stoll(*this->data_string->get()));
+        return static_cast<int64_t>(std::atoll((*data_string)->c_str()));
     default:
-        throw std::invalid_argument("Cannot convert data to the specified type");
+        throw JKSNError{"Cannot convert data to the specified type"};
     }
 }
 
 float JKSNObject::toFloat() const {
-    switch(this->getType()) {
+    switch(data_type) {
     case JKSN_BOOL:
-        return this->data_bool ? 1.0f : 0.0f;
+        return data_bool ? 1.0f : 0.0f;
     case JKSN_INT:
-        return float(this->data_int);
+        return static_cast<float>(data_int);
     case JKSN_FLOAT:
-        return this->data_float;
+        return data_float;
     case JKSN_DOUBLE:
-        return float(this->data_double);
+        return static_cast<float>(data_double);
     case JKSN_LONG_DOUBLE:
-        return float(this->data_long_double);
-    case JKSN_STRING:
-        try {
-            return std::stof(*this->data_string->get());
-        } catch(std::invalid_argument) {
+        return static_cast<float>(data_long_double);
+    case JKSN_STRING: {
+        float re = std::strtof(data_string->c_str());
+        if(re == 0 || re == HUGE_VALF)
             return NAN;
-        } catch(std::out_of_range) {
-            return NAN;
-        }
+        else
+            return re;
+    }
     default:
         return NAN;
     }
 }
 
 double JKSNObject::toDouble() const {
-    switch(this->getType()) {
+    switch(data_type) {
     case JKSN_BOOL:
-        return this->data_bool ? 1.0 : 0.0;
+        return data_bool ? 1.0 : 0.0;
     case JKSN_INT:
-        return double(this->data_int);
+        return static_cast<double>(data_int);
     case JKSN_FLOAT:
-        return double(this->data_float);
+        return static_cast<double>(data_float);
     case JKSN_DOUBLE:
-        return this->data_double;
+        return data_double;
     case JKSN_LONG_DOUBLE:
-        return double(this->data_long_double);
-    case JKSN_STRING:
-        try {
-            return std::stod(*this->data_string->get());
-        } catch(std::invalid_argument) {
+        return static_cast<double>(data_long_double);
+    case JKSN_STRING: {
+        double re = std::strtod(data_string->c_str());
+        if(re == 0 || re == HUGE_VAL)
             return NAN;
-        } catch(std::out_of_range) {
-            return NAN;
-        }
+        else
+            return re;
+    }
     default:
         return NAN;
     }
 }
 
 long double JKSNObject::toLongDouble() const {
-    switch(this->getType()) {
+    switch(data_type) {
     case JKSN_BOOL:
-        return this->data_bool ? 1.0L : 0.0L;
+        return data_bool ? 1.0L : 0.0L;
     case JKSN_INT:
-        return (long double) this->data_int;
+        return static_cast<long double>(data_int);
     case JKSN_FLOAT:
-        return (long double) this->data_float;
+        return static_cast<long double>(data_float);
     case JKSN_DOUBLE:
-        return (long double) this->data_double;
+        return static_cast<long double>(data_double);
     case JKSN_LONG_DOUBLE:
-        return this->data_long_double;
+        return data_long_double;
     case JKSN_STRING:
-        try {
-            return std::stold(*this->data_string->get());
-        } catch(std::invalid_argument) {
+        long double re = std::strtold(data_string->c_str());
+        if(re == 0 || re == HUGE_VALL)
             return NAN;
-        } catch(std::out_of_range) {
-            return NAN;
-        }
+        else
+            return re;
     default:
         return NAN;
     }
 }
 
 std::shared_ptr<std::string> JKSNObject::toString() const {
-    switch(this->getType()) {
+    std::ostringstream os;
+    switch(data_type) {
     case JKSN_UNDEFINED:
-        return std::make_shared<std::string>(std::string("undefined"));
+        return std::make_shared<std::string>("undefined");
     case JKSN_NULL:
-        return std::make_shared<std::string>(std::string("null"));
+        return std::make_shared<std::string>("null");
     case JKSN_BOOL:
-        return std::make_shared<std::string>(std::string(this->data_bool ? "true" : "false"));
+        return std::make_shared<std::string>(data_bool ? "true" : "false");
     case JKSN_INT:
-        return std::make_shared<std::string>(std::to_string(this->data_int));
+        os << data_int;
+        return std::make_shared<std::string>(os.str());
     case JKSN_FLOAT:
-        return std::make_shared<std::string>(std::to_string(this->data_float));
+        os << data_float;
+        return std::make_shared<std::string>(os.str());
     case JKSN_DOUBLE:
-        return std::make_shared<std::string>(std::to_string(this->data_double));
+        os << data_double;
+        return std::make_shared<std::string>(os.str());
     case JKSN_LONG_DOUBLE:
-        return std::make_shared<std::string>(std::to_string(this->data_long_double));
+        os << data_long_double;
+        return std::make_shared<std::string>(os.str());
     case JKSN_STRING:
     case JKSN_BLOB:
-        return *this->data_string;
+        return *data_string;
     case JKSN_ARRAY:
-        {
-            std::string res;
-            for(size_t i = 0; i < this->data_array->get()->size(); i++) {
-                if(i != 0)
-                    res.append(1, ',');
-                res += *(*this->data_array->get())[i].toString();
-            }
-            return std::make_shared<std::string>(res);
+    {
+        std::ostringstream os;
+        bool comma = false;
+        for(auto &i : **data_array) {
+            if(comma)
+                os << ',';
+            comma = true;
+            os << i.toString();
         }
+        return std::make_shared<std::string>(os.str());
+    }
     default:
-        return std::make_shared<std::string>(std::string("[object Object]"));
+        return std::make_shared<std::string>("[object Object]");
     }
 }
 
 std::shared_ptr<std::string> JKSNObject::toBlob() const {
-    if(this->getType() == JKSN_BLOB)
-        return *this->data_string;
+    if(data_type == JKSN_BLOB)
+        return data_string;
     else
-        throw std::invalid_argument("Cannot convert data to the specified type");
+        throw JKSNError{"Cannot convert data to the specified type"};
 }
 
 std::shared_ptr<std::vector<JKSNObject>> JKSNObject::toArray() const {
-    if(this->getType() == JKSN_ARRAY)
-        return *this->data_array;
+    if(data_type == JKSN_ARRAY)
+        return *data_array;
     else
-        return std::make_shared<std::vector<JKSNObject>>(std::vector<JKSNObject>(1, *this));
+        return std::make_shared<std::vector<JKSNObject>>(1, *this); // FIXME: memory leak! copying unmanaged pointers.
 }
 
 std::shared_ptr<std::map<JKSNObject, JKSNObject>> JKSNObject::toObject() const {
-    switch(this->getType()) {
+    switch(data_type) {
     case JKSN_ARRAY:
-        {
-            std::map<JKSNObject, JKSNObject> res;
-            for(size_t i = 0; i < this->data_array->get()->size(); i++)
-                res[JKSNObject(int64_t(i))] = (*this->data_array->get())[i];
-            return std::make_shared<std::map<JKSNObject, JKSNObject>>(res);
-        }
+    {
+        std::map<JKSNObject, JKSNObject> res;
+        for(size_t i = 0; i < (*data_array)->size(); i++)
+            res[JKSNObject(static_cast<int64_t>(i))] = (**data_array)[i]; // FIXME: memory leak!
+        return std::make_shared<std::map<JKSNObject, JKSNObject>>(res);
+    }
     case JKSN_OBJECT:
-        return *this->data_object;
+        return *data_object;
     default:
-        throw std::invalid_argument("Cannot convert data to the specified type");
+        throw JKSNError{"Cannot convert data to the specified type"};
     }
 }
 
 bool JKSNObject::operator==(const JKSNObject &that) const {
-    if(this->getType() != that.getType())
-        switch(this->getType()) {
+    if(data_type != that.data_type)
+        switch(data_type) {
         case JKSN_UNDEFINED:
         case JKSN_NULL:
         case JKSN_UNSPECIFIED:
             return true;
         case JKSN_BOOL:
-            return this->toBool() == that.toBool();
+            return toBool() == that.toBool();
         case JKSN_INT:
-            return this->toInt() == that.toInt();
+            return toInt() == that.toInt();
         case JKSN_FLOAT:
-            return this->toFloat() == that.toFloat();
+            return toFloat() == that.toFloat();
         case JKSN_DOUBLE:
-            return this->toDouble() == that.toDouble();
+            return toDouble() == that.toDouble();
         case JKSN_LONG_DOUBLE:
-            return this->toLongDouble() == that.toLongDouble();
+            return toLongDouble() == that.toLongDouble();
         case JKSN_STRING:
-            return this->toString() == that.toString();
+            return toString() == that.toString();
         case JKSN_BLOB:
-            return this->toBlob() == that.toBlob();
+            return toBlob() == that.toBlob();
         case JKSN_ARRAY:
-            return this->toArray() == that.toArray();
+            return toArray() == that.toArray();
         case JKSN_OBJECT:
-            return this->toObject() == that.toObject();
+            return toObject() == that.toObject();
         default:
-            throw std::invalid_argument("Invalid data type");
+            throw JKSNError{"Invalid data type"};
         }
-    else if((this->getType() == JKSN_FLOAT || this->getType() == JKSN_DOUBLE || this->getType() == JKSN_LONG_DOUBLE) &&
-            (that.getType() == JKSN_FLOAT || that.getType() == JKSN_DOUBLE || that.getType() == JKSN_LONG_DOUBLE))
-        return this->toLongDouble() == that.toLongDouble();
+    else if((data_type == JKSN_FLOAT || data_type == JKSN_DOUBLE || data_type == JKSN_LONG_DOUBLE) &&
+            (that.data_type == JKSN_FLOAT || that.data_type == JKSN_DOUBLE || that.data_type == JKSN_LONG_DOUBLE))
+        return toLongDouble() == that.toLongDouble();
     else
         return false;
 }
 
 bool JKSNObject::operator<(const JKSNObject &that) const {
-    if(this->getType() != that.getType())
-        switch(this->getType()) {
+    if(data_type != that.data_type)
+        switch(data_type) {
         case JKSN_UNDEFINED:
         case JKSN_NULL:
         case JKSN_UNSPECIFIED:
             return true;
         case JKSN_BOOL:
-            return this->toBool() < that.toBool();
+            return toBool() < that.toBool();
         case JKSN_INT:
-            return this->toInt() < that.toInt();
+            return toInt() < that.toInt();
         case JKSN_FLOAT:
-            return this->toFloat() < that.toFloat();
+            return toFloat() < that.toFloat();
         case JKSN_DOUBLE:
-            return this->toDouble() < that.toDouble();
+            return toDouble() < that.toDouble();
         case JKSN_LONG_DOUBLE:
-            return this->toLongDouble() < that.toLongDouble();
+            return toLongDouble() < that.toLongDouble();
         case JKSN_STRING:
-            return this->toString() < that.toString();
+            return toString() < that.toString();
         case JKSN_BLOB:
-            return this->toBlob() < that.toBlob();
+            return toBlob() < that.toBlob();
         case JKSN_ARRAY:
-            return this->toArray() < that.toArray();
+            return toArray() < that.toArray();
         case JKSN_OBJECT:
-            return this->toObject() < that.toObject();
+            return toObject() < that.toObject();
         default:
-            throw std::invalid_argument("Invalid data type");
+            throw JKSNError{"Invalid data type"};
         }
-    else if((this->getType() == JKSN_FLOAT || this->getType() == JKSN_DOUBLE || this->getType() == JKSN_LONG_DOUBLE) &&
-            (that.getType() == JKSN_FLOAT || that.getType() == JKSN_DOUBLE || that.getType() == JKSN_LONG_DOUBLE))
-        return this->toLongDouble() < that.toLongDouble();
+    else if((data_type == JKSN_FLOAT || data_type == JKSN_DOUBLE || data_type == JKSN_LONG_DOUBLE) &&
+            (that.data_type == JKSN_FLOAT || that.data_type == JKSN_DOUBLE || that.data_type == JKSN_LONG_DOUBLE))
+        return toLongDouble() < that.toLongDouble();
     else
-        return this->getType() < that.getType();
+        return data_type < that.data_type;
 }
 
 std::shared_ptr<JKSNObject> JKSNObject::operator[](const JKSNObject &key) const {
-    if(this->getType() == JKSN_OBJECT || key.getType() != JKSN_INT)
-        return std::make_shared<JKSNObject>(&(*this->toObject())[key]);
+    if(data_type == JKSN_OBJECT || key.data_type != JKSN_INT)
+        return std::make_shared<JKSNObject>((*toObject())[key]); // FIXME: the implementation of std::shared_ptr is not intrusive, so again, you must write a copy constructor. Otherwise you can make the key type of std::map a std::shared_ptr.
     else
-        return std::make_shared<JKSNObject>(&(*this->toArray())[key.toInt()]);
+        return std::make_shared<JKSNObject>((*toArray())[key.toInt()]);
 }
 
 std::shared_ptr<JKSNObject> JKSNObject::operator[](size_t key) const {
-    if(this->getType() == JKSN_OBJECT)
-        return std::make_shared<JKSNObject>(&(*this->toObject())[JKSNObject(int64_t(key))]);
+    if(data_type == JKSN_OBJECT)
+        return std::make_shared<JKSNObject>((*toObject())[JKSNObject(static_cast<int64_t>(key))]);
     else
-        return std::make_shared<JKSNObject>(&(*this->toArray())[key]);
+        return std::make_shared<JKSNObject>((*toArray())[key]);
 }
 
 std::shared_ptr<JKSNObject> JKSNObject::operator[](const std::string &key) const {
-    return std::make_shared<JKSNObject>(&(*this->toObject())[JKSNObject(std::make_shared<std::string>(key))]);
+    return std::make_shared<JKSNObject>((*toObject())[JKSNObject(std::make_shared<std::string>(key))]);
 }
 
 std::shared_ptr<JKSNObject> JKSNObject::operator[](const char *key) const {

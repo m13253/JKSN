@@ -6,7 +6,80 @@
 #include <vector>
 
 namespace JKSN {
+    namespace impl {
+        class any {
+        public:
+            virtual ~any() = default;
+        };
+        
+        template <class T>
+        class any_value: public any {
+        public:
+            any(const T& v): value{v} {}
+            ~any_value() = default;
+            T value;
+        };
+        
+        using any_ptr = std::shared_ptr<any>;
+        
+        template <class T>
+        any_ptr to_any(const T& x) {
+            return std::make_shared<any<T>>(x);
+        }
+        
+        class bad_any_cast {};
+        
+        template <class T>
+        T& any_to(any_ptr a) {
+            if (auto* p = dynamic_cast<any_value<T>*>(a.get()))
+                return p->value;
+            else
+                throw bad_any_cast{};
+        }
+        
+        template <class T>
+        bool any_is(any_ptr a) {
+            return dynamic_cast<any_value<T>*>(a.get()) != nullptr;
+        }
+    }
 
+    typedef enum {
+        JKSN_UNDEFINED,
+        JKSN_NULL,
+        JKSN_BOOL,
+        JKSN_INT,
+        JKSN_FLOAT,
+        JKSN_DOUBLE,
+        JKSN_LONG_DOUBLE,
+        JKSN_STRING,
+        JKSN_BLOB,
+        JKSN_ARRAY,
+        JKSN_OBJECT,
+        JKSN_UNSPECIFIED
+    } JKSNType;
+    
+    using Null = nullptr_t;    
+    using Bool = bool;
+    using Int8 = int8_t;
+    using Int16 = int16_t;
+    using Int32 = int32_t;
+    using Float = float;
+    using Double = double;
+    using LongDouble = long double;
+    using UTF8String = std::u8string;
+    using UTF16String = std::u16string;
+    using BlobString = std::vector<Int8>;
+    using Array = std::vector<JKSNObject>;
+    using Object = std::map<JKSNObject, JKSNObject>;
+    class Undefined {};
+    class Unspecified {};
+    
+    class JKSNObject {
+    public:
+        
+    };
+
+/*
 class JKSNError : public std::runtime_error {
 public:
     using runtime_error::runtime_error;
@@ -20,20 +93,6 @@ class JKSNDecodeError : public JKSNError {
     using JKSNError::JKSNError;
 };
 
-typedef enum {
-    JKSN_UNDEFINED,
-    JKSN_NULL,
-    JKSN_BOOL,
-    JKSN_INT,
-    JKSN_FLOAT,
-    JKSN_DOUBLE,
-    JKSN_LONG_DOUBLE,
-    JKSN_STRING,
-    JKSN_BLOB,
-    JKSN_ARRAY,
-    JKSN_OBJECT,
-    JKSN_UNSPECIFIED
-} jksn_data_type;
 
 class JKSNUnspecified {};
 
@@ -83,7 +142,7 @@ private:
 };
 
 class JKSNEncoder {
-/* Note: With a certain JKSN encoder, the hashtable is preserved during each dump */
+// Note: With a certain JKSN encoder, the hashtable is preserved during each dump
 public:
     JKSNEncoder();
     ~JKSNEncoder();
@@ -94,7 +153,7 @@ private:
 };
 
 class JKSNDecoder {
-/* Note: With a certain JKSN decoder, the hashtable is preserved during each parse */
+// Note: With a certain JKSN decoder, the hashtable is preserved during each parse
 public:
     JKSNDecoder();
     ~JKSNDecoder();
@@ -110,3 +169,4 @@ std::unique_ptr<JKSNObject> parsestr(const std::string &s, bool header = true);
 std::unique_ptr<JKSNObject> parse(std::istream &fp, bool header = true);
 
 }
+*/

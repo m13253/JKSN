@@ -60,15 +60,12 @@ namespace JKSN {
     
     using Null = nullptr_t;    
     using Bool = bool;
-    using Int8 = int8_t;
-    using Int16 = int16_t;
-    using Int32 = int32_t;
+    using Int64 = int64_t;
     using Float = float;
     using Double = double;
     using LongDouble = long double;
-    using UTF8String = std::u8string;
-    using UTF16String = std::u16string;
-    using BlobString = std::vector<Int8>;
+    using UTF8String = std::string;
+    using BlobString = std::string;
     using Array = std::vector<JKSNObject>;
     using Object = std::map<JKSNObject, JKSNObject>;
     class Undefined {};

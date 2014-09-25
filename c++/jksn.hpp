@@ -4,7 +4,6 @@
 #include <cassert>
 #include <cstdint>
 #include <map>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -29,7 +28,7 @@ namespace JKSN {
         using any_ptr = std::shared_ptr<any>;
         
         template <class T>
-        any_ptr to_any(T&& x) {
+        inline any_ptr to_any(T&& x) {
             using U = std::remove_cv_t<std::remove_reference_t<T>>;
             return std::make_shared<any_value<U>>(std::forward<T>(x));
         }
@@ -37,7 +36,7 @@ namespace JKSN {
         class bad_any_cast {};
         
         template <class T>
-        T& any_to(any_ptr a) {
+        inline T& any_cast(const any_ptr& a) {
             if (auto* p = dynamic_cast<any_value<T>*>(a.get()))
                 return p->value;
             else
@@ -45,7 +44,12 @@ namespace JKSN {
         }
         
         template <class T>
-        bool any_is(any_ptr a) {
+        inline T& any_to(const any_ptr& a) {
+            return static_cast<any_value<T>*>(a.get())->value;
+        }
+        
+        template <class T>
+        inline bool any_is(const any_ptr& a) {
             return dynamic_cast<any_value<T>*>(a.get()) != nullptr;
         }
     }
@@ -97,7 +101,7 @@ namespace JKSN {
         class Unspecified {};
         
         JKSNObject(Undefined):           value{}, value_type{JKSN_UNDEFINED} {}
-        JKSNObject(Null):                value{}, value_type{JKSN_NUMM} {}
+        JKSNObject(Null):                value{}, value_type{JKSN_NULL} {}
         JKSNObject(Bool b):              value{to_any(b)}, value_type{JKSN_BOOL} {}
         JKSNObject(Int64 i):             value{to_any(i)}, value_type{JKSN_INT} {}
         JKSNObject(Float f):             value{to_any(f)}, value_type{JKSN_FLOAT} {}

@@ -3,6 +3,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace JKSN {
@@ -16,6 +17,7 @@ namespace JKSN {
         class any_value: public any {
         public:
             any(const T& v): value{v} {}
+            any(T&& v): value{std::move(v)} {}
             ~any_value() = default;
             T value;
         };
@@ -23,8 +25,9 @@ namespace JKSN {
         using any_ptr = std::shared_ptr<any>;
         
         template <class T>
-        any_ptr to_any(const T& x) {
-            return std::make_shared<any<T>>(x);
+        any_ptr to_any(T&& x) {
+            using U = typename std::remove_reference<T>::type;
+            return std::make_shared<any_value<U>>(std::forward<T>(x));
         }
         
         class bad_any_cast {};
@@ -43,11 +46,11 @@ namespace JKSN {
         }
     }
 
-    typedef enum {
+    enum JKSNType {
         JKSN_UNDEFINED,
         JKSN_NULL,
         JKSN_BOOL,
-        JKSN_INT,
+        JKSN_INT64,
         JKSN_FLOAT,
         JKSN_DOUBLE,
         JKSN_LONG_DOUBLE,
@@ -56,24 +59,34 @@ namespace JKSN {
         JKSN_ARRAY,
         JKSN_OBJECT,
         JKSN_UNSPECIFIED
-    } JKSNType;
-    
-    using Null = nullptr_t;    
-    using Bool = bool;
-    using Int64 = int64_t;
-    using Float = float;
-    using Double = double;
-    using LongDouble = long double;
-    using UTF8String = std::string;
-    using BlobString = std::string;
-    using Array = std::vector<JKSNObject>;
-    using Object = std::map<JKSNObject, JKSNObject>;
-    class Undefined {};
-    class Unspecified {};
+    };
+
     
     class JKSNObject {
     public:
+        class Undefined {};
+        using Null = nullptr_t;    
+        using Bool = bool;
+        using Int64 = int64_t;
+        using Float = float;
+        using Double = double;
+        using LongDouble = long double;
+        using UTF8String = std::string;
+        using Blob = std::string;
+        using Array = std::vector<JKSNObject>;
+        using Object = std::map<JKSNObject, JKSNObject>;
+        class Unspecified {};
         
+        JKSNObject(Undefined): value{}, value_type{JKSN_UNDEFINED} {}
+        JKSNObject(Null): value{}, value_type{JKSN_NUMM} {}
+        JKSNObject(Bool b): value{to_any(b)}, value_type{JKSN_BOOL} {}
+        JKSNObject(Int64 i): value{to_any(i)}, value_type{JKSN_INT64} {}
+        JKSNObject(Float f): value{to_any(f)}, value_type{JKSN_FLOAT} {}
+        JKSNObject(Double d): value{to_any(d)}, value_type{JKSN_DOUBLE} {}
+        
+    private:
+        any_ptr value;
+        JKSNType value_type;
     };
 
 /*

@@ -10,50 +10,6 @@
 #include <vector>
 
 namespace JKSN {
-    namespace impl {
-        class any {
-        public:
-            virtual ~any() = default;
-        };
-        
-        template <class T>
-        class any_value: public any {
-        public:
-            any(const T& v): value{v} {}
-            any(T&& v): value{std::move(v)} {}
-            ~any_value() = default;
-            T value;
-        };
-        
-        using any_ptr = std::shared_ptr<any>;
-        
-        template <class T>
-        inline any_ptr to_any(T&& x) {
-            using U = std::remove_cv_t<std::remove_reference_t<T>>;
-            return std::make_shared<any_value<U>>(std::forward<T>(x));
-        }
-        
-        class bad_any_cast {};
-        
-        template <class T>
-        inline T& any_cast(const any_ptr& a) {
-            if (auto* p = dynamic_cast<any_value<T>*>(a.get()))
-                return p->value;
-            else
-                throw bad_any_cast{};
-        }
-        
-        template <class T>
-        inline T& any_to(const any_ptr& a) {
-            return static_cast<any_value<T>*>(a.get())->value;
-        }
-        
-        template <class T>
-        inline bool any_is(const any_ptr& a) {
-            return dynamic_cast<any_value<T>*>(a.get()) != nullptr;
-        }
-    }
-
     class JKSNError: public std::runtime_error {
     public:
         using runtime_error::runtime_error;
@@ -83,7 +39,6 @@ namespace JKSN {
         JKSN_OBJECT,
         JKSN_UNSPECIFIED
     };
-
     
     class JKSNObject {
     public:
@@ -100,22 +55,24 @@ namespace JKSN {
         using Object = std::map<JKSNObject, JKSNObject>;
         class Unspecified {};
         
-        JKSNObject(Undefined):           value{}, value_type{JKSN_UNDEFINED} {}
-        JKSNObject(Null):                value{}, value_type{JKSN_NULL} {}
-        JKSNObject(Bool b):              value{to_any(b)}, value_type{JKSN_BOOL} {}
-        JKSNObject(Int64 i):             value{to_any(i)}, value_type{JKSN_INT} {}
-        JKSNObject(Float f):             value{to_any(f)}, value_type{JKSN_FLOAT} {}
-        JKSNObject(Double d):            value{to_any(d)}, value_type{JKSN_DOUBLE} {}
-        JKSNObject(LongDouble l):        value{to_any(l)}, value_type{JKSN_LONG_DOUBLE} {}
-        JKSNObject(const UTF8String& s): value{to_any(s)}, value_type{JKSN_STRING} {}
-        JKSNObject(UTF8String&& s):      value{to_any(s)}, value_type{JKSN_STRING} {}
-        JKSNObject(const Blob& b):       value{to_any(b)}, value_type{JKSN_BLOB} {}
-        JKSNObject(Blob&& b):            value{to_any(b)}, value_type{JKSN_BLOB} {}
-        JKSNObject(const Array& a):      value{to_any(a)}, value_type{JKSN_ARRAY} {}
-        JKSNObject(Array&& a):           value{to_any(a)}, value_type{JKSN_ARRAY} {}
-        JKSNObject(const Object& o):     value{to_any(o)}, value_type{JKSN_OBJECT} {}
-        JKSNObject(Object&& o):          value{to_any(o)}, value_type{JKSN_OBJECT} {}
-        JKSNObject(Unspecified):         value{}, value_type{JKSN_UNSPECIFIED} {}
+        JKSNObject(Undefined):           value_type{JKSN_UNDEFINED} {}
+        JKSNObject(Null):                value_type{JKSN_NULL} {}
+        JKSNObject(Bool b):              value_bool{b}, value_type{JKSN_BOOL} {}
+        JKSNObject(Int64 i):             value_int{i}, value_type{JKSN_INT} {}
+        JKSNObject(Float f):             value_float{f}, value_type{JKSN_FLOAT} {}
+        JKSNObject(Double d):            value_double{d}, value_type{JKSN_DOUBLE} {}
+        JKSNObject(LongDouble l):        value_long_double{l}, value_type{JKSN_LONG_DOUBLE} {}
+        JKSNObject(const UTF8String& s): value_pstring{new auto{s}}, value_type{JKSN_STRING} {}
+        JKSNObject(UTF8String&& s):      value_pstring{new auto{s}}, value_type{JKSN_STRING} {}
+        JKSNObject(const Blob& b):       value_pblob{new auto{b}}, value_type{JKSN_BLOB} {}
+        JKSNObject(Blob&& b):            value_pblob{new auto{b}}, value_type{JKSN_BLOB} {}
+        JKSNObject(const Array& a):      value_parray{new auto{a}}, value_type{JKSN_ARRAY} {}
+        JKSNObject(Array&& a):           value_parray{new auto{a}}, value_type{JKSN_ARRAY} {}
+        JKSNObject(const Object& o):     value_pobject{new auto{o}}, value_type{JKSN_OBJECT} {}
+        JKSNObject(Object&& o):          value_pobject{new auto{o}}, value_type{JKSN_OBJECT} {}
+        JKSNObject(Unspecified):         value_type{JKSN_UNSPECIFIED} {}
+        ~JKSNObject();
+        JKSNObject& operator = (const JKSNObject&);
 
         JKSNType type() const { return value_type; }
         Bool toBool() const;
@@ -128,25 +85,35 @@ namespace JKSN {
         Array toArray() const;
         Object toObject() const;
 
-        bool operator == (const JKSNObject& that) const;
-        bool operator < (const JKSNObject& that) const;
+        bool operator == (const JKSNObject&) const;
+        bool operator < (const JKSNObject&) const;
 
         JKSNObject& operator [] (const JKSNObject& key) const {
             if (value_type == JKSN_OBJECT || key.value_type != JKSN_INT)
-                return impl::any_to<Object>(value)[key];
+                return (*value_pobject)[key];
             else if (value_type == JKSN_ARRAY || key.value_type == JKSN_INT)
-                return impl::any_to<Array>(value)[key.toInt()];
+                return (*value_parray)[key.toInt()];
             else
                 assert(false);
         }
         JKSNObject& operator [] (size_t index) {
             assert(value_type == JKSN_ARRAY);
-            return impl::any_to<Array>(value)[index];
+            return (*value_array)[index];
         }
 
     private:
-        impl::any_ptr value;
         JKSNType value_type;
+        union {
+            Bool value_bool = false;
+            Int64 value_int;
+            Float value_float;
+            Double value_double;
+            LongDouble value_long_double;
+            std::shared_ptr<UTF8String> value_pstring;
+            std::shared_ptr<Blob> value_pblob;
+            std::shared_ptr<Array> value_parray;
+            std::shared_ptr<Object> value_pobject;
+        };
     };
 }
 

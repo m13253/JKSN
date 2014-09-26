@@ -3,10 +3,11 @@
 
 #include <cassert>
 #include <cstdint>
-#include <map>
+#include <cstdlib>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <vector>
 
 namespace JKSN {
@@ -21,6 +22,11 @@ namespace JKSN {
     };
 
     class JKSNDecodeError: public JKSNError {
+    public:
+        using JKSNError::JKSNError;
+    };
+    
+    class JKSNTypeError: public JKSNError {
     public:
         using JKSNError::JKSNError;
     };
@@ -39,13 +45,15 @@ namespace JKSN {
         JKSN_OBJECT,
         JKSN_UNSPECIFIED
     };
+
+    class JKSNObjectHasher;
     
     class JKSNObject {
     public:
         class Undefined {};
         class Null {};
         using Array = std::vector<JKSNObject>;
-        using Object = std::map<JKSNObject, JKSNObject>;
+        using Object = std::unordered_map<JKSNObject, JKSNObject, JKSNObjectHasher>;
         class Unspecified {};
         
         JKSNObject(Undefined):           value_type{JKSN_UNDEFINED} {}
@@ -69,7 +77,6 @@ namespace JKSN {
         ~JKSNObject();
         JKSNObject& operator = (const JKSNObject&);
 
-        JKSNType type() const { return value_type; }
         bool toBool() const;
         int64_t toInt() const;
         float toFloat() const;
@@ -80,8 +87,21 @@ namespace JKSN {
         Array toArray() const;
         Object toObject() const;
 
+        bool isUndefined() const { return value_type == JKSN_UNDEFINED; }
+        bool isNull() const { return value_type == JKSN_NULL; }
+        bool isBool() const { return value_type == JKSN_BOOL; }
+        bool isInt() const { return value_type == JKSN_INT; }
+        bool isFloat() const { return value_type == JKSN_FLOAT; }
+        bool isDouble() const { return value_type == JKSN_DOUBLE; }
+        bool isLongDouble() const { return value_type == JKSN_LONG_DOUBLE; }
+        bool isString() const { return value_type == JKSN_STRING; }
+        bool isBlob() const { return value_type == JKSN_BLOB; }
+        bool isArray() const { return value_type == JKSN_ARRAY; }
+        bool isObject() const { return value_type == JKSN_OBJECT; }
+        bool isUnspecified() const { return value_type == JKSN_UNSPECIFIED; }
+
         bool operator == (const JKSNObject&) const;
-        bool operator < (const JKSNObject&) const;
+        size_t hashCode() const;
 
         JKSNObject& operator [] (const JKSNObject& key) const {
             if (value_type == JKSN_OBJECT || key.value_type != JKSN_INT)
@@ -89,10 +109,11 @@ namespace JKSN {
             else if (value_type == JKSN_ARRAY || key.value_type == JKSN_INT)
                 return (*value_parray)[key.toInt()];
             else
-                assert(false);
+                throw JKSNTypeError{"Operator [] on non-aggregation type."};
         }
         JKSNObject& operator [] (size_t index) {
-            assert(value_type == JKSN_ARRAY);
+            if (value_type != JKSN_ARRAY)
+                throw JKSNTypeError{"Operator [] on non-aggregation type."};
             return (*value_array)[index];
         }
 
@@ -108,6 +129,13 @@ namespace JKSN {
             std::shared_ptr<Array> value_parray;
             std::shared_ptr<Object> value_pobject;
         };
+    };
+
+    class JKSNObjectHasher {
+    public:
+        size_t operator () (const JKSNObject& j) const {
+            return j.hashCode();
+        }
     };
 }
 

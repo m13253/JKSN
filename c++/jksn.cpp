@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdlib>
+#include <functional>
 #include <sstream>
 
 using namespace JKSN;
@@ -13,10 +14,10 @@ JKSNObject::~JKSNObject() {
         value_pstr.~shared_ptr();
         break;
     case JKSN_ARRAY:
-        value_parray.~vector();
+        value_parray.~shared_ptr();
         break;
     case JKSN_OBJECT:
-        value_pobject.~map();
+        value_pobject.~shared_ptr();
         break;
     default:
         break;
@@ -65,8 +66,39 @@ JKSNObject& JKSNObject::operator = (const JKSNObject& rhs) {
         }
     }
     else {
-        // TODO
+        ~JKSNObject();
+        value_type = JKSN_UNDEFINED;
+        switch (rhs.value_type) {
+        case JKSN_BOOL:
+            value_bool = rhs.value_bool;
+            break;
+        case JKSN_INT:
+            value_int = rhs.value_int;
+            break;
+        case JKSN_FLOAT:
+            value_float = rhs.value_float;
+            break;
+        case JKSN_DOUBLE:
+            value_double = rhs.value_double;
+            break;
+        case JKSN_LONG_DOUBLE:
+            value_long_double = rhs.value_long_double;
+            break;
+        case JKSN_STRING:
+        case JKSN_BLOB:
+            new(&value_pstr) std::shared_ptr<std::string>{new auto{*rhs.value_pstr}};
+            break;
+        case JKSN_ARRAY:
+            new(&value_parray) std::shared_ptr<Array>{new auto{*rhs.value_parray}};
+            break;
+        case JKSN_OBJECT:
+            new(&value_pobject) std::shared_ptr<Object>{new auto{*rhs.value_pobject}};
+            break;
+        }
+        value_type = rhs.value_type;
+        return *this;
     }
+}
 
 bool JKSNObject::toBool() const {
     switch (value_type) {
@@ -111,7 +143,7 @@ int64_t JKSNObject::toInt() const {
     case JKSN_STRING:
         return static_cast<int64_t>(std::atoll((*value_pstr)->c_str()));
     default:
-        throw JKSNError{"Cannot convert value to int64_t."};
+        throw JKSNTypeError{"Cannot convert value to int64_t."};
     }
 }
 
@@ -236,14 +268,14 @@ std::string JKSNObject::toBlob() const {
     if (value_type == JKSN_BLOB)
         return *value_pstr;
     else
-        throw JKSNError{"Cannot convert value to blob."};
+        throw JKSNTypeError{"Cannot convert value to blob."};
 }
 
 JKSNObject::Array JKSNObject::toArray() const {
     if (value_type == JKSN_ARRAY)
         return *value_parray;
     else
-        return {*this,};
+        return {*this};
 }
 
 JKSNObject::Object JKSNObject::toObject() const {
@@ -257,34 +289,13 @@ JKSNObject::Object JKSNObject::toObject() const {
     case JKSN_OBJECT:
         return *value_pobject;
     default:
-        throw JKSNError{"Cannot convert value to object."};
+        throw JKSNTypeError{"Cannot convert value to object."};
     }
 }
 
 bool JKSNObject::operator == (const JKSNObject& rhs) const {
     if (value_type != that.value_type) {
-        switch (value_type) {
-        case JKSN_BOOL:
-            return value_bool == that.toBool();
-        case JKSN_INT:
-            return value_int == that.toInt();
-        case JKSN_FLOAT:
-            return value_float == that.toFloat();
-        case JKSN_DOUBLE:
-            return value_double == that.toDouble();
-        case JKSN_LONG_DOUBLE:
-            return value_long_double == that.toLongDouble();
-        case JKSN_STRING:
-            return *value_pstr == that.toString();
-        case JKSN_BLOB:
-            return *value_pstr == that.toBlob();
-        case JKSN_ARRAY:
-            return *value_parray == that.toArray();
-        case JKSN_OBJECT:
-            return *value_pobject == that.toObject();
-        default:
-            return false;
-        }
+        return false;
     }
     else {
         switch (value_type) {
@@ -307,55 +318,34 @@ bool JKSNObject::operator == (const JKSNObject& rhs) const {
     }
 }
 
-// bool JKSNObject::operator<(const JKSNObject &that) const {
-//     if(value_type != that.value_type)
-//         switch(value_type) {
-//         case JKSN_UNDEFINED:
-//         case JKSN_NULL:
-//         case JKSN_UNSPECIFIED:
-//             return true;
-//         case JKSN_BOOL:
-//             return toBool() < that.toBool();
-//         case JKSN_INT:
-//             return toInt() < that.toInt();
-//         case JKSN_FLOAT:
-//             return toFloat() < that.toFloat();
-//         case JKSN_DOUBLE:
-//             return toDouble() < that.toDouble();
-//         case JKSN_LONG_DOUBLE:
-//             return toLongDouble() < that.toLongDouble();
-//         case JKSN_STRING:
-//             return toString() < that.toString();
-//         case JKSN_BLOB:
-//             return toBlob() < that.toBlob();
-//         case JKSN_ARRAY:
-//             return toArray() < that.toArray();
-//         case JKSN_OBJECT:
-//             return toObject() < that.toObject();
-//         default:
-//             throw JKSNError{"Invalid data type"};
-//         }
-//     else if((value_type == JKSN_FLOAT || value_type == JKSN_DOUBLE || value_type == JKSN_LONG_DOUBLE) &&
-//             (that.value_type == JKSN_FLOAT || that.value_type == JKSN_DOUBLE || that.value_type == JKSN_LONG_DOUBLE))
-//         return toLongDouble() < that.toLongDouble();
-//     else
-//         return value_type < that.value_type;
-// }
-// 
-// std::shared_ptr<JKSNObject> JKSNObject::operator[](const JKSNObject &key) const {
-//     if(value_type == JKSN_OBJECT || key.value_type != JKSN_INT)
-//         return std::make_shared<JKSNObject>((*toObject())[key]); // FIXME: the implementation of std::shared_ptr is not intrusive, so again, you must write a copy constructor. Otherwise you can make the key type of std::map a std::shared_ptr.
-//     else
-//         return std::make_shared<JKSNObject>((*toArray())[key.toInt()]);
-// }
-// 
-// std::shared_ptr<JKSNObject> JKSNObject::operator[](size_t key) const {
-//     if(value_type == JKSN_OBJECT)
-//         return std::make_shared<JKSNObject>((*toObject())[JKSNObject(static_cast<int64_t>(key))]);
-//     else
-//         return std::make_shared<JKSNObject>((*toArray())[key]);
-// }
-// 
-// std::shared_ptr<JKSNObject> JKSNObject::operator[](const std::string &key) const {
-//     return std::make_shared<JKSNObject>((*toObject())[JKSNObject(std::make_shared<std::string>(key))]);
-// }
+size_t JKSNObject::hashCode() {
+    switch (value_type) {
+    case JKSN_BOOL:
+        return std::hash<bool>{}(value_bool);
+    case JKSN_INT:
+        return std::hash<int64_t>{}(value_int);
+    case JKSN_FLOAT:
+        return std::hash<float>{}(value_float);
+    case JKSN_DOUBLE:
+        return std::hash<double>{}(value_double);
+    case JKSN_LONG_DOUBLE:
+        return std::hash<long double>{}(value_long_double);
+    case JKSN_STRING:
+    case JKSN_BLOB:
+        return std::hash<std::string>{}(*value_pstr);
+    case JKSN_ARRAY: {
+        size_t re = 0;
+        for (auto& i : *value_parray)
+            re += i.hashCode();
+        return re;
+    }
+    case JKSN_OBJECT: {
+        size_t re = 0;
+        for (auto& i : *value_pobject)
+            re += i.first.hashCode() + i.second.hashCode();
+        return re;
+    }
+    default:
+        return 0;
+    }
+}

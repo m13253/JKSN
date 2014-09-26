@@ -43,29 +43,24 @@ namespace JKSN {
     class JKSNObject {
     public:
         class Undefined {};
-        using Null = nullptr_t;    
-        using Bool = bool;
-        using Int64 = int64_t;
-        using Float = float;
-        using Double = double;
-        using LongDouble = long double;
-        using UTF8String = std::string;
-        using Blob = std::string;
+        class Null {};
         using Array = std::vector<JKSNObject>;
         using Object = std::map<JKSNObject, JKSNObject>;
         class Unspecified {};
         
         JKSNObject(Undefined):           value_type{JKSN_UNDEFINED} {}
         JKSNObject(Null):                value_type{JKSN_NULL} {}
-        JKSNObject(Bool b):              value_bool{b}, value_type{JKSN_BOOL} {}
-        JKSNObject(Int64 i):             value_int{i}, value_type{JKSN_INT} {}
-        JKSNObject(Float f):             value_float{f}, value_type{JKSN_FLOAT} {}
-        JKSNObject(Double d):            value_double{d}, value_type{JKSN_DOUBLE} {}
-        JKSNObject(LongDouble l):        value_long_double{l}, value_type{JKSN_LONG_DOUBLE} {}
-        JKSNObject(const UTF8String& s): value_pstring{new auto{s}}, value_type{JKSN_STRING} {}
-        JKSNObject(UTF8String&& s):      value_pstring{new auto{s}}, value_type{JKSN_STRING} {}
-        JKSNObject(const Blob& b):       value_pblob{new auto{b}}, value_type{JKSN_BLOB} {}
-        JKSNObject(Blob&& b):            value_pblob{new auto{b}}, value_type{JKSN_BLOB} {}
+        JKSNObject(bool b):              value_bool{b}, value_type{JKSN_BOOL} {}
+        JKSNObject(int64_t i):           value_int{i}, value_type{JKSN_INT} {}
+        JKSNObject(float f):             value_float{f}, value_type{JKSN_FLOAT} {}
+        JKSNObject(double d):            value_double{d}, value_type{JKSN_DOUBLE} {}
+        JKSNObject(long double l):       value_long_double{l}, value_type{JKSN_LONG_DOUBLE} {}
+        JKSNObject(const std::string& s, bool is_blob = false):
+                value_pstr{new auto{s}},
+                value_type{is_blob ? JKSN_BLOB : JKSN_STRING} {}
+        JKSNObject(std::string&& s, bool is_blob = false):
+                value_pstr{new auto{s}},
+                value_type{is_blob ? JKSN_BLOB : JKSN_STRING} {}
         JKSNObject(const Array& a):      value_parray{new auto{a}}, value_type{JKSN_ARRAY} {}
         JKSNObject(Array&& a):           value_parray{new auto{a}}, value_type{JKSN_ARRAY} {}
         JKSNObject(const Object& o):     value_pobject{new auto{o}}, value_type{JKSN_OBJECT} {}
@@ -75,13 +70,13 @@ namespace JKSN {
         JKSNObject& operator = (const JKSNObject&);
 
         JKSNType type() const { return value_type; }
-        Bool toBool() const;
-        Int64 toInt() const;
-        Float toFloat() const;
-        Double toDouble() const;
-        LongDouble toLongDouble() const;
-        UTF8String toString() const;
-        Blob toBlob() const;
+        bool toBool() const;
+        int64_t toInt() const;
+        float toFloat() const;
+        double toDouble() const;
+        long double toLongDouble() const;
+        std::string toString() const;
+        std::string toBlob() const;
         Array toArray() const;
         Object toObject() const;
 
@@ -104,13 +99,12 @@ namespace JKSN {
     private:
         JKSNType value_type;
         union {
-            Bool value_bool = false;
-            Int64 value_int;
-            Float value_float;
-            Double value_double;
-            LongDouble value_long_double;
-            std::shared_ptr<UTF8String> value_pstring;
-            std::shared_ptr<Blob> value_pblob;
+            bool value_bool = false;
+            int64_t value_int;
+            float value_float;
+            double value_double;
+            long double value_long_double;
+            std::shared_ptr<std::string> value_pstr;
             std::shared_ptr<Array> value_parray;
             std::shared_ptr<Object> value_pobject;
         };

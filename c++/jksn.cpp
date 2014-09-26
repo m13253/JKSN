@@ -7,7 +7,7 @@
 using namespace JKSN;
 
 JKSNObject::~JKSNObject() {
-    switch(value_type) {
+    switch (value_type) {
     case JKSN_STRING:
     case JKSN_BLOB:
         value_pstr.~shared_ptr();
@@ -43,19 +43,19 @@ JKSNObject& JKSNObject::operator = (const JKSNObject& rhs) {
             return *this;
         case JKSN_STRING:
         case JKSN_BLOB:
-            if (value_pstr->use_count() == 1)
+            if (value_pstr.unique())
                 value_pstr = rhs.value_pstr;
             else
                 *value_pstr = *rhs.value_pstr;
             return *this;
         case JKSN_ARRAY:
-            if (value_parray->use_count() == 1)
+            if (value_parray.unique())
                 value_parray = rhs.value_parray;
             else
                 *value_parray = *rhs.value_parray;
             return *this;
         case JKSN_OBJECT:
-            if (value_pobject->use_count() == 1)
+            if (value_pobject.unique())
                 value_pobject = rhs.value_pobject;
             else
                 *value_pobject = *rhs.value_pobject;
@@ -69,7 +69,7 @@ JKSNObject& JKSNObject::operator = (const JKSNObject& rhs) {
     }
 
 bool JKSNObject::toBool() const {
-    switch(value_type) {
+    switch (value_type) {
     case JKSN_UNDEFINED:
     case JKSN_NULL:
     case JKSN_UNSPECIFIED:
@@ -93,7 +93,7 @@ bool JKSNObject::toBool() const {
 }
 
 int64_t JKSNObject::toInt() const {
-    switch(value_type) {
+    switch (value_type) {
     case JKSN_UNDEFINED:
     case JKSN_NULL:
     case JKSN_UNSPECIFIED:
@@ -116,7 +116,7 @@ int64_t JKSNObject::toInt() const {
 }
 
 float JKSNObject::toFloat() const {
-    switch(value_type) {
+    switch (value_type) {
     case JKSN_BOOL:
         return value_bool ? 1.0f : 0.0f;
     case JKSN_INT:
@@ -142,7 +142,7 @@ float JKSNObject::toFloat() const {
 }
 
 double JKSNObject::toDouble() const {
-    switch(value_type) {
+    switch (value_type) {
     case JKSN_BOOL:
         return value_bool ? 1.0 : 0.0;
     case JKSN_INT:
@@ -168,7 +168,7 @@ double JKSNObject::toDouble() const {
 }
 
 long double JKSNObject::toLongDouble() const {
-    switch(value_type) {
+    switch (value_type) {
     case JKSN_BOOL:
         return value_bool ? 1.0L : 0.0L;
     case JKSN_INT:
@@ -195,7 +195,7 @@ long double JKSNObject::toLongDouble() const {
 
 std::string JKSNObject::toString() const {
     std::ostringstream os;
-    switch(value_type) {
+    switch (value_type) {
     case JKSN_UNDEFINED:
         return "undefined";
     case JKSN_NULL:
@@ -217,17 +217,15 @@ std::string JKSNObject::toString() const {
     case JKSN_STRING:
     case JKSN_BLOB:
         return *value_pstr;
-    case JKSN_ARRAY:
-    {
-        std::ostringstream os;
+    case JKSN_ARRAY: {
         bool comma = false;
-        for(auto &i : *value_array) {
-            if(comma)
+        for (auto& i : *value_array) {
+            if (comma)
                 os << ',';
             comma = true;
             os << i.toString();
         }
-        return std::make_shared<std::string>(os.str());
+        return os.str();
     }
     default:
         return "[object Object]";
@@ -235,25 +233,24 @@ std::string JKSNObject::toString() const {
 }
 
 std::string JKSNObject::toBlob() const {
-    if(value_type == JKSN_BLOB)
+    if (value_type == JKSN_BLOB)
         return *value_pstr;
     else
         throw JKSNError{"Cannot convert value to blob."};
 }
 
 JKSNObject::Array JKSNObject::toArray() const {
-    if(value_type == JKSN_ARRAY)
+    if (value_type == JKSN_ARRAY)
         return *value_parray;
     else
         return {*this,};
 }
 
 JKSNObject::Object JKSNObject::toObject() const {
-    switch(value_type) {
-    case JKSN_ARRAY:
-    {
+    switch (value_type) {
+    case JKSN_ARRAY: {
         Object res;
-        for(size_t i = 0; i < (*value_parray)->size(); i++)
+        for (size_t i = 0; i < (*value_parray)->size(); i++)
             res[i] = (*value_parray)[i];
         return res;
     }
@@ -266,7 +263,7 @@ JKSNObject::Object JKSNObject::toObject() const {
 
 bool JKSNObject::operator == (const JKSNObject& rhs) const {
     if (value_type != that.value_type) {
-        switch(value_type) {
+        switch (value_type) {
         case JKSN_BOOL:
             return value_bool == that.toBool();
         case JKSN_INT:
@@ -299,11 +296,11 @@ bool JKSNObject::operator == (const JKSNObject& rhs) const {
             return toLongDouble() == that.toLongDouble();
         case JKSN_STRING:
         case JKSN_BLOB:
-            return value_pstr = that.value_pstr || *value_pstr == *that.value_pstr;
+            return value_pstr == that.value_pstr || *value_pstr == *that.value_pstr;
         case JKSN_ARRAY:
-            return value_parray = that.value_parray || *value_parray == *that.value_parray;
+            return value_parray == that.value_parray || *value_parray == *that.value_parray;
         case JKSN_OBJECT:
-            return value_pobject = that.value_pobject || *value_pobject == *that.value_pobject;
+            return value_pobject == that.value_pobject || *value_pobject == *that.value_pobject;
         default:
             return true;
         }

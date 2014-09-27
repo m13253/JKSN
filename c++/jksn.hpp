@@ -117,17 +117,16 @@ namespace JKSN {
         size_t hashCode() const;
 
         JKSNObject& operator [] (const JKSNObject& key) const {
-            if (value_type == JKSN_OBJECT || key.value_type != JKSN_INT)
+            if (value_type == JKSN_OBJECT)
                 return (*value_pobject)[key];
-            else if (value_type == JKSN_ARRAY || key.value_type == JKSN_INT)
-                return (*value_parray)[key.toInt()];
             else
-                throw JKSNTypeError{"Operator [] on non-aggregation type."};
+                throw JKSNTypeError{"Operator [] on non-object type."};
         }
         JKSNObject& operator [] (size_t index) {
-            if (value_type != JKSN_ARRAY)
+            if (value_type == JKSN_ARRAY)
+                return (*value_parray)[index];
+            else
                 throw JKSNTypeError{"Operator [] on non-array type."};
-            return (*value_parray)[index];
         }
 
     private:

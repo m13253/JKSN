@@ -45,15 +45,19 @@ namespace JKSN {
         JKSN_OBJECT,
         JKSN_UNSPECIFIED
     };
-
-    class JKSNObjectHasher;
     
     class JKSNObject {
     public:
+        class Hasher {
+        public:
+            size_t operator () (const JKSNObject& j) const {
+                return j.hashCode();
+            }
+        };
         class Undefined {};
         class Null {};
         using Array = std::vector<JKSNObject>;
-        using Object = std::unordered_map<JKSNObject, JKSNObject, JKSNObjectHasher>;
+        using Object = std::unordered_map<JKSNObject, JKSNObject, Hasher>;
         class Unspecified {};
         
         JKSNObject(Undefined):           value_type{JKSN_UNDEFINED} {}
@@ -113,7 +117,7 @@ namespace JKSN {
         }
         JKSNObject& operator [] (size_t index) {
             if (value_type != JKSN_ARRAY)
-                throw JKSNTypeError{"Operator [] on non-aggregation type."};
+                throw JKSNTypeError{"Operator [] on non-array type."};
             return (*value_array)[index];
         }
 
@@ -129,13 +133,6 @@ namespace JKSN {
             std::shared_ptr<Array> value_parray;
             std::shared_ptr<Object> value_pobject;
         };
-    };
-
-    class JKSNObjectHasher {
-    public:
-        size_t operator () (const JKSNObject& j) const {
-            return j.hashCode();
-        }
     };
 }
 

@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -60,26 +61,30 @@ namespace JKSN {
         using Object = std::unordered_map<JKSNObject, JKSNObject, Hasher>;
         class Unspecified {};
         
+        JKSNObject():                    value_type{JKSN_UNDEFINED} {}
         JKSNObject(Undefined):           value_type{JKSN_UNDEFINED} {}
         JKSNObject(Null):                value_type{JKSN_NULL} {}
-        JKSNObject(bool b):              value_bool{b}, value_type{JKSN_BOOL} {}
-        JKSNObject(int64_t i):           value_int{i}, value_type{JKSN_INT} {}
-        JKSNObject(float f):             value_float{f}, value_type{JKSN_FLOAT} {}
-        JKSNObject(double d):            value_double{d}, value_type{JKSN_DOUBLE} {}
-        JKSNObject(long double l):       value_long_double{l}, value_type{JKSN_LONG_DOUBLE} {}
+        JKSNObject(bool b):              value_type{JKSN_BOOL}, value_bool{b} {}
+        JKSNObject(int64_t i):           value_type{JKSN_INT}, value_int{i} {}
+        JKSNObject(float f):             value_type{JKSN_FLOAT}, value_float{f} {}
+        JKSNObject(double d):            value_type{JKSN_DOUBLE}, value_double{d} {}
+        JKSNObject(long double l):       value_type{JKSN_LONG_DOUBLE}, value_long_double{l} {}
         JKSNObject(const std::string& s, bool is_blob = false):
-                value_pstr{new auto{s}},
-                value_type{is_blob ? JKSN_BLOB : JKSN_STRING} {}
+                value_type{is_blob ? JKSN_BLOB : JKSN_STRING},
+                value_pstr{new auto(s)} {}
         JKSNObject(std::string&& s, bool is_blob = false):
-                value_pstr{new auto{s}},
-                value_type{is_blob ? JKSN_BLOB : JKSN_STRING} {}
-        JKSNObject(const Array& a):      value_parray{new auto{a}}, value_type{JKSN_ARRAY} {}
-        JKSNObject(Array&& a):           value_parray{new auto{a}}, value_type{JKSN_ARRAY} {}
-        JKSNObject(const Object& o):     value_pobject{new auto{o}}, value_type{JKSN_OBJECT} {}
-        JKSNObject(Object&& o):          value_pobject{new auto{o}}, value_type{JKSN_OBJECT} {}
+                value_type{is_blob ? JKSN_BLOB : JKSN_STRING},
+                value_pstr{new auto(s)} {}
+        JKSNObject(const Array& a):      value_type{JKSN_ARRAY},value_parray{new auto(a)} {}
+        JKSNObject(Array&& a):           value_type{JKSN_ARRAY}, value_parray{new auto(a)} {}
+        JKSNObject(const Object& o):     value_type{JKSN_OBJECT}, value_pobject{new auto(o)} {}
+        JKSNObject(Object&& o):          value_type{JKSN_OBJECT}, value_pobject{new auto(o)} {}
         JKSNObject(Unspecified):         value_type{JKSN_UNSPECIFIED} {}
-        ~JKSNObject();
+        JKSNObject(const JKSNObject&);
+        JKSNObject(JKSNObject&&);
         JKSNObject& operator = (const JKSNObject&);
+        JKSNObject& operator = (JKSNObject&&);
+        ~JKSNObject();
 
         bool toBool() const;
         int64_t toInt() const;
@@ -91,17 +96,17 @@ namespace JKSN {
         Array toArray() const;
         Object toObject() const;
 
-        bool isUndefined() const { return value_type == JKSN_UNDEFINED; }
-        bool isNull() const { return value_type == JKSN_NULL; }
-        bool isBool() const { return value_type == JKSN_BOOL; }
-        bool isInt() const { return value_type == JKSN_INT; }
-        bool isFloat() const { return value_type == JKSN_FLOAT; }
-        bool isDouble() const { return value_type == JKSN_DOUBLE; }
-        bool isLongDouble() const { return value_type == JKSN_LONG_DOUBLE; }
-        bool isString() const { return value_type == JKSN_STRING; }
-        bool isBlob() const { return value_type == JKSN_BLOB; }
-        bool isArray() const { return value_type == JKSN_ARRAY; }
-        bool isObject() const { return value_type == JKSN_OBJECT; }
+        bool isUndefined() const   { return value_type == JKSN_UNDEFINED; }
+        bool isNull() const        { return value_type == JKSN_NULL; }
+        bool isBool() const        { return value_type == JKSN_BOOL; }
+        bool isInt() const         { return value_type == JKSN_INT; }
+        bool isFloat() const       { return value_type == JKSN_FLOAT; }
+        bool isDouble() const      { return value_type == JKSN_DOUBLE; }
+        bool isLongDouble() const  { return value_type == JKSN_LONG_DOUBLE; }
+        bool isString() const      { return value_type == JKSN_STRING; }
+        bool isBlob() const        { return value_type == JKSN_BLOB; }
+        bool isArray() const       { return value_type == JKSN_ARRAY; }
+        bool isObject() const      { return value_type == JKSN_OBJECT; }
         bool isUnspecified() const { return value_type == JKSN_UNSPECIFIED; }
 
         bool operator == (const JKSNObject&) const;
@@ -118,7 +123,7 @@ namespace JKSN {
         JKSNObject& operator [] (size_t index) {
             if (value_type != JKSN_ARRAY)
                 throw JKSNTypeError{"Operator [] on non-array type."};
-            return (*value_array)[index];
+            return (*value_parray)[index];
         }
 
     private:

@@ -1,7 +1,6 @@
 #include "jksn.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <cstdlib>
 #include <functional>
 #include <sstream>
@@ -227,7 +226,7 @@ long double JKSNObject::toLongDouble() const {
     case JKSN_STRING: {
         const char *start = value_pstr->c_str();
         char *end = nullptr;
-        long double re = std::strtof(start, &end);
+        long double re = std::strtold(start, &end);
         if(re == HUGE_VALL || end != start + value_pstr->size())
             return NAN;
         else

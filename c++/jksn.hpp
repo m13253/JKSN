@@ -1,13 +1,11 @@
 #ifndef _JKSN_HPP_INCLUDED
 #define _JKSN_HPP_INCLUDED
 
-#include <cassert>
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -55,6 +53,7 @@ namespace JKSN {
                 return j.hashCode();
             }
         };
+        
         class Undefined {};
         class Null {};
         using Array = std::vector<JKSNObject>;
@@ -84,6 +83,7 @@ namespace JKSN {
         JKSNObject(const Object& o):     value_type{JKSN_OBJECT}, value_pobject{new auto(o)} {}
         JKSNObject(Object&& o):          value_type{JKSN_OBJECT}, value_pobject{new auto(o)} {}
         JKSNObject(Unspecified):         value_type{JKSN_UNSPECIFIED} {}
+        
         JKSNObject(const JKSNObject&);
         JKSNObject(JKSNObject&&);
         JKSNObject& operator = (const JKSNObject&);

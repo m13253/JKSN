@@ -79,7 +79,7 @@ namespace JKSN {
         JKSNObject(const char* s, bool is_blob = false):
                 value_type{is_blob ? JKSN_BLOB : JKSN_STRING},
                 value_pstr{new std::string{s}} {}
-        JKSNObject(const Array& a):      value_type{JKSN_ARRAY},value_parray{new auto(a)} {}
+        JKSNObject(const Array& a):      value_type{JKSN_ARRAY}, value_parray{new auto(a)} {}
         JKSNObject(Array&& a):           value_type{JKSN_ARRAY}, value_parray{new auto(a)} {}
         JKSNObject(const Object& o):     value_type{JKSN_OBJECT}, value_pobject{new auto(o)} {}
         JKSNObject(Object&& o):          value_type{JKSN_OBJECT}, value_pobject{new auto(o)} {}

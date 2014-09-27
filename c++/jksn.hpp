@@ -65,6 +65,7 @@ namespace JKSN {
         JKSNObject(Undefined):           value_type{JKSN_UNDEFINED} {}
         JKSNObject(Null):                value_type{JKSN_NULL} {}
         JKSNObject(bool b):              value_type{JKSN_BOOL}, value_bool{b} {}
+        JKSNObject(int i):               value_type{JKSN_INT}, value_int{i} {}
         JKSNObject(int64_t i):           value_type{JKSN_INT}, value_int{i} {}
         JKSNObject(float f):             value_type{JKSN_FLOAT}, value_float{f} {}
         JKSNObject(double d):            value_type{JKSN_DOUBLE}, value_double{d} {}
@@ -75,6 +76,9 @@ namespace JKSN {
         JKSNObject(std::string&& s, bool is_blob = false):
                 value_type{is_blob ? JKSN_BLOB : JKSN_STRING},
                 value_pstr{new auto(s)} {}
+        JKSNObject(const char* s, bool is_blob = false):
+                value_type{is_blob ? JKSN_BLOB : JKSN_STRING},
+                value_pstr{new std::string{s}} {}
         JKSNObject(const Array& a):      value_type{JKSN_ARRAY},value_parray{new auto(a)} {}
         JKSNObject(Array&& a):           value_type{JKSN_ARRAY}, value_parray{new auto(a)} {}
         JKSNObject(const Object& o):     value_type{JKSN_OBJECT}, value_pobject{new auto(o)} {}

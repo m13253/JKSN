@@ -263,17 +263,31 @@ std::string JKSNObject::toString() const {
     case JKSN_BLOB:
         return *value_pstr;
     case JKSN_ARRAY: {
+        os << '[';
         bool comma = false;
         for (auto& i : *value_parray) {
             if (comma)
-                os << ',';
+                os << ", ";
             comma = true;
             os << i.toString();
         }
+        os << ']';
         return os.str();
     }
-    default:
-        return "[object Object]";
+    case JKSN_OBJECT: {
+        os << '{';
+        bool comma = false;
+        for (auto& i : *value_pobject) {
+            if (comma)
+                os << ", ";
+            comma = true;
+            os << i.first.toString() << " : " << i.second.toString();
+        }
+        os << '}';
+        return os.str();
+    }
+    case JKSN_UNSPECIFIED:
+        throw JKSNTypeError{"toString() on unspecified value."};
     }
 }
 

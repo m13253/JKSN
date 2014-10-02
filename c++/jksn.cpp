@@ -194,7 +194,7 @@ float JKSNValue::toFloat() const {
         const char *start = value_pstr->c_str();
         char *end = nullptr;
         float re = std::strtof(start, &end);
-        if(re == HUGE_VALF || end != start + value_pstr->size())
+        if (re == HUGE_VALF || end != start + value_pstr->size())
             return NAN;
         else
             return re;
@@ -220,7 +220,7 @@ double JKSNValue::toDouble() const {
         const char *start = value_pstr->c_str();
         char *end = nullptr;
         double re = std::strtod(start, &end);
-        if(re == HUGE_VAL || end != start + value_pstr->size())
+        if (re == HUGE_VAL || end != start + value_pstr->size())
             return NAN;
         else
             return re;
@@ -246,7 +246,7 @@ long double JKSNValue::toLongDouble() const {
         const char *start = value_pstr->c_str();
         char *end = nullptr;
         long double re = std::strtold(start, &end);
-        if(re == HUGE_VALL || end != start + value_pstr->size())
+        if (re == HUGE_VALL || end != start + value_pstr->size())
             return NAN;
         else
             return re;
@@ -328,8 +328,7 @@ JKSNValue::Object JKSNValue::toObject() const {
     case JKSN_ARRAY: {
         Object res;
         for (size_t i = 0; i < value_parray->size(); i++) {
-            int64_t idx = static_cast<int64_t>(i);
-            res[idx] = (*value_parray)[idx];
+            res[JKSNValue{i}] = (*value_parray)[i];
         }
         return res;
     }

@@ -26,7 +26,7 @@
 
 using namespace JKSN;
 
-JKSNObject::JKSNObject(const JKSNObject& that): value_type{JKSN_UNDEFINED} {
+JKSNValue::JKSNValue(const JKSNValue& that): value_type{JKSN_UNDEFINED} {
     switch (that.value_type) {
     case JKSN_BOOL:
         value_bool = that.value_bool;
@@ -59,7 +59,7 @@ JKSNObject::JKSNObject(const JKSNObject& that): value_type{JKSN_UNDEFINED} {
     value_type = that.value_type;
 }
 
-JKSNObject::JKSNObject(JKSNObject&& that): value_type{JKSN_UNDEFINED} {
+JKSNValue::JKSNValue(JKSNValue&& that): value_type{JKSN_UNDEFINED} {
     switch (that.value_type) {
     case JKSN_BOOL:
         value_bool = that.value_bool;
@@ -92,29 +92,29 @@ JKSNObject::JKSNObject(JKSNObject&& that): value_type{JKSN_UNDEFINED} {
     value_type = that.value_type;
 }
 
-JKSNObject& JKSNObject::operator = (const JKSNObject& rhs) {
+JKSNValue& JKSNValue::operator = (const JKSNValue& rhs) {
     if (this == &rhs) {
         return *this;
     }
     else {
-        this->~JKSNObject();
-        new(this) JKSNObject(rhs);
+        this->~JKSNValue();
+        new(this) JKSNValue(rhs);
         return *this;
     }
 }
 
-JKSNObject& JKSNObject::operator = (JKSNObject&& rhs) {
+JKSNValue& JKSNValue::operator = (JKSNValue&& rhs) {
     if (this == &rhs) {
         return *this;
     }
     else {
-        this->~JKSNObject();
-        new(this) JKSNObject(std::move(rhs));
+        this->~JKSNValue();
+        new(this) JKSNValue(std::move(rhs));
         return *this;
     }
 }
 
-JKSNObject::~JKSNObject() {
+JKSNValue::~JKSNValue() {
     switch (value_type) {
     case JKSN_STRING:
     case JKSN_BLOB:
@@ -131,7 +131,7 @@ JKSNObject::~JKSNObject() {
     }
 }
 
-bool JKSNObject::toBool() const {
+bool JKSNValue::toBool() const {
     switch (value_type) {
     case JKSN_UNDEFINED:
     case JKSN_NULL:
@@ -155,7 +155,7 @@ bool JKSNObject::toBool() const {
     }
 }
 
-int64_t JKSNObject::toInt() const {
+int64_t JKSNValue::toInt() const {
     switch (value_type) {
     case JKSN_UNDEFINED:
     case JKSN_NULL:
@@ -178,7 +178,7 @@ int64_t JKSNObject::toInt() const {
     }
 }
 
-float JKSNObject::toFloat() const {
+float JKSNValue::toFloat() const {
     switch (value_type) {
     case JKSN_BOOL:
         return value_bool ? 1.0f : 0.0f;
@@ -204,7 +204,7 @@ float JKSNObject::toFloat() const {
     }
 }
 
-double JKSNObject::toDouble() const {
+double JKSNValue::toDouble() const {
     switch (value_type) {
     case JKSN_BOOL:
         return value_bool ? 1.0 : 0.0;
@@ -230,7 +230,7 @@ double JKSNObject::toDouble() const {
     }
 }
 
-long double JKSNObject::toLongDouble() const {
+long double JKSNValue::toLongDouble() const {
     switch (value_type) {
     case JKSN_BOOL:
         return value_bool ? 1.0L : 0.0L;
@@ -256,7 +256,7 @@ long double JKSNObject::toLongDouble() const {
     }
 }
 
-std::string JKSNObject::toString() const {
+std::string JKSNValue::toString() const {
     std::ostringstream os;
     switch (value_type) {
     case JKSN_UNDEFINED:
@@ -309,21 +309,21 @@ std::string JKSNObject::toString() const {
     }
 }
 
-std::string JKSNObject::toBlob() const {
+std::string JKSNValue::toBlob() const {
     if (value_type == JKSN_BLOB)
         return *value_pstr;
     else
         throw JKSNTypeError{"Cannot convert value to blob."};
 }
 
-JKSNObject::Array JKSNObject::toArray() const {
+JKSNValue::Array JKSNValue::toArray() const {
     if (value_type == JKSN_ARRAY)
         return *value_parray;
     else
         return {*this};
 }
 
-JKSNObject::Object JKSNObject::toObject() const {
+JKSNValue::Object JKSNValue::toObject() const {
     switch (value_type) {
     case JKSN_ARRAY: {
         Object res;
@@ -340,7 +340,7 @@ JKSNObject::Object JKSNObject::toObject() const {
     }
 }
 
-bool JKSNObject::operator == (const JKSNObject& rhs) const {
+bool JKSNValue::operator == (const JKSNValue& rhs) const {
     if (value_type != rhs.value_type) {
         return false;
     }
@@ -365,7 +365,7 @@ bool JKSNObject::operator == (const JKSNObject& rhs) const {
     }
 }
 
-size_t JKSNObject::hashCode() const {
+size_t JKSNValue::hashCode() const {
     switch (value_type) {
     case JKSN_BOOL:
         return std::hash<bool>{}(value_bool);

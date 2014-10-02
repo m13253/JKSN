@@ -64,50 +64,50 @@ namespace JKSN {
         JKSN_UNSPECIFIED
     };
     
-    class JKSNObject {
+    class JKSNValue {
     public:
         class Hasher {
         public:
-            size_t operator () (const JKSNObject& j) const {
+            size_t operator () (const JKSNValue& j) const {
                 return j.hashCode();
             }
         };
         
         class Undefined {};
         class Null {};
-        using Array = std::vector<JKSNObject>;
-        using Object = std::unordered_map<JKSNObject, JKSNObject, Hasher>;
+        using Array = std::vector<JKSNValue>;
+        using Object = std::unordered_map<JKSNValue, JKSNValue, Hasher>;
         class Unspecified {};
         
-        JKSNObject():                    value_type{JKSN_UNDEFINED} {}
-        JKSNObject(Undefined):           value_type{JKSN_UNDEFINED} {}
-        JKSNObject(Null):                value_type{JKSN_NULL} {}
-        JKSNObject(bool b):              value_type{JKSN_BOOL}, value_bool{b} {}
-        JKSNObject(int i):               value_type{JKSN_INT}, value_int{i} {}
-        JKSNObject(int64_t i):           value_type{JKSN_INT}, value_int{i} {}
-        JKSNObject(float f):             value_type{JKSN_FLOAT}, value_float{f} {}
-        JKSNObject(double d):            value_type{JKSN_DOUBLE}, value_double{d} {}
-        JKSNObject(long double l):       value_type{JKSN_LONG_DOUBLE}, value_long_double{l} {}
-        JKSNObject(const std::string& s, bool is_blob = false):
+        JKSNValue():                    value_type{JKSN_UNDEFINED} {}
+        JKSNValue(Undefined):           value_type{JKSN_UNDEFINED} {}
+        JKSNValue(Null):                value_type{JKSN_NULL} {}
+        JKSNValue(bool b):              value_type{JKSN_BOOL}, value_bool{b} {}
+        JKSNValue(int i):               value_type{JKSN_INT}, value_int{i} {}
+        JKSNValue(int64_t i):           value_type{JKSN_INT}, value_int{i} {}
+        JKSNValue(float f):             value_type{JKSN_FLOAT}, value_float{f} {}
+        JKSNValue(double d):            value_type{JKSN_DOUBLE}, value_double{d} {}
+        JKSNValue(long double l):       value_type{JKSN_LONG_DOUBLE}, value_long_double{l} {}
+        JKSNValue(const std::string& s, bool is_blob = false):
                 value_type{is_blob ? JKSN_BLOB : JKSN_STRING},
                 value_pstr{new auto(s)} {}
-        JKSNObject(std::string&& s, bool is_blob = false):
+        JKSNValue(std::string&& s, bool is_blob = false):
                 value_type{is_blob ? JKSN_BLOB : JKSN_STRING},
                 value_pstr{new auto(s)} {}
-        JKSNObject(const char* s, bool is_blob = false):
+        JKSNValue(const char* s, bool is_blob = false):
                 value_type{is_blob ? JKSN_BLOB : JKSN_STRING},
                 value_pstr{new std::string{s}} {}
-        JKSNObject(const Array& a):      value_type{JKSN_ARRAY}, value_parray{new auto(a)} {}
-        JKSNObject(Array&& a):           value_type{JKSN_ARRAY}, value_parray{new auto(a)} {}
-        JKSNObject(const Object& o):     value_type{JKSN_OBJECT}, value_pobject{new auto(o)} {}
-        JKSNObject(Object&& o):          value_type{JKSN_OBJECT}, value_pobject{new auto(o)} {}
-        JKSNObject(Unspecified):         value_type{JKSN_UNSPECIFIED} {}
+        JKSNValue(const Array& a):      value_type{JKSN_ARRAY}, value_parray{new auto(a)} {}
+        JKSNValue(Array&& a):           value_type{JKSN_ARRAY}, value_parray{new auto(a)} {}
+        JKSNValue(const Object& o):     value_type{JKSN_OBJECT}, value_pobject{new auto(o)} {}
+        JKSNValue(Object&& o):          value_type{JKSN_OBJECT}, value_pobject{new auto(o)} {}
+        JKSNValue(Unspecified):         value_type{JKSN_UNSPECIFIED} {}
         
-        JKSNObject(const JKSNObject&);
-        JKSNObject(JKSNObject&&);
-        JKSNObject& operator = (const JKSNObject&);
-        JKSNObject& operator = (JKSNObject&&);
-        ~JKSNObject();
+        JKSNValue(const JKSNValue&);
+        JKSNValue(JKSNValue&&);
+        JKSNValue& operator = (const JKSNValue&);
+        JKSNValue& operator = (JKSNValue&&);
+        ~JKSNValue();
 
         bool toBool() const;
         int64_t toInt() const;
@@ -132,16 +132,16 @@ namespace JKSN {
         bool isObject() const      { return value_type == JKSN_OBJECT; }
         bool isUnspecified() const { return value_type == JKSN_UNSPECIFIED; }
 
-        bool operator == (const JKSNObject&) const;
+        bool operator == (const JKSNValue&) const;
         size_t hashCode() const;
 
-        JKSNObject& operator [] (const JKSNObject& key) const {
+        JKSNValue& operator [] (const JKSNValue& key) const {
             if (value_type == JKSN_OBJECT)
                 return (*value_pobject)[key];
             else
                 throw JKSNTypeError{"Operator [] on non-object type."};
         }
-        JKSNObject& operator [] (size_t index) {
+        JKSNValue& operator [] (size_t index) {
             if (value_type == JKSN_ARRAY)
                 return (*value_parray)[index];
             else
@@ -170,8 +170,8 @@ namespace JKSN {
 // public:
 //     JKSNEncoder();
 //     ~JKSNEncoder();
-//     std::unique_ptr<std::string> dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);
-//     std::unique_ptr<std::stringstream> dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
+//     std::unique_ptr<std::string> dumpstr(const JKSNValue &obj, bool header = true, bool check_circular = true);
+//     std::unique_ptr<std::stringstream> dump(const JKSNValue &obj, bool header = true, bool check_circular = true);
 // private:
 //     struct JKSNEncoderImpl *impl;
 // };
@@ -181,15 +181,15 @@ namespace JKSN {
 // public:
 //     JKSNDecoder();
 //     ~JKSNDecoder();
-//     std::unique_ptr<JKSNObject> parsestr(const std::string &s, bool header = true);
-//     std::unique_ptr<JKSNObject> parse(std::istream &fp, bool header = true);
+//     std::unique_ptr<JKSNValue> parsestr(const std::string &s, bool header = true);
+//     std::unique_ptr<JKSNValue> parse(std::istream &fp, bool header = true);
 // private:
 //     struct JKSNDecoderImpl *impl;
 // };
 // 
-// std::unique_ptr<std::string> dumpstr(const JKSNObject &obj, bool header = true, bool check_circular = true);
-// std::unique_ptr<std::stringstream> dump(const JKSNObject &obj, bool header = true, bool check_circular = true);
-// std::unique_ptr<JKSNObject> parsestr(const std::string &s, bool header = true);
-// std::unique_ptr<JKSNObject> parse(std::istream &fp, bool header = true);
+// std::unique_ptr<std::string> dumpstr(const JKSNValue &obj, bool header = true, bool check_circular = true);
+// std::unique_ptr<std::stringstream> dump(const JKSNValue &obj, bool header = true, bool check_circular = true);
+// std::unique_ptr<JKSNValue> parsestr(const std::string &s, bool header = true);
+// std::unique_ptr<JKSNValue> parse(std::istream &fp, bool header = true);
 // 
 // }

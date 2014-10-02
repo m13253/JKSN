@@ -65,7 +65,7 @@ function JKSNEncoder() {
     }
     function unspecifiedValue() {
     }
-    function dumpToObject(obj) {
+    function dumpToProxy(obj) {
         return optimize(dumpValue(obj));
     }
     function dumpValue(obj) {
@@ -326,7 +326,7 @@ function JKSNEncoder() {
     }
     return {
         "stringifyToArrayBuffer": function (obj, header) {
-            var result = dumpToObject(obj);
+            var result = dumpToProxy(obj);
             var result_size = result.getSize();
             var buf = new ArrayBuffer(header !== false ? result_size + 3 : result_size);
             var bufview = new Uint8Array(buf);

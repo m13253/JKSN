@@ -125,7 +125,7 @@ class JKSNEncoder:
 
     def dumps(self, obj, header=True, check_circular=True):
         '''Dump an object into a buffer'''
-        result = self.dumpobj(obj, check_circular=check_circular)
+        result = self._dump_to_proxy(obj, check_circular=check_circular)
         result_len = result.__len__()
         if header:
             buf = io.BytesIO(b'\0' * (result_len+3))
@@ -141,12 +141,12 @@ class JKSNEncoder:
 
     def dump(self, obj, fp, header=True, check_circular=True):
         '''Dump an object into a file object'''
-        result = self.dumpobj(obj, check_circular=check_circular)
+        result = self._dump_to_proxy(obj, check_circular=check_circular)
         if header:
             fp.write(b'jk!')
         result.output(fp)
 
-    def dumpobj(self, obj, check_circular=True):
+    def _dump_to_proxy(self, obj, check_circular=True):
         try:
             self.circular = set() if check_circular else None
             return self._optimize(self._dump_value(obj))

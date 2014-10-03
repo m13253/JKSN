@@ -20,15 +20,15 @@
 module JKSN
 
   # Exception class raised during JKSN encoding and decoding
-  class Error
+  class JKSNError < RuntimeError
   end
 
   # Exception class raised during JKSN encoding
-  class EncodeError < Error
+  class EncodeError < JKSNError
   end
 
   # Exception class raised during JKSN decoding
-  class DecodeError < Error
+  class DecodeError < JKSNError
   end
 
   # Exception class raised during checksum verification when decoding
@@ -63,6 +63,7 @@ module JKSN
     attr_accessor :data
     attr_accessor :buf
     attr_accessor :hash
+    attr_accessor :children
     def initialize(origin, control, data='', buf='')
       raise unless control.is_a?(Fixnum) && (0..255).cover?(control)
       raise unless data.is_a? String
@@ -97,7 +98,39 @@ module JKSN
   end
 
   class UnspecifiedValue
+    @@jksn_proxy = JKSNProxy.new(nil, 0xa0)
+    @@jksn_proxy.freeze
+    def self.__jksn_dump(*args)
+      @@jksn_proxy
+    end
   end
-  UnspecifiedValue.freeze
+
+  class JKSNEncoder
+    def initialize
+      @lastint = nil
+      @texthash = [nil] * 256
+      @blobhash = [nil] * 256
+    end
+
+    def dumps(obj, header=true)
+      result = dump_to_proxy(obj)
+      return header ? ('jk!' + result.to_s) : result.to_s
+    end
+
+    def dump(fd, obj, header=true)
+      fd.write(dumps(obj, header))
+    end
+
+    def dump_to_proxy(obj)
+      optimize(obj.__jksn_dump)
+    end
+
+    def optimize(proxyobj)
+      # TODO
+      return proxyobj
+    end
+
+  end
 
 end
+

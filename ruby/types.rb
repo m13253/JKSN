@@ -6,7 +6,7 @@
 # provided that the above copyright notice and this paragraph are
 # duplicated in all such forms and that any documentation,
 # advertising materials, and other materials related to such
-# distribution and use acknowledge that the software was originally 
+# distribution and use acknowledge that the software was originally
 # developed by StarBrilliant.
 # The name of StarBrilliant may not be used to endorse or promote
 # products derived from this software without specific prior written
@@ -17,22 +17,40 @@
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 #require 'jksn'
 
+class Object
+  def __jksn_dump(*args)
+    self.inspect.__jksn_dump(*args)
+  end
+
+  protected
+  def __jksn_check_circular_helper(obj, circular_idlist)
+    if obj.respond_to?(:to_a) or obj.respond_to?(:to_h)
+      if circular_idlist.include? obj.object_id
+        raise JKSN::EncodeError.new('circular reference found')
+      else
+        circular_idlist << obj.object_id
+      end
+    end
+  end
+end
+
+
 class Integer
-  def __jksn_dump
+  def __jksn_dump(*args)
     if (0x00..0x0A).cover? self
       #return (self + 0x10).chr
       return JKSN::JKSNProxy.new(self, self | 0x10)
     elsif (-128..127).cover? self
       #return [0x1d, self].pack('cc')
-      return JKSN::JKSNProxy.new(self, 0x1d, __jksn_encode)
+      return JKSN::JKSNProxy.new(self, 0x1d, __jksn_encode(1))
     elsif (-32767..32768).cover? self
       #return [0x1c, self].pack('cs>')
-      return JKSN::JKSNProxy.new(self, 0x1c, __jksn_encode)
+      return JKSN::JKSNProxy.new(self, 0x1c, __jksn_encode(2))
     elsif (0x20000000..0x7FFFFFFF).cover?(self) or (-0x80000000..-0x20000000).cover?(self)
       return __jksn_dump_bignum
     elsif (-2147483648...0x20000000).cover? self
       #return [0x1b, self].pack('cl>')
-      return JKSN::JKSNProxy.new(self, 0x1b, __jksn_encode)
+      return JKSN::JKSNProxy.new(self, 0x1b, __jksn_encode(4))
     else
       return __jksn_dump_bignum
     end
@@ -46,7 +64,7 @@ class Integer
       return (self & 0x00FF).chr
     when 2
       return [self & 0x00FFFF].pack('s>')[0]
-    when 4 
+    when 4
       return [self & 0x00FFFFFFFF].pack('l>')[0]
     else
       raise ArgumentError.new
@@ -76,7 +94,7 @@ end
 class TrueClass
   @@jksn_proxy = JKSN::JKSNProxy.new(self, 0x03)
   @@jksn_proxy.freeze
-  def __jksn_dump
+  def __jksn_dump(*args)
     @@jksn_proxy
   end
 end
@@ -84,7 +102,7 @@ end
 class FalseClass
   @@jksn_proxy = JKSN::JKSNProxy.new(self, 0x02)
   @@jksn_proxy.freeze
-  def __jksn_dump
+  def __jksn_dump(*args)
     @@jksn_proxy
   end
 end
@@ -92,13 +110,13 @@ end
 class NilClass
   @@jksn_proxy = JKSN::JKSNProxy.new(self, 0x01)
   @@jksn_proxy.freeze
-  def __jksn_dump
+  def __jksn_dump(*args)
     @@jksn_proxy
   end
 end
 
 class Float
-  def __jksn_dump
+  def __jksn_dump(*args)
     return JKSN::JKSNProxy.new(self, 0x20) if self.nan?
     case self.infinite?
     when 1
@@ -112,7 +130,7 @@ class Float
 end
 
 class String
-  def __jksn_dump
+  def __jksn_dump(*args)
     if self.encoding == Encoding::ASCII_8BIT
       return __jksn_dump_blob
     else
@@ -147,7 +165,7 @@ class String
   def __jksn_dump_unicode
     u16str = self.encode(Encoding::UTF_16LE)
     u8str  = self.encode(Encoding::UTF_8)
-    short, control, enclength = (u16str.length < u8str.length) ? (u16str, 0x30, u16str.length << 1) : (u8str, 0x40, u8str.length)
+    short, control, enclength = (u16str.length < u8str.length) ? [u16str, 0x30, u16str.length << 1] : [u8str, 0x40, u8str.length]
     if enclength <= (control == 0x40 ? 0xc : 0xb)
       result = JKSN::JKSNProxy.new(self, control | length, '', short)
     elsif enclength <= 0xFF
@@ -162,7 +180,7 @@ class String
 end
 
 class Hash
-  def __jksn_dump
+  def __jksn_dump(circular_idlist=[])
     if length <= 0xc
       result = JKSN::JKSNProxy.new(self, 0x90 | length)
     elsif length <= 0xff
@@ -173,8 +191,12 @@ class Hash
       result = JKSN::JKSNProxy.new(self, 0x9f, length.__jksn_encode(0))
     end
     self.each do |key, value|
-      result.children << key.__jksn_dump
-      result.children << value.__jksn_dump
+      __jksn_check_circular_helper(key, circular_idlist)
+      __jksn_check_circular_helper(value, circular_idlist)
+
+      result.children << key.__jksn_dump(circular_idlist)
+      result.children << value.__jksn_dump(circular_idlist)
+
     end
     raise unless result.children.length == length * 2
     return result
@@ -184,7 +206,13 @@ end
 
 require 'set'
 class Array
-  def __jksn_dump
+  def __jksn_dump(circular_idlist=[])
+    result = __jksn_encode_straight(circular_idlist)
+    if __jksn_can_swap?
+      result_swapped = __jksn_encode_swapped(circular_idlist)
+      result = result_swapped if result_swapped.length(3) < result.length(3)
+    end
+    return result
   end
 
   def __jksn_can_swap?
@@ -196,7 +224,7 @@ class Array
     return columns
   end
 
-  def __jksn_encode_straight
+  def __jksn_encode_straight(circular_idlist=[])
     if length <= 0xc
       result = JKSN::JKSNProxy.new(self, 0x80 | length)
     elsif length <= 0xff
@@ -207,13 +235,14 @@ class Array
       result = JKSN::JKSNProxy.new(self, 0x8f, length.__jksn_encode(0))
     end
     self.each do |i|
-      result.children << i.__jksn_dump
+      __jksn_check_circular_helper(i, circular_idlist)
+      result.children << i.__jksn_dump(circular_idlist)
     end
     raise unless result.children.length == length
     return result
   end
 
-  def __jksn_encode_swapped
+  def __jksn_encode_swapped(circular_idlist=[])
     # row is Hash
     columns = Set.new(self.map(&:keys).flatten)
     if length <= 0xc
@@ -226,16 +255,11 @@ class Array
       result = JKSN::JKSNProxy.new(self, 0xa8f, length.__jksn_encode(0))
     end
     columns.each do |column|
-      result.children << column.__jksn_dump
-      result.children << self.map{|row| row.fetch(column, JKSN::UnspecifiedValue)}.__jksn_dump
+      __jksn_check_circular_helper(column, circular_idlist)
+      result.children << column.__jksn_dump(circular_idlist)
+      result.children << self.map{|row| row.fetch(column, JKSN::UnspecifiedValue)}.__jksn_dump(circular_idlist)
     end
     raise unless result.children.length == length * 2
     return result
-  end
-end
-
-class Object
-  def to_jksn
-    self.respond_to?(:__jksn_dump) ? self.__jksn_dump : self.inspect.__jksn_dump
   end
 end

@@ -58,6 +58,11 @@ module JKSN
   end
 
   class JKSNProxy
+    attr_accessor :origin
+    attr_accessor :control
+    attr_accessor :data
+    attr_accessor :buf
+    attr_accessor :hash
     def initialize(origin, control, data='', buf='')
       raise unless control.is_a?(Fixnum) && (0..255).cover?(control)
       raise unless data.is_a? String
@@ -78,8 +83,8 @@ module JKSN
     end
 
     def to_s(recursive=true) # Python __bytes__
-      result = [@control.chr, @data, @buf].join ''
-      @children.each {|i| result << i.to_s } if recursive
+      result = [@control.chr, @data, @buf].join('').b
+      @children.each {|i| result << i.to_s.b } if recursive
       return result
     end
 
@@ -93,5 +98,6 @@ module JKSN
 
   class UnspecifiedValue
   end
+  UnspecifiedValue.freeze
 
 end

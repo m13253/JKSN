@@ -24,30 +24,212 @@ class Integer
       return JKSN::JKSNProxy.new(self, self | 0x10)
     elsif (-128..127).cover? self
       #return [0x1d, self].pack('cc')
-      return JKSN::JKSNProxy.new(self, 0x1d, [self].pack('c')[0])
+      return JKSN::JKSNProxy.new(self, 0x1d, __jksn_encode)
     elsif (-32767..32768).cover? self
       #return [0x1c, self].pack('cs>')
-      return JKSN::JKSNProxy.new(self, 0x1c, [self].pack('s>')[0])
-    elsif (0x20000000..0x7FFFFFFF).cover? self
+      return JKSN::JKSNProxy.new(self, 0x1c, __jksn_encode)
+    elsif (0x20000000..0x7FFFFFFF).cover?(self) or (-0x80000000..-0x20000000).cover?(self)
       return __jksn_dump_bignum
     elsif (-2147483648...0x20000000).cover? self
       #return [0x1b, self].pack('cl>')
-      return JKSN::JKSNProxy.new(self, 0x1b, [self].pack('l>')[0])
+      return JKSN::JKSNProxy.new(self, 0x1b, __jksn_encode)
     else
       return __jksn_dump_bignum
     end
   end
 
+  def __jksn_encode(length)
+    case length
+    when 0
+      return __jksn_encode_bignum
+    when 1
+      return (self & 0x00FF).chr
+    when 2
+      return [self & 0x00FFFF].pack('s>')[0]
+    when 4 
+      return [self & 0x00FFFFFFFF].pack('l>')[0]
+    else
+      raise ArgumentError.new
+    end
+  end
+
+  private
   def __jksn_dump_bignum
     raise unless self != 0
     minus = (self < 0)
-    num = self.abs
+    return JKSN::JKSNProxy.new(self, (minus ? 0x1e : 0x1f), __jksn_encode_bignum)
+  end
+
+  def __jksn_encode_bignum(num)
+    num = num.clone
     atoms = [num & 0x007F]
     num >>= 7
     while num != 0
       atoms.unshift((num & 0x007F) | 0x0080)
       num >>= 7
     end
-    return JKSN::JKSNProxy.new(self, (minus ? 0x1e : 0x1f), atoms.pack('C*'))
+    atoms.pack('C*')
+  end
+
+end
+
+class TrueClass
+  @@jksn_proxy = JKSN::JKSNProxy.new(self, 0x03)
+  @@jksn_proxy.freeze
+  def __jksn_dump
+    @@jksn_proxy
+  end
+end
+
+class FalseClass
+  @@jksn_proxy = JKSN::JKSNProxy.new(self, 0x02)
+  @@jksn_proxy.freeze
+  def __jksn_dump
+    @@jksn_proxy
+  end
+end
+
+class NilClass
+  @@jksn_proxy = JKSN::JKSNProxy.new(self, 0x01)
+  @@jksn_proxy.freeze
+  def __jksn_dump
+    @@jksn_proxy
+  end
+end
+
+class Float
+  def __jksn_dump
+    return JKSN::JKSNProxy.new(self, 0x20) if self.nan?
+    case self.infinite?
+    when 1
+      return JKSN::JKSNProxy.new(self, 0x2f)
+    when -1
+      return JKSN::JKSNProxy.new(self, 0x2e)
+    else
+      return JKSN::JKSNProxy.new(self, 0x2c, [self].pack('G')[0])
+    end
+  end
+end
+
+class String
+  def __jksn_dump
+    if self.encoding == Encoding::ASCII_8BIT
+      return __jksn_dump_blob
+    else
+      return __jksn_dump_unicode
+    end
+  end
+
+  def __jksn_djbhash(iv=0)
+    result = iv
+    self.each_byte do |i|
+      result += (result << 5) + i
+      result &= 0xFF
+    end
+  end
+
+  private
+
+  def __jksn_dump_blob
+    if length <= 0xB
+      result = JKSN::JKSNProxy.new(self, 0x50 | length, '', self)
+    elsif length <= 0xFF
+      result = JKSN::JKSNProxy.new(self, 0x5e, length.__jksn_encode(1), self)
+    elsif length <= 0xFFFF
+      result = JKSN::JKSNProxy.new(self, 0x5d, length.__jksn_encode(2), self)
+    else
+      result = JKSN::JKSNProxy.new(self, 0x5f, length.__jksn_encode(0), self)
+    end
+    result.hash = __jksn_djbhash
+    return result
+  end
+
+  def __jksn_dump_unicode
+    u16str = self.encode(Encoding::UTF_16LE)
+    u8str  = self.encode(Encoding::UTF_8)
+    short, control, enclength = (u16str.length < u8str.length) ? (u16str, 0x30, u16str.length << 1) : (u8str, 0x40, u8str.length)
+    if enclength <= (control == 0x40 ? 0xc : 0xb)
+      result = JKSN::JKSNProxy.new(self, control | length, '', short)
+    elsif enclength <= 0xFF
+      result = JKSN::JKSNProxy.new(self, control | 0x0e, length.__jksn_encode(1), short)
+    elsif enclength <= 0xFFFF
+      result = JKSN::JKSNProxy.new(self, control | 0x0d, length.__jksn_encode(2), short)
+    else
+      result = JKSN::JKSNProxy.new(self, control | 0x0f, length.__jksn_encode(0), short)
+    end
+    result.hash = short.__jksn_djbhash
+  end
+end
+
+class Hash
+  def __jksn_dump
+    if length <= 0xc
+      result = JKSN::JKSNProxy.new(self, 0x90 | length)
+    elsif length <= 0xff
+      result = JKSN::JKSNProxy.new(self, 0x9e, length.__jksn_encode(1))
+    elsif length <= 0xffff
+      result = JKSN::JKSNProxy.new(self, 0x9d, length.__jksn_encode(2))
+    else
+      result = JKSN::JKSNProxy.new(self, 0x9f, length.__jksn_encode(0))
+    end
+    self.each do |key, value|
+      result.children << key.__jksn_dump
+      result.children << value.__jksn_dump
+    end
+    raise unless result.children.length == length * 2
+    return result
+  end
+end
+
+
+require 'set'
+class Array
+  def __jksn_dump
+  end
+
+  def __jksn_can_swap?
+    columns = false
+    self.each do |row|
+      return false unless row.is_a? Hash
+      columns = columns || (row.length != 0)
+    end
+    return columns
+  end
+
+  def __jksn_encode_straight
+    if length <= 0xc
+      result = JKSN::JKSNProxy.new(self, 0x80 | length)
+    elsif length <= 0xff
+      result = JKSN::JKSNProxy.new(self, 0x8e, length.__jksn_encode(1))
+    elsif length <= 0xffff
+      result = JKSN::JKSNProxy.new(self, 0x8d, length.__jksn_encode(2))
+    else
+      result = JKSN::JKSNProxy.new(self, 0x8f, length.__jksn_encode(0))
+    end
+    self.each do |i|
+      result.children << i.__jksn_dump
+    end
+    raise unless result.children.length == length
+    return result
+  end
+
+  def __jksn_encode_swapped
+    # row is Hash
+    columns = Set.new(self.map(&:keys).flatten)
+    if length <= 0xc
+      result = JKSN::JKSNProxy.new(self, 0xa0 | length)
+    elsif length <= 0xff
+      result = JKSN::JKSNProxy.new(self, 0xae, length.__jksn_encode(1))
+    elsif length <= 0xffff
+      result = JKSN::JKSNProxy.new(self, 0xad, length.__jksn_encode(2))
+    else
+      result = JKSN::JKSNProxy.new(self, 0xa8f, length.__jksn_encode(0))
+    end
+    columns.each do |column|
+      result.children << column.__jksn_dump
+      result.children << self.map{|row| row.fetch(column, JKSN::UnspecifiedValue)}.__jksn_dump
+    end
+    raise unless result.children.length == length * 2
+    return result
   end
 end

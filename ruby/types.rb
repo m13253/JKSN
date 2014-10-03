@@ -233,3 +233,9 @@ class Array
     return result
   end
 end
+
+class Object
+  def to_jksn
+    self.respond_to?(:__jksn_dump) ? self.__jksn_dump : self.inspect.__jksn_dump
+  end
+end

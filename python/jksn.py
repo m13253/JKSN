@@ -32,6 +32,7 @@ if sys.version_info < (3,):
     bytechr = chr
 else:
     bytechr = lambda i: bytes((i,))
+    long = int
 
 
 class JKSNError(ValueError):
@@ -160,7 +161,7 @@ class JKSNEncoder:
             return self._dump_unspecified(obj)
         elif isinstance(obj, bool):
             return self._dump_bool(obj)
-        elif isinstance(obj, int):
+        elif isinstance(obj, (int, long)):
             return self._dump_int(obj)
         elif isinstance(obj, float):
             return self._dump_float(obj)

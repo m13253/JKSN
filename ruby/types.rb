@@ -39,16 +39,15 @@ class Integer
   end
 
   def __jksn_dump_bignum
+    raise unless self != 0
     minus = (self < 0)
-    bits = self.abs.to_s 2
-    bits = ('0' * (bits.length % 7)) + bits
-    atoms = bits.scan(/[01].{7}/)
-    lastatom = '0' + atoms.pop
-    encoded_bits = []
-    atoms.each do |atom|
-      encoded_bits << ('1' + atom)
+    num = self.abs
+    atoms = [num & 0x007F]
+    num >>= 7
+    while num != 0
+      atoms.unshift((num & 0x007F) | 0x0080)
+      num >>= 7
     end
-    encoded_bits << lastatom
-    return JKSN::JKSNProxy.new(self, (minus ? 0x1e : 0x1f), [encoded_bits.join('')].pack('B*'))
+    return JKSN::JKSNProxy.new(self, (minus ? 0x1e : 0x1f), atoms.pack('C*'))
   end
 end

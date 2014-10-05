@@ -65,14 +65,13 @@ namespace JKSN {
     };
     
     class JKSNValue {
-    public:
         class Hasher {
         public:
             size_t operator () (const JKSNValue& j) const {
                 return j.hashCode();
             }
         };
-        
+    public:
         class Undefined {};
         class Null {};
         using Array = std::vector<JKSNValue>;

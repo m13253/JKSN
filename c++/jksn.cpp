@@ -328,7 +328,7 @@ JKSNValue::Object JKSNValue::toObject() const {
     case JKSN_ARRAY: {
         Object res;
         for (size_t i = 0; i < value_parray->size(); i++) {
-            res[JKSNValue{i}] = (*value_parray)[i];
+            res[static_cast<int64_t>(i)] = (*value_parray)[i];
         }
         return res;
     }

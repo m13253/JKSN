@@ -160,35 +160,15 @@ namespace JKSN {
             std::shared_ptr<Object> value_pobject;
         };
     };
+
+    class JKSNCache {
+        // TODO
+    };
+
+    JKSNValue readJKSNValue(const std::string& blob, JKSNCache* cache = nullptr);
+    JKSNValue readJKSN(std::istream& is, JKSNCache* cache = nullptr, bool header = true);
+    std::string writeJKSNValue(JKSNValue obj, JKSNCache* cache = nullptr);
+    void writeJKSN(JKSNValue obj, std::ostream& os, JKSNCache* cache = nullptr, bool header = true, bool check_circular = true);
 }
 
 #endif /* _JKSN_HPP_INCLUDED */
-
-// class JKSNEncoder {
-// // Note: With a certain JKSN encoder, the hashtable is preserved during each dump
-// public:
-//     JKSNEncoder();
-//     ~JKSNEncoder();
-//     std::unique_ptr<std::string> dumpstr(const JKSNValue &obj, bool header = true, bool check_circular = true);
-//     std::unique_ptr<std::stringstream> dump(const JKSNValue &obj, bool header = true, bool check_circular = true);
-// private:
-//     struct JKSNEncoderImpl *impl;
-// };
-// 
-// class JKSNDecoder {
-// // Note: With a certain JKSN decoder, the hashtable is preserved during each parse
-// public:
-//     JKSNDecoder();
-//     ~JKSNDecoder();
-//     std::unique_ptr<JKSNValue> parsestr(const std::string &s, bool header = true);
-//     std::unique_ptr<JKSNValue> parse(std::istream &fp, bool header = true);
-// private:
-//     struct JKSNDecoderImpl *impl;
-// };
-// 
-// std::unique_ptr<std::string> dumpstr(const JKSNValue &obj, bool header = true, bool check_circular = true);
-// std::unique_ptr<std::stringstream> dump(const JKSNValue &obj, bool header = true, bool check_circular = true);
-// std::unique_ptr<JKSNValue> parsestr(const std::string &s, bool header = true);
-// std::unique_ptr<JKSNValue> parse(std::istream &fp, bool header = true);
-// 
-// }

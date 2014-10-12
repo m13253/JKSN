@@ -122,15 +122,9 @@ public:
     operator nullptr_t() const { return nullptr; };
     operator bool() const;
     operator int64_t() const;
-    operator float() const {
-        return this->toNumber<float>();
-    }
-    operator double() const {
-        return this->toNumber<double>();
-    }
-    operator long double() const {
-        return this->toNumber<long double>();
-    }
+    operator float() const { return this->toNumber<float>(); }
+    operator double() const { return this->toNumber<double>(); }
+    operator long double() const { return this->toNumber<long double>(); }
     operator std::string() const;
     operator const std::vector<JKSNValue> &() const {
         if(this->getType() == JKSN_ARRAY) return *this->data_array; else throw JKSNTypeError();

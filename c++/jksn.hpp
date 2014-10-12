@@ -117,6 +117,7 @@ public:
         jksn_data_type type = this->getType();
         return type == JKSN_STRING || type == JKSN_BLOB || type == JKSN_ARRAY || type == JKSN_OBJECT;
     }
+    bool isUnspecified const { return this->getType() == JKSN_UNSPECIFIED; }
 
     operator nullptr_t() const { return nullptr; };
     operator bool() const;

@@ -80,6 +80,11 @@ public:
         if(this->data_int < 0)
             throw std::overflow_error("JKSN value too large");
     }
+    JKSNValue(int data) :            data_type(JKSN_INT), data_int(data) {}
+    JKSNValue(unsigned data) :       data_type(JKSN_INT), data_int(static_cast<intmax_t>(data)) {
+        if(this->data_int < 0)
+            throw std::overflow_error("JKSN value too large");
+    }
     JKSNValue(float data) :          data_type(JKSN_FLOAT), data_float(data) {}
     JKSNValue(double data) :         data_type(JKSN_DOUBLE), data_double(data) {}
     JKSNValue(long double data) :    data_type(JKSN_LONG_DOUBLE), data_long_double(data) {}
@@ -219,6 +224,7 @@ public:
     explicit operator std::nullptr_t() const { return this->toNullptr(); }
     explicit operator bool() const           { return this->toBool(); }
     explicit operator intmax_t() const       { return this->toInt(); }
+    explicit operator uintmax_t() const      { intmax_t res = this->toInt(); if(res >= 0) return res; else throw JKSNTypeError(); }
     explicit operator float() const          { return this->toFloat(); }
     explicit operator double() const         { return this->toDouble(); }
     explicit operator long double() const    { return this->toLongDouble(); }
@@ -316,7 +322,7 @@ private:
         std::map<JKSNValue, JKSNValue> *data_object;
     };
 
-    template<typename T> inline T toNumber() const;
+    template<typename T> T toNumber() const;
 };
 
 

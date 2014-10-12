@@ -24,7 +24,7 @@
 
 using namespace JKSN;
 
-template<typename T> inline T JKSNValue::toNumber() const {
+template<typename T> T JKSNValue::toNumber() const {
     switch(this->getType()) {
     case JKSN_FLOAT:
         return this->data_float;

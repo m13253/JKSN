@@ -66,7 +66,7 @@ JKSNValue::operator bool() const {
     }
 }
 
-JKSNValue::operator int64_t() const {
+JKSNValue::operator intmax_t() const {
     switch(this->getType()) {
     case JKSN_NULL:
         return 0;
@@ -163,7 +163,7 @@ JKSNValue::operator std::string() const {
                     res << ',';
                     first = false;
                 }
-                res << std::string(i);
+                res << i.operator std::string();
             }
             return res.str();
         }

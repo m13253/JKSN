@@ -69,9 +69,17 @@ class Unspecified {};
 class JKSNValue {
 public:
     JKSNValue() : data_type(JKSN_UNDEFINED) {}
-    JKSNValue(nullptr_t) : data_type(JKSN_NULL) {}
+    JKSNValue(const JKSNValue &that);
+    JKSNValue(std::nullptr_t data) : data_type(JKSN_NULL) {
+        if(data != nullptr)
+            throw std::invalid_argument("invalid JKSN value");
+    }
     JKSNValue(bool data) : data_type(JKSN_BOOL), data_bool(data) {}
-    JKSNValue(int64_t data) : data_type(JKSN_INT), data_int(data) {}
+    JKSNValue(intmax_t data) : data_type(JKSN_INT), data_int(data) {}
+    JKSNValue(uintmax_t data) : data_type(JKSN_INT), data_int(static_cast<intmax_t>(data)) {
+        if(this->data_int < 0)
+            throw std::overflow_error("JKSN value too large");
+    }
     JKSNValue(float data) : data_type(JKSN_FLOAT), data_float(data) {}
     JKSNValue(double data) : data_type(JKSN_DOUBLE), data_double(data) {}
     JKSNValue(long double data) : data_type(JKSN_LONG_DOUBLE), data_long_double(data) {}
@@ -86,6 +94,26 @@ public:
     JKSNValue(const Unspecified &) : data_type(JKSN_UNSPECIFIED) {}
     ~JKSNValue();
 
+    JKSNValue &operator[](size_t index) {
+        switch(this->getType()) {
+        case JKSN_ARRAY:
+            return static_cast<std::vector<JKSNValue> &>(*this)[index];
+        case JKSN_OBJECT:
+            return static_cast<std::map<JKSNValue, JKSNValue> &>(*this)[JKSNValue(index)];
+        default:
+            throw JKSNTypeError();
+        }
+    }
+    const JKSNValue &operator[](size_t index) const {
+        switch(this->getType()) {
+        case JKSN_ARRAY:
+            return static_cast<const std::vector<JKSNValue> &>(*this)[index];
+        case JKSN_OBJECT:
+            return static_cast<const std::map<JKSNValue, JKSNValue> &>(*this)[JKSNValue(index)];
+        default:
+            throw JKSNTypeError();
+        }
+    }
     bool operator<(const JKSNValue &that) const;
     bool operator==(const JKSNValue &that) const;
 
@@ -119,38 +147,40 @@ public:
     }
     bool isUnspecified() const { return this->getType() == JKSN_UNSPECIFIED; }
 
-    operator nullptr_t() const { return nullptr; };
-    operator bool() const;
-    operator int64_t() const;
-    operator float() const { return this->toNumber<float>(); }
-    operator double() const { return this->toNumber<double>(); }
-    operator long double() const { return this->toNumber<long double>(); }
-    operator std::string() const;
-    operator const std::vector<JKSNValue> &() const {
-        if(this->getType() == JKSN_ARRAY) return *this->data_array; else throw JKSNTypeError();
+    explicit operator std::nullptr_t() const {
+        if(this->isNull()) return nullptr; else throw JKSNTypeError();
+    };
+    explicit operator bool() const;
+    explicit operator intmax_t() const;
+    explicit operator float() const { return this->toNumber<float>(); }
+    explicit operator double() const { return this->toNumber<double>(); }
+    explicit operator long double() const { return this->toNumber<long double>(); }
+    explicit operator std::string() const;
+    explicit operator const std::vector<JKSNValue> &() const {
+        if(this->isArray()) return *this->data_array; else throw JKSNTypeError();
     }
-    operator std::vector<JKSNValue> &() {
-        if(this->getType() == JKSN_ARRAY) return *this->data_array; else throw JKSNTypeError();
+    explicit operator std::vector<JKSNValue> &() {
+        if(this->isArray()) return *this->data_array; else throw JKSNTypeError();
     }
-    operator std::vector<JKSNValue>() const {
-        if(this->getType() == JKSN_ARRAY) return *this->data_array; else throw JKSNTypeError();
+    explicit operator std::vector<JKSNValue>() const {
+        if(this->isArray()) return *this->data_array; else throw JKSNTypeError();
     }
-    operator const std::map<JKSNValue, JKSNValue> &() const {
-        if(this->getType() == JKSN_OBJECT) return *this->data_object; else throw JKSNTypeError();
+    explicit operator const std::map<JKSNValue, JKSNValue> &() const {
+        if(this->isObject()) return *this->data_object; else throw JKSNTypeError();
     }
-    operator std::map<JKSNValue, JKSNValue> &() {
-        if(this->getType() == JKSN_OBJECT) return *this->data_object; else throw JKSNTypeError();
+    explicit operator std::map<JKSNValue, JKSNValue> &() {
+        if(this->isObject()) return *this->data_object; else throw JKSNTypeError();
     }
-    operator std::map<JKSNValue, JKSNValue>() const {
-        if(this->getType() == JKSN_OBJECT) return *this->data_object; else throw JKSNTypeError();
+    explicit operator std::map<JKSNValue, JKSNValue>() const {
+        if(this->isObject()) return *this->data_object; else throw JKSNTypeError();
     }
-    operator Unspecified() const { return Unspecified(); }
+    explicit operator Unspecified() const { return Unspecified(); }
 
 private:
     jksn_data_type data_type = JKSN_UNDEFINED;
     union {
         bool data_bool;
-        int64_t data_int;
+        intmax_t data_int;
         float data_float;
         double data_double;
         long double data_long_double;

@@ -145,11 +145,11 @@ public:
     };
     bool toBool() const {
         switch(this->getType()) {
+        case JKSN_BOOL:
+            return this->data_bool;
         case JKSN_UNDEFINED:
         case JKSN_NULL:
             return false;
-        case JKSN_BOOL:
-            return this->data_bool;
         case JKSN_INT:
             return this->data_int != 0;
         case JKSN_FLOAT:
@@ -171,18 +171,18 @@ public:
     };
     intmax_t toInt() const {
         switch(this->getType()) {
-        case JKSN_NULL:
-            return 0;
-        case JKSN_BOOL:
-            return this->data_bool;
         case JKSN_INT:
             return this->data_int;
+        case JKSN_BOOL:
+            return this->data_bool;
         case JKSN_FLOAT:
             return this->data_float;
         case JKSN_DOUBLE:
             return this->data_double;
         case JKSN_LONG_DOUBLE:
             return this->data_long_double;
+        case JKSN_NULL:
+            return 0;
         case JKSN_STRING:
             try {
                 return std::stoll(*this->data_string);
@@ -290,15 +290,15 @@ public:
     }
     JKSNValue &operator=(JKSNValue &&that) {
         if(this != &that)
-            this->operator=(&that);
+            this->operator=(that);
         return *this;
     }
+    bool operator==(const JKSNValue &that) const;
+    bool operator!=(const JKSNValue &that) const { return !(*this == that); }
     bool operator<(const JKSNValue &that) const;
     bool operator>(const JKSNValue &that) const { return that < *this; }
     bool operator<=(const JKSNValue &that) const { return !(that < *this); }
     bool operator>=(const JKSNValue &that) const { return !(*this < that); }
-    bool operator==(const JKSNValue &that) const;
-    bool operator!=(const JKSNValue &that) const { return !(*this == that); }
 
 private:
     jksn_data_type data_type = JKSN_UNDEFINED;

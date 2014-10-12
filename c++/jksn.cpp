@@ -26,18 +26,18 @@ using namespace JKSN;
 
 template<typename T> inline T JKSNValue::toNumber() const {
     switch(this->getType()) {
-    case JKSN_NULL:
-        return 0;
-    case JKSN_BOOL:
-        return this->data_bool;
-    case JKSN_INT:
-        return this->data_int;
     case JKSN_FLOAT:
         return this->data_float;
     case JKSN_DOUBLE:
         return this->data_double;
     case JKSN_LONG_DOUBLE:
         return this->data_long_double;
+    case JKSN_INT:
+        return this->data_int;
+    case JKSN_BOOL:
+        return this->data_bool;
+    case JKSN_NULL:
+        return 0;
     case JKSN_STRING:
         try {
             return std::stoll(*this->data_string);
@@ -103,6 +103,100 @@ std::string JKSNValue::toString() const {
     default:
         throw JKSNTypeError();
     }
+}
+
+bool JKSNValue::operator==(const JKSNValue &that) const {
+    jksn_data_type this_type = this->getType();
+    jksn_data_type that_type = that.getType();
+    if(this_type == that_type || (this->isNumber() && that.isNumber()))
+        switch(this_type) {
+        case JKSN_BOOL:
+            return this->toBool() == that.toBool();
+        case JKSN_INT:
+            switch(that_type) {
+            case JKSN_INT:
+                return this->toInt() == that.toInt();
+            case JKSN_FLOAT:
+                return this->toFloat() == that.toFloat();
+            case JKSN_DOUBLE:
+                return this->toDouble() == that.toDouble();
+            case JKSN_LONG_DOUBLE:
+                return this->toLongDouble() == that.toLongDouble();
+            default:
+                assert(that.isNumber());
+                throw std::logic_error("unknown error occured during value comparision");
+            }
+        case JKSN_FLOAT:
+            switch(that_type) {
+            case JKSN_INT:
+            case JKSN_FLOAT:
+                return this->toFloat() == that.toFloat();
+            case JKSN_DOUBLE:
+                return this->toDouble() == that.toDouble();
+            case JKSN_LONG_DOUBLE:
+                return this->toLongDouble() == that.toLongDouble();
+            default:
+                assert(that.isNumber());
+                throw std::logic_error("unknown error occured during value comparision");
+            }
+        case JKSN_DOUBLE:
+            switch(that_type) {
+            case JKSN_INT:
+            case JKSN_FLOAT:
+            case JKSN_DOUBLE:
+                return this->toDouble() == that.toDouble();
+            case JKSN_LONG_DOUBLE:
+                return this->toLongDouble() == that.toLongDouble();
+            default:
+                assert(that.isNumber());
+                throw std::logic_error("unknown error occured during value comparision");
+            }
+        case JKSN_LONG_DOUBLE:
+            switch(that_type) {
+            case JKSN_INT:
+            case JKSN_FLOAT:
+            case JKSN_DOUBLE:
+            case JKSN_LONG_DOUBLE:
+                return this->toLongDouble() == that.toLongDouble();
+            default:
+                assert(that.isNumber());
+                throw std::logic_error("unknown error occured during value comparision");
+            }
+        case JKSN_STRING:
+        case JKSN_BLOB:
+            return this->toString() == that.toString();
+        case JKSN_ARRAY:
+            {
+                const std::vector<JKSNValue> &this_vector = this->toVector();
+                const std::vector<JKSNValue> &that_vector = that.toVector();
+                if(this_vector.size() != that_vector.size())
+                    return false;
+                else {
+                    for(auto this_iter = this_vector.cbegin(), that_iter = that_vector.cbegin();
+                        this_iter != this_vector.end(); ++this_iter, ++that_iter)
+                    if(*this_iter != *that_iter)
+                        return false;
+                    return true;
+                }
+            }
+        case JKSN_OBJECT:
+            {
+                const std::map<JKSNValue, JKSNValue> &this_map = this->toMap();
+                const std::map<JKSNValue, JKSNValue> &that_map = that.toMap();
+                if(this_map.size() != that_map.size())
+                    return false;
+                else {
+                    for(auto this_iter = this_map.cbegin(), that_iter = that_map.cbegin();
+                        this_iter != this_map.end(); ++this_iter, ++that_iter)
+                    if((*this_iter).first != (*that_iter).first || (*this_iter).second != (*that_iter).second)
+                        return false;
+                    return true;
+                }
+            }
+        default:
+            return true;
+    } else
+        return this_type == that_type;
 }
 
 bool JKSNValue::operator<(const JKSNValue &that) const {
@@ -171,15 +265,13 @@ bool JKSNValue::operator<(const JKSNValue &that) const {
                 const std::vector<JKSNValue> &that_vector = that.toVector();
                 auto this_iter = this_vector.cbegin();
                 auto that_iter = that_vector.cbegin();
-                while(this_iter != this_vector.cend()) {
+                for(; this_iter != this_vector.cend(); ++this_iter, ++that_iter) {
                     if(that_iter == that_vector.cend())
                         return false;
                     else if(*this_iter < *that_iter)
                         return true;
                     else if(*this_iter != *that_iter) /* > */
                         return false;
-                    ++this_iter;
-                    ++that_iter;
                 }
                 return that_iter != that_vector.cend();
             }
@@ -189,7 +281,7 @@ bool JKSNValue::operator<(const JKSNValue &that) const {
                 const std::map<JKSNValue, JKSNValue> &that_map = this->toMap();
                 auto this_iter = this_map.cbegin();
                 auto that_iter = that_map.cbegin();
-                while(this_iter != this_map.cend()) {
+                for(; this_iter != this_map.cend(); ++this_iter, ++that_iter) {
                     if(that_iter == that_map.cend())
                         return false;
                     else if((*this_iter).first < (*that_iter).first)
@@ -200,8 +292,6 @@ bool JKSNValue::operator<(const JKSNValue &that) const {
                         return true;
                     else if((*this_iter).second != (*that_iter).second)
                         return false;
-                    ++this_iter;
-                    ++that_iter;
                 }
                 return that_iter != that_map.cend();
             }

@@ -85,9 +85,39 @@ public:
     JKSNValue(std::initializer_list<std::pair<const JKSNValue, JKSNValue> > data) : data_type(JKSN_OBJECT), data_object(new std::map<JKSNValue, JKSNValue>(data)) {}
     JKSNValue(const Unspecified &) : data_type(JKSN_UNSPECIFIED) {}
     ~JKSNValue();
-    jksn_data_type getType() const { return this->data_type; }
+
     bool operator<(const JKSNValue &that) const;
     bool operator==(const JKSNValue &that) const;
+
+    jksn_data_type getType() const { return this->data_type; }
+    bool isUndefined() const { return this->getType() == JKSN_UNDEFINED; }
+    bool isNull() const { return this->getType() == JKSN_UNDEFINED; }
+    bool isBool() const { return this->getType() == JKSN_NULL; }
+    bool isInt() const { return this->getType() == JKSN_INT; }
+    bool isFloat() const { return this->getType() == JKSN_FLOAT; }
+    bool isDouble() const { return this->getType() == JKSN_DOUBLE; }
+    bool isLongDouble() const { return this->getType() == JKSN_LONG_DOUBLE; }
+    bool isNumber() const {
+        jksn_data_type type = this->getType();
+        return type == JKSN_INT || type == JKSN_FLOAT || type == JKSN_DOUBLE || type == JKSN_LONG_DOUBLE;
+    }
+    bool isString() const { return this->getType() == JKSN_STRING; }
+    bool isBlob() const { return this->getType() == JKSN_BLOB; }
+    bool isStringOrBlob() const {
+        jksn_data_type type = this->getType();
+        return type == JKSN_STRING || type == JKSN_BLOB;
+    }
+    bool isArray() const { return this->getType() == JKSN_ARRAY; }
+    bool isObject() const { return this->getType() == JKSN_OBJECT; }
+    bool isContainer() const {
+        jksn_data_type type = this->getType();
+        return type == JKSN_ARRAY || type == JKSN_OBJECT;
+    }
+    bool isIterable() const {
+        jksn_data_type type = this->getType();
+        return type == JKSN_STRING || type == JKSN_BLOB || type == JKSN_ARRAY || type == JKSN_OBJECT;
+    }
+
     operator nullptr_t() const { return nullptr; };
     operator bool() const;
     operator int64_t() const;
@@ -114,6 +144,7 @@ public:
         if(this->getType() == JKSN_OBJECT) return *this->data_object; else throw JKSNTypeError();
     }
     operator Unspecified() const { return Unspecified(); }
+
 private:
     jksn_data_type data_type = JKSN_UNDEFINED;
     union {
@@ -126,6 +157,7 @@ private:
         std::vector<JKSNValue> *data_array;
         std::map<JKSNValue, JKSNValue> *data_object;
     };
+
     template<typename T> inline T toNumber() const;
 };
 

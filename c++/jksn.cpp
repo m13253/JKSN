@@ -39,7 +39,7 @@ JKSNValue::~JKSNValue() {
     };
 }
 
-JKSNValue::operator bool() const {
+bool JKSNValue::toBool() const {
     switch(this->getType()) {
     case JKSN_UNDEFINED:
     case JKSN_NULL:
@@ -66,7 +66,7 @@ JKSNValue::operator bool() const {
     }
 }
 
-JKSNValue::operator intmax_t() const {
+intmax_t JKSNValue::toInt() const {
     switch(this->getType()) {
     case JKSN_NULL:
         return 0;
@@ -120,7 +120,7 @@ template<typename T> inline T JKSNValue::toNumber() const {
     }
 }
 
-JKSNValue::operator std::string() const {
+std::string JKSNValue::toString() const {
     switch(this->getType()) {
     case JKSN_UNDEFINED:
         return "undefined";
@@ -163,7 +163,7 @@ JKSNValue::operator std::string() const {
                     res << ',';
                     first = false;
                 }
-                res << static_cast<std::string>(i);
+                res << i.toString();
             }
             return res.str();
         }

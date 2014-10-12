@@ -25,6 +25,7 @@
 #include <map>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace JKSN {
@@ -84,6 +85,7 @@ public:
     JKSNValue(long double data) :    data_type(JKSN_LONG_DOUBLE), data_long_double(data) {}
     JKSNValue(const std::string &data, bool is_blob = false) : data_type(is_blob ? JKSN_BLOB : JKSN_STRING), data_string(new std::string(data)) {}
     JKSNValue(std::string &&data, bool is_blob = false) :      data_type(is_blob ? JKSN_BLOB : JKSN_STRING), data_string(new std::string(std::move(data))) {}
+    JKSNValue(const char *data, bool is_blob = false) :        data_type(is_blob ? JKSN_BLOB : JKSN_STRING), data_string(new std::string(data)) {}
     JKSNValue(const std::vector<JKSNValue> &data) :            data_type(JKSN_ARRAY), data_array(new std::vector<JKSNValue>(data)) {}
     JKSNValue(std::vector<JKSNValue> &&data) :                 data_type(JKSN_ARRAY), data_array(new std::vector<JKSNValue>(std::move(data))) {}
     JKSNValue(std::initializer_list<JKSNValue> data) :         data_type(JKSN_ARRAY), data_array(new std::vector<JKSNValue>(data)) {}
@@ -254,8 +256,7 @@ public:
     JKSNValue &operator[](size_t index)             { return this->at(index); }
 
     JKSNValue &operator=(const JKSNValue &that) {
-        if(this != &that) {
-            this->~JKSNValue();
+        if(this != &that)
             switch((this->data_type = that.getType())) {
             case JKSN_BOOL:
                 this->data_bool = that.toBool();
@@ -274,18 +275,20 @@ public:
                 break;
             case JKSN_STRING:
             case JKSN_BLOB:
+                delete this->data_string;
                 this->data_string = new std::string(that.toString());
                 break;
             case JKSN_ARRAY:
+                delete this->data_array;
                 this->data_array = new std::vector<JKSNValue>(that.toVector());
                 break;
             case JKSN_OBJECT:
+                delete this->data_object;
                 this->data_object = new std::map<JKSNValue, JKSNValue>(that.toMap());
                 break;
             default:
                 break;
             }
-        }
         return *this;
     }
     JKSNValue &operator=(JKSNValue &&that) {

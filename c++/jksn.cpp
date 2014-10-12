@@ -120,18 +120,6 @@ template<typename T> inline T JKSNValue::toNumber() const {
     }
 }
 
-JKSNValue::operator float() const {
-    return this->toNumber<float>();
-}
-
-JKSNValue::operator double() const {
-    return this->toNumber<double>();
-}
-
-JKSNValue::operator long double() const {
-    return this->toNumber<long double>();
-}
-
 JKSNValue::operator std::string() const {
     switch(this->getType()) {
     case JKSN_UNDEFINED:

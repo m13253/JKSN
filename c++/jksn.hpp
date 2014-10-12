@@ -117,14 +117,20 @@ public:
         jksn_data_type type = this->getType();
         return type == JKSN_STRING || type == JKSN_BLOB || type == JKSN_ARRAY || type == JKSN_OBJECT;
     }
-    bool isUnspecified const { return this->getType() == JKSN_UNSPECIFIED; }
+    bool isUnspecified() const { return this->getType() == JKSN_UNSPECIFIED; }
 
     operator nullptr_t() const { return nullptr; };
     operator bool() const;
     operator int64_t() const;
-    operator float() const;
-    operator double() const;
-    operator long double() const;
+    operator float() const {
+        return this->toNumber<float>();
+    }
+    operator double() const {
+        return this->toNumber<double>();
+    }
+    operator long double() const {
+        return this->toNumber<long double>();
+    }
     operator std::string() const;
     operator const std::vector<JKSNValue> &() const {
         if(this->getType() == JKSN_ARRAY) return *this->data_array; else throw JKSNTypeError();

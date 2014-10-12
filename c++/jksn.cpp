@@ -163,7 +163,7 @@ JKSNValue::operator std::string() const {
                     res << ',';
                     first = false;
                 }
-                res << i.operator std::string();
+                res << static_cast<std::string>(i);
             }
             return res.str();
         }

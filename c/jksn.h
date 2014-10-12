@@ -67,7 +67,7 @@ typedef struct jksn_t {
     jksn_data_type data_type;
     union {
         int data_bool;
-        int64_t data_int;
+        intmax_t data_int;
         float data_float;
         double data_double;
         long double data_long_double;

@@ -35,7 +35,7 @@ typedef struct jksn_proxy {
 
 struct jksn_cache {
     int haslastint;
-    int64_t lastint;
+    intmax_t lastint;
     jksn_utf8string texthash[256];
     jksn_blobstring blobhash[256];
 };
@@ -44,6 +44,8 @@ struct jksn_swap_columns {
     jksn_t *key;
     struct jksn_swap_columns *next;
 };
+
+static const size_t jksn_varint_size = (sizeof (intmax_t)*8)/7 + 1;
 
 static const char *jksn_error_messages[] = {
     "OK",
@@ -89,20 +91,20 @@ static jksn_error_message_no jksn_dump_blob(jksn_proxy **result, const jksn_t *o
 static jksn_error_message_no jksn_dump_array(jksn_proxy **result, const jksn_t *object, jksn_cache *cache);
 static jksn_error_message_no jksn_dump_object(jksn_proxy **result, const jksn_t *object, jksn_cache *cache);
 static void jksn_optimize(jksn_proxy *object, jksn_cache *cache);
-static size_t jksn_encode_int(char result[], uint64_t object, size_t size);
+static size_t jksn_encode_int(char result[], uintmax_t object, size_t size);
 static struct jksn_swap_columns *jksn_swap_columns_free(struct jksn_swap_columns *columns);
 static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffer, size_t size, size_t *bytes_parsed, jksn_cache *cache);
 static jksn_error_message_no jksn_parse_float(jksn_t **result, const char *buffer, size_t size, size_t *bytes_parsed);
 static jksn_error_message_no jksn_parse_double(jksn_t **result, const char *buffer, size_t size, size_t *bytes_parsed);
 static jksn_error_message_no jksn_parse_longdouble(jksn_t **result, const char *buffer, size_t size, size_t *bytes_parsed);
-static jksn_error_message_no jksn_decode_int(uint64_t *result, const char *buffer, size_t bufsize, size_t size, size_t *bytes_parsed);
+static jksn_error_message_no jksn_decode_int(uintmax_t *result, const char *buffer, size_t bufsize, size_t size, size_t *bytes_parsed);
 static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size, int strict);
 static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size);
 static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2);
 static jksn_t *jksn_duplicate(const jksn_t *object);
 static uint8_t jksn_djbhash(const char *buf, size_t size);
 static inline int jksn_is_little_endian(void);
-static inline uint64_t jksn_int64abs(int64_t x) { return x >= 0 ? x : -x; };
+static inline uintmax_t jksn_int64abs(intmax_t x) { return x >= 0 ? x : -x; };
 
 static inline void *jksn_malloc(size_t size) {
     return malloc(size != 0 ? size : 1);
@@ -357,32 +359,32 @@ static jksn_error_message_no jksn_dump_int(jksn_proxy **result, const jksn_t *ob
         jksn_blobstring data = {1, jksn_malloc(1)};
         if(!data.buf)
             return JKSN_ENOMEM;
-        jksn_encode_int(data.buf, (uint64_t) object->data_int, 1);
+        jksn_encode_int(data.buf, (uintmax_t) object->data_int, 1);
         *result = jksn_proxy_new(object, 0x1d, &data, NULL);
     } else if(object->data_int >= -0x8000 && object->data_int <= 0x7fff) {
         jksn_blobstring data = {2, jksn_malloc(2)};
         if(!data.buf)
             return JKSN_ENOMEM;
-        jksn_encode_int(data.buf, (uint64_t) object->data_int, 2);
+        jksn_encode_int(data.buf, (uintmax_t) object->data_int, 2);
         *result = jksn_proxy_new(object, 0x1c, &data, NULL);
     } else if((object->data_int >= -0x80000000L && object->data_int <= -0x200000L) ||
               (object->data_int >= 0x200000L && object->data_int <= 0x7fffffffL)) {
         jksn_blobstring data = {4, jksn_malloc(4)};
         if(!data.buf)
             return JKSN_ENOMEM;
-        jksn_encode_int(data.buf, (uint64_t) object->data_int, 4);
+        jksn_encode_int(data.buf, (uintmax_t) object->data_int, 4);
         *result = jksn_proxy_new(object, 0x1b, &data, NULL);
     } else if(object->data_int >= 0) {
-        jksn_blobstring data = {0, jksn_malloc(10)};
+        jksn_blobstring data = {0, jksn_malloc(jksn_varint_size)};
         if(!data.buf)
             return JKSN_ENOMEM;
-        data.size = jksn_encode_int(data.buf, (uint64_t) object->data_int, 0);
+        data.size = jksn_encode_int(data.buf, (uintmax_t) object->data_int, 0);
         *result = jksn_proxy_new(object, 0x1f, &data, NULL);
     } else {
-        jksn_blobstring data = {0, jksn_malloc(10)};
+        jksn_blobstring data = {0, jksn_malloc(jksn_varint_size)};
         if(!data.buf)
             return JKSN_ENOMEM;
-        data.size = jksn_encode_int(data.buf, (uint64_t) -object->data_int, 0);
+        data.size = jksn_encode_int(data.buf, (uintmax_t) -object->data_int, 0);
         *result = jksn_proxy_new(object, 0x1e, &data, NULL);
     }
     return *result ? JKSN_EOK : JKSN_ENOMEM;
@@ -549,7 +551,7 @@ static jksn_error_message_no jksn_dump_string(jksn_proxy **result, const jksn_t 
             jksn_encode_int(data.buf, utf16size, 2);
             *result = jksn_proxy_new(object, 0x3d, &data, &buf);
         } else {
-            jksn_blobstring data = {0, jksn_malloc(10)};
+            jksn_blobstring data = {0, jksn_malloc(jksn_varint_size)};
             if(!data.buf) {
                 free(utf16str);
                 return JKSN_ENOMEM;
@@ -577,7 +579,7 @@ static jksn_error_message_no jksn_dump_string(jksn_proxy **result, const jksn_t 
             jksn_encode_int(data.buf, buf.size, 2);
             *result = jksn_proxy_new(object, 0x4d, &data, &buf);
         } else {
-            jksn_blobstring data = {0, jksn_malloc(10)};
+            jksn_blobstring data = {0, jksn_malloc(jksn_varint_size)};
             if(!data.buf)
                 return JKSN_ENOMEM;
             data.size = jksn_encode_int(data.buf, buf.size, 0);
@@ -611,7 +613,7 @@ static jksn_error_message_no jksn_dump_blob(jksn_proxy **result, const jksn_t *o
         jksn_encode_int(data.buf, object->data_blob.size, 2);
         *result = jksn_proxy_new(object, 0x5d, &data, &object->data_blob);
     } else {
-        jksn_blobstring data = {0, jksn_malloc(10)};
+        jksn_blobstring data = {0, jksn_malloc(jksn_varint_size)};
         if(!data.buf)
             return JKSN_ENOMEM;
         data.size = jksn_encode_int(data.buf, object->data_blob.size, 0);
@@ -651,7 +653,7 @@ static jksn_error_message_no jksn_encode_straight_array(jksn_proxy **result, con
         jksn_encode_int(data.buf, object->data_array.size, 2);
         *result = jksn_proxy_new(object, 0x8d, &data, NULL);
     } else {
-        jksn_blobstring data = {0, jksn_malloc(10)};
+        jksn_blobstring data = {0, jksn_malloc(jksn_varint_size)};
         if(!data.buf)
             return JKSN_ENOMEM;
         data.size = jksn_encode_int(data.buf, object->data_array.size, 0);
@@ -715,7 +717,7 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_proxy **result, cons
         jksn_encode_int(data.buf, columns_size, 2);
         *result = jksn_proxy_new(object, 0xad, &data, NULL);
     } else {
-        jksn_blobstring data = {0, jksn_malloc(10)};
+        jksn_blobstring data = {0, jksn_malloc(jksn_varint_size)};
         if(!data.buf) {
             columns = jksn_swap_columns_free(columns);
             return JKSN_ENOMEM;
@@ -813,7 +815,7 @@ static jksn_error_message_no jksn_dump_object(jksn_proxy **result, const jksn_t 
         jksn_encode_int(data.buf, object->data_object.size, 2);
         *result = jksn_proxy_new(object, 0x9d, &data, NULL);
     } else {
-        jksn_blobstring data = {0, jksn_malloc(10)};
+        jksn_blobstring data = {0, jksn_malloc(jksn_varint_size)};
         if(!data.buf)
             return JKSN_ENOMEM;
         data.size = jksn_encode_int(data.buf, object->data_object.size, 0);
@@ -848,7 +850,7 @@ static void jksn_optimize(jksn_proxy *object, jksn_cache *cache) {
         switch(control) {
         case 0x10:
             if(cache->haslastint) {
-                int64_t delta = object->origin->data_int - cache->lastint;
+                intmax_t delta = object->origin->data_int - cache->lastint;
                 if(jksn_int64abs(delta) < jksn_int64abs(object->origin->data_int)) {
                     uint8_t new_control = 0;
                     jksn_blobstring new_data = {0, NULL};
@@ -861,14 +863,14 @@ static void jksn_optimize(jksn_proxy *object, jksn_cache *cache) {
                         new_data.buf = jksn_malloc(1);
                         if(new_data.buf) {
                             new_control = 0xbd;
-                            jksn_encode_int(new_data.buf, (uint64_t) delta, 1);
+                            jksn_encode_int(new_data.buf, (uintmax_t) delta, 1);
                         }
                     } else if(delta >= -0x8000 && delta <= 0x7fff) {
                         new_data.size = 2;
                         new_data.buf = jksn_malloc(2);
                         if(new_data.buf) {
                             new_control = 0xbc;
-                            jksn_encode_int(new_data.buf, (uint64_t) delta, 2);
+                            jksn_encode_int(new_data.buf, (uintmax_t) delta, 2);
                         }
                     } else if((delta >= -0x80000000L && delta <= -0x200000L) ||
                               (delta >= 0x200000L && delta <= 0x7fffffffL)) {
@@ -876,19 +878,19 @@ static void jksn_optimize(jksn_proxy *object, jksn_cache *cache) {
                         new_data.buf = jksn_malloc(4);
                         if(new_data.buf) {
                             new_control = 0xbb;
-                            jksn_encode_int(new_data.buf, (uint64_t) delta, 4);
+                            jksn_encode_int(new_data.buf, (uintmax_t) delta, 4);
                         }
                     } else if(delta >= 0) {
-                        new_data.buf = jksn_malloc(10);
+                        new_data.buf = jksn_malloc(jksn_varint_size);
                         if(new_data.buf) {
                             new_control = 0xbf;
-                            new_data.size = jksn_encode_int(new_data.buf, (uint64_t) delta, 0);
+                            new_data.size = jksn_encode_int(new_data.buf, (uintmax_t) delta, 0);
                         }
                     } else {
-                        new_data.buf = jksn_malloc(10);
+                        new_data.buf = jksn_malloc(jksn_varint_size);
                         if(new_data.buf) {
                             new_control = 0xbe;
-                            new_data.size = jksn_encode_int(new_data.buf, (uint64_t) -delta, 0);
+                            new_data.size = jksn_encode_int(new_data.buf, (uintmax_t) -delta, 0);
                         }
                     }
                     if(new_control != 0) {
@@ -960,7 +962,7 @@ static void jksn_optimize(jksn_proxy *object, jksn_cache *cache) {
     }
 }
 
-static size_t jksn_encode_int(char result[], uint64_t number, size_t size) {
+static size_t jksn_encode_int(char result[], uintmax_t number, size_t size) {
     switch(size) {
     case 1:
         result[0] = (char) (uint8_t) number;
@@ -975,16 +977,16 @@ static size_t jksn_encode_int(char result[], uint64_t number, size_t size) {
         result[2] = (char) (uint8_t) (number >> 8);
         result[3] = (char) (uint8_t) number;
         break;
-    case 0: /* buffer size should be 10 */
-        result[(size = 9)] = (char) (((uint8_t) number) & 0x7f);
+    case 0: /* buffer size should be jksn_varint_size */
+        result[(size = jksn_varint_size-1)] = (char) (((uint8_t) number) & 0x7f);
         number >>= 7;
         while(number != 0) {
             result[--size] = (char) (((uint8_t) number) | 0x80);
             number >>= 7;
         }
         assert(result <= result+size);
-        memmove(result, result+size, 10-size);
-        size = 10-size;
+        memmove(result, result+size, jksn_varint_size-size);
+        size = jksn_varint_size-size;
         break;
     default:
         assert(size == 1 || size == 2 || size == 4 || size == 0);
@@ -1074,45 +1076,45 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
         case 0x10:
             {
                 jksn_error_message_no retval;
-                uint64_t uresint;
-                int64_t resint;
+                uintmax_t uresint;
+                intmax_t resint;
                 switch(control) {
                 case 0x1b:
                     retval = jksn_decode_int(&uresint, buffer, size, 4, bytes_parsed);
                     if(retval != JKSN_EOK)
                         return retval;
-                    resint = (int64_t) (int32_t) uresint;
+                    resint = (intmax_t) (int32_t) uresint;
                     break;
                 case 0x1c:
                     retval = jksn_decode_int(&uresint, buffer, size, 2, bytes_parsed);
                     if(retval != JKSN_EOK)
                         return retval;
-                    resint = (int64_t) (int16_t) uresint;
+                    resint = (intmax_t) (int16_t) uresint;
                     break;
                 case 0x1d:
                     retval = jksn_decode_int(&uresint, buffer, size, 1, bytes_parsed);
                     if(retval != JKSN_EOK)
                         return retval;
-                    resint = (int64_t) (int8_t) uresint;
+                    resint = (intmax_t) (int8_t) uresint;
                     break;
                 case 0x1e:
                     retval = jksn_decode_int(&uresint, buffer, size, 0, bytes_parsed);
                     if(retval != JKSN_EOK)
                         return retval;
-                    if((int64_t) uresint < 0)
+                    if((intmax_t) uresint < 0)
                         return JKSN_EVARINT;
-                    resint = -(int64_t) uresint;
+                    resint = -(intmax_t) uresint;
                     break;
                 case 0x1f:
                     retval = jksn_decode_int(&uresint, buffer, size, 0, bytes_parsed);
                     if(retval != JKSN_EOK)
                         return retval;
-                    if((int64_t) uresint < 0)
+                    if((intmax_t) uresint < 0)
                         return JKSN_EVARINT;
-                    resint = (int64_t) uresint;
+                    resint = (intmax_t) uresint;
                     break;
                 default:
-                    resint = (int64_t) (control & 0xf);
+                    resint = (intmax_t) (control & 0xf);
                 }
                 *result = jksn_malloc(sizeof (jksn_t));
                 if(!*result)
@@ -1156,7 +1158,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
         case 0x30:
             {
                 jksn_error_message_no retval;
-                uint64_t str_size;
+                uintmax_t str_size;
                 size_t varint_size = 0;
                 uint16_t *utf16str;
                 size_t i;
@@ -1257,7 +1259,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
         case 0x40:
             {
                 jksn_error_message_no retval;
-                uint64_t str_size;
+                uintmax_t str_size;
                 size_t varint_size = 0;
                 uint8_t hashvalue;
                 switch(control) {
@@ -1324,7 +1326,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
         case 0x50:
             {
                 jksn_error_message_no retval;
-                uint64_t blob_size;
+                uintmax_t blob_size;
                 size_t varint_size = 0;
                 uint8_t hashvalue;
                 switch(control) {
@@ -1391,7 +1393,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
         case 0x70:
             {
                 jksn_error_message_no retval;
-                uint64_t value_len;
+                uintmax_t value_len;
                 size_t varint_size = 0;
                 size_t i;
                 switch(control) {
@@ -1450,7 +1452,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
         case 0x80:
             {
                 jksn_error_message_no retval;
-                uint64_t array_len;
+                uintmax_t array_len;
                 size_t varint_size = 0;
                 size_t i;
                 switch(control) {
@@ -1508,7 +1510,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
         case 0x90:
             {
                 jksn_error_message_no retval;
-                uint64_t object_len;
+                uintmax_t object_len;
                 size_t varint_size = 0;
                 size_t i;
                 switch(control) {
@@ -1576,7 +1578,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
         case 0xa0:
             {
                 jksn_error_message_no retval;
-                uint64_t column_len;
+                uintmax_t column_len;
                 size_t varint_size = 0;
                 size_t column_id;
                 switch(control) {
@@ -1706,17 +1708,17 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
         case 0xb0:
             {
                 jksn_error_message_no retval;
-                uint64_t delta;
+                uintmax_t delta;
                 switch(control) {
                 case 0xb0: case 0xb1: case 0xb2: case 0xb3: case 0xb4: case 0xb5:
                     if(!cache->haslastint)
                         return JKSN_EDELTA;
-                    cache->lastint += (int64_t) (control & 0xf);
+                    cache->lastint += (intmax_t) (control & 0xf);
                     break;
                 case 0xb6: case 0xb7: case 0xb8: case 0xb9: case 0xba:
                     if(!cache->haslastint)
                         return JKSN_EDELTA;
-                    cache->lastint += ((int64_t) (control & 0xf)) - 11;
+                    cache->lastint += ((intmax_t) (control & 0xf)) - 11;
                     break;
                 case 0xbb:
                     retval = jksn_decode_int(&delta, buffer, size, 4, bytes_parsed);
@@ -1746,7 +1748,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     retval = jksn_decode_int(&delta, buffer, size, 0, bytes_parsed);
                     if(retval != JKSN_EOK)
                         return retval;
-                    if((int64_t) delta < 0)
+                    if((intmax_t) delta < 0)
                         return JKSN_EVARINT;
                     if(!cache->haslastint)
                         return JKSN_EDELTA;
@@ -1756,7 +1758,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     retval = jksn_decode_int(&delta, buffer, size, 0, bytes_parsed);
                     if(retval != JKSN_EOK)
                         return retval;
-                    if((int64_t) delta < 0)
+                    if((intmax_t) delta < 0)
                         return JKSN_EVARINT;
                     if(!cache->haslastint)
                         return JKSN_EDELTA;
@@ -1963,17 +1965,17 @@ static jksn_error_message_no jksn_parse_double(jksn_t **result, const char *buff
         return JKSN_ETRUNC;
     else {
         const union {
-            uint64_t data_int;
+            uintmax_t data_int;
             double data_double;
         } conv = {
-            ((uint64_t) (uint8_t) buffer[0]) << 56 |
-            ((uint64_t) (uint8_t) buffer[1]) << 48 |
-            ((uint64_t) (uint8_t) buffer[2]) << 40 |
-            ((uint64_t) (uint8_t) buffer[3]) << 32 |
-            ((uint64_t) (uint8_t) buffer[4]) << 24 |
-            ((uint64_t) (uint8_t) buffer[5]) << 16 |
-            ((uint64_t) (uint8_t) buffer[6]) << 8 |
-            ((uint64_t) (uint8_t) buffer[7])
+            ((uintmax_t) (uint8_t) buffer[0]) << 56 |
+            ((uintmax_t) (uint8_t) buffer[1]) << 48 |
+            ((uintmax_t) (uint8_t) buffer[2]) << 40 |
+            ((uintmax_t) (uint8_t) buffer[3]) << 32 |
+            ((uintmax_t) (uint8_t) buffer[4]) << 24 |
+            ((uintmax_t) (uint8_t) buffer[5]) << 16 |
+            ((uintmax_t) (uint8_t) buffer[6]) << 8 |
+            ((uintmax_t) (uint8_t) buffer[7])
         };
         *result = jksn_malloc(sizeof (jksn_t));
         if(!*result)
@@ -2082,30 +2084,30 @@ static jksn_error_message_no jksn_parse_longdouble(jksn_t **result, const char *
         return JKSN_ELONGDOUBLE;
 }
 
-static jksn_error_message_no jksn_decode_int(uint64_t *result, const char *buffer, size_t bufsize, size_t size, size_t *bytes_parsed) {
+static jksn_error_message_no jksn_decode_int(uintmax_t *result, const char *buffer, size_t bufsize, size_t size, size_t *bytes_parsed) {
     switch(size) {
     case 1:
         if(bufsize < 1)
             return JKSN_ETRUNC;
-        *result = (uint64_t) (uint8_t) buffer[0];
+        *result = (uintmax_t) (uint8_t) buffer[0];
         if(bytes_parsed)
             (*bytes_parsed)++;
         break;
     case 2:
         if(bufsize < 2)
             return JKSN_ETRUNC;
-        *result = ((uint64_t) (uint8_t) buffer[0]) << 8 |
-                  ((uint64_t) (uint8_t) buffer[1]);
+        *result = ((uintmax_t) (uint8_t) buffer[0]) << 8 |
+                  ((uintmax_t) (uint8_t) buffer[1]);
         if(bytes_parsed)
             *bytes_parsed += 2;
         break;
     case 4:
         if(bufsize < 4)
             return JKSN_ETRUNC;
-        *result = ((uint64_t) (uint8_t) buffer[0]) << 24 |
-                  ((uint64_t) (uint8_t) buffer[1]) << 16 |
-                  ((uint64_t) (uint8_t) buffer[2]) << 8 |
-                  ((uint64_t) (uint8_t) buffer[3]);
+        *result = ((uintmax_t) (uint8_t) buffer[0]) << 24 |
+                  ((uintmax_t) (uint8_t) buffer[1]) << 16 |
+                  ((uintmax_t) (uint8_t) buffer[2]) << 8 |
+                  ((uintmax_t) (uint8_t) buffer[3]);
         if(bytes_parsed)
             *bytes_parsed += 4;
         break;
@@ -2116,7 +2118,7 @@ static jksn_error_message_no jksn_decode_int(uint64_t *result, const char *buffe
             do {
                 if(bufsize-- == 0)
                     return JKSN_ETRUNC;
-                if(*result & 0xfe00000000000000LL)
+                if(*result & ~((~(uintmax_t) 0) >> 7))
                     return JKSN_EVARINT;
                 thisbyte = (buffer++)[0];
                 *result = (*result << 7) | (thisbyte & 0x7f);

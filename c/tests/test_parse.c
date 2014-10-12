@@ -17,7 +17,7 @@ int main(void) {
         return retval;
     }
     assert(bufin.size == bytes_parsed);
-    retval = jksn_dump(&bufout, result, 0, NULL);
+    retval = jksn_dump(&bufout, result, 1, NULL);
     result = jksn_free(result);
     if(retval != 0) {
         fprintf(stderr, "Dump error %d: %s\n", retval, jksn_errcode(retval));

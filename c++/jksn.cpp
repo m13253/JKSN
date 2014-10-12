@@ -18,6 +18,7 @@
 */
 
 #include "jksn.hpp"
+#include <cassert>
 #include <cmath>
 #include <sstream>
 
@@ -104,3 +105,109 @@ std::string JKSNValue::toString() const {
     }
 }
 
+bool JKSNValue::operator<(const JKSNValue &that) const {
+    jksn_data_type this_type = this->getType();
+    jksn_data_type that_type = that.getType();
+    if(this_type == that_type || (this->isNumber() && that.isNumber()))
+        switch(this_type) {
+        case JKSN_BOOL:
+            return this->toBool() < that.toBool();
+        case JKSN_INT:
+            switch(that_type) {
+            case JKSN_INT:
+                return this->toInt() < that.toInt();
+            case JKSN_FLOAT:
+                return this->toFloat() < that.toFloat();
+            case JKSN_DOUBLE:
+                return this->toDouble() < that.toDouble();
+            case JKSN_LONG_DOUBLE:
+                return this->toLongDouble() < that.toLongDouble();
+            default:
+                assert(that.isNumber());
+                throw std::logic_error("unknown error occured during value comparision");
+            }
+        case JKSN_FLOAT:
+            switch(that_type) {
+            case JKSN_INT:
+            case JKSN_FLOAT:
+                return this->toFloat() < that.toFloat();
+            case JKSN_DOUBLE:
+                return this->toDouble() < that.toDouble();
+            case JKSN_LONG_DOUBLE:
+                return this->toLongDouble() < that.toLongDouble();
+            default:
+                assert(that.isNumber());
+                throw std::logic_error("unknown error occured during value comparision");
+            }
+        case JKSN_DOUBLE:
+            switch(that_type) {
+            case JKSN_INT:
+            case JKSN_FLOAT:
+            case JKSN_DOUBLE:
+                return this->toDouble() < that.toDouble();
+            case JKSN_LONG_DOUBLE:
+                return this->toLongDouble() < that.toLongDouble();
+            default:
+                assert(that.isNumber());
+                throw std::logic_error("unknown error occured during value comparision");
+            }
+        case JKSN_LONG_DOUBLE:
+            switch(that_type) {
+            case JKSN_INT:
+            case JKSN_FLOAT:
+            case JKSN_DOUBLE:
+            case JKSN_LONG_DOUBLE:
+                return this->toLongDouble() < that.toLongDouble();
+            default:
+                assert(that.isNumber());
+                throw std::logic_error("unknown error occured during value comparision");
+            }
+        case JKSN_STRING:
+        case JKSN_BLOB:
+            return this->toString() < that.toString();
+        case JKSN_ARRAY:
+            {
+                const std::vector<JKSNValue> &this_vector = this->toVector();
+                const std::vector<JKSNValue> &that_vector = that.toVector();
+                auto this_iter = this_vector.cbegin();
+                auto that_iter = that_vector.cbegin();
+                while(this_iter != this_vector.cend()) {
+                    if(that_iter == that_vector.cend())
+                        return false;
+                    else if(*this_iter < *that_iter)
+                        return true;
+                    else if(*this_iter != *that_iter) /* > */
+                        return false;
+                    ++this_iter;
+                    ++that_iter;
+                }
+                return that_iter != that_vector.cend();
+            }
+        case JKSN_OBJECT:
+            {
+                const std::map<JKSNValue, JKSNValue> &this_map = this->toMap();
+                const std::map<JKSNValue, JKSNValue> &that_map = this->toMap();
+                auto this_iter = this_map.cbegin();
+                auto that_iter = that_map.cbegin();
+                while(this_iter != this_map.cend()) {
+                    if(that_iter == that_map.cend())
+                        return false;
+                    else if((*this_iter).first < (*that_iter).first)
+                        return true;
+                    else if((*this_iter).first != (*that_iter).first) /* > */
+                        return false;
+                    else if((*this_iter).second < (*that_iter).second)
+                        return true;
+                    else if((*this_iter).second != (*that_iter).second)
+                        return false;
+                    ++this_iter;
+                    ++that_iter;
+                }
+                return that_iter != that_map.cend();
+            }
+        default:
+            return false;
+        }
+    else
+        return this_type < that_type;
+}

@@ -199,6 +199,7 @@ public:
     double toDouble() const          { return this->toNumber<double>(); }
     long double toLongDouble() const { return this->toNumber<long double>(); }
     std::string toString() const;
+    std::string toBlob() const { return this->toString(); };
     const std::vector<JKSNValue> &toVector() const {
         if(this->isArray()) return *this->data_array; else throw JKSNTypeError();
     }
@@ -252,8 +253,9 @@ public:
     const JKSNValue &operator[](size_t index) const { return this->at(index); }
     JKSNValue &operator[](size_t index)             { return this->at(index); }
 
-    JKSNValue &operator =(const JKSNValue &that) {
-        if(this != &that)
+    JKSNValue &operator=(const JKSNValue &that) {
+        if(this != &that) {
+            this->~JKSNValue();
             switch((this->data_type = that.getType())) {
             case JKSN_BOOL:
                 this->data_bool = that.toBool();
@@ -283,11 +285,20 @@ public:
             default:
                 break;
             }
+        }
         return *this;
     }
-    JKSNValue &operator =(JKSNValue &&that) = default;
+    JKSNValue &operator=(JKSNValue &&that) {
+        if(this != &that)
+            this->operator=(&that);
+        return *this;
+    }
     bool operator<(const JKSNValue &that) const;
+    bool operator>(const JKSNValue &that) const { return that < *this; }
+    bool operator<=(const JKSNValue &that) const { return !(that < *this); }
+    bool operator>=(const JKSNValue &that) const { return !(*this < that); }
     bool operator==(const JKSNValue &that) const;
+    bool operator!=(const JKSNValue &that) const { return !(*this == that); }
 
 private:
     jksn_data_type data_type = JKSN_UNDEFINED;

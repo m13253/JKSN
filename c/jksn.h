@@ -78,11 +78,7 @@ typedef struct jksn_t {
     };
 } jksn_t;
 
-#ifdef _JKSN_PRIVATE
 typedef struct jksn_cache jksn_cache;
-#else
-typedef void jksn_cache;
-#endif
 
 #ifdef __cplusplus
 extern "C" {

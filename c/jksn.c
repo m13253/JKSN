@@ -21,7 +21,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-#define _JKSN_PRIVATE
 #include "jksn.h"
 
 typedef struct jksn_proxy {

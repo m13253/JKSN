@@ -237,12 +237,28 @@ public:
     explicit operator std::map<JKSNValue, JKSNValue>() const         { return this->toMap(); }
     explicit operator Unspecified() const    { return this->toUnspecified(); }
 
-    const JKSNValue &at(size_t index) const {
+    JKSNValue &at(const JKSNValue &index) {
         switch(this->getType()) {
         case JKSN_ARRAY:
-            return this->toVector().at(index);
+            if(index.isInt())
+                return this->toVector().at(index.toInt());
+            else
+                throw JKSNTypeError();
         case JKSN_OBJECT:
-            return this->toMap().at(JKSNValue(index));
+            return this->toMap().at(index);
+        default:
+            throw JKSNTypeError();
+        }
+    }
+    const JKSNValue &at(const JKSNValue &index) const {
+        switch(this->getType()) {
+        case JKSN_ARRAY:
+            if(index.isInt())
+                return this->toVector().at(index.toInt());
+            else
+                throw JKSNTypeError();
+        case JKSN_OBJECT:
+            return this->toMap().at(index);
         default:
             throw JKSNTypeError();
         }
@@ -257,9 +273,21 @@ public:
             throw JKSNTypeError();
         }
     }
+    const JKSNValue &at(size_t index) const {
+        switch(this->getType()) {
+        case JKSN_ARRAY:
+            return this->toVector().at(index);
+        case JKSN_OBJECT:
+            return this->toMap().at(JKSNValue(index));
+        default:
+            throw JKSNTypeError();
+        }
+    }
 
-    const JKSNValue &operator[](size_t index) const { return this->at(index); }
-    JKSNValue &operator[](size_t index)             { return this->at(index); }
+    JKSNValue &operator[](const JKSNValue &index)             { return this->at(index); }
+    const JKSNValue &operator[](const JKSNValue &index) const { return this->at(index); }
+    JKSNValue &operator[](size_t index)                       { return this->at(index); }
+    const JKSNValue &operator[](size_t index) const           { return this->at(index); }
 
     JKSNValue &operator=(const JKSNValue &that) {
         if(this != &that) {

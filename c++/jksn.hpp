@@ -262,8 +262,24 @@ public:
     JKSNValue &operator[](size_t index)             { return this->at(index); }
 
     JKSNValue &operator=(const JKSNValue &that) {
-        if(this != &that)
-            switch((this->data_type = that.getType())) {
+        if(this != &that) {
+            jksn_data_type old_type = this->getType();
+            this->data_type = JKSN_UNDEFINED;
+            switch(old_type) {
+            case JKSN_STRING:
+            case JKSN_BLOB:
+                delete this->data_string;
+                break;
+            case JKSN_ARRAY:
+                delete this->data_array;
+                break;
+            case JKSN_OBJECT:
+                delete this->data_object;
+                break;
+            default:
+                break;
+            }
+            switch(that.getType()) {
             case JKSN_BOOL:
                 this->data_bool = that.toBool();
                 break;
@@ -281,20 +297,19 @@ public:
                 break;
             case JKSN_STRING:
             case JKSN_BLOB:
-                delete this->data_string;
                 this->data_string = new std::string(that.toString());
                 break;
             case JKSN_ARRAY:
-                delete this->data_array;
                 this->data_array = new std::vector<JKSNValue>(that.toVector());
                 break;
             case JKSN_OBJECT:
-                delete this->data_object;
                 this->data_object = new std::map<JKSNValue, JKSNValue>(that.toMap());
                 break;
             default:
                 break;
             }
+            this->data_type = that.getType();
+        }
         return *this;
     }
     JKSNValue &operator=(JKSNValue &&that) {

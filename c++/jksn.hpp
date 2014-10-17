@@ -291,22 +291,11 @@ public:
 
     JKSNValue &operator=(const JKSNValue &that) {
         if(this != &that) {
-            jksn_data_type old_type = this->getType();
-            this->data_type = JKSN_UNDEFINED;
-            switch(old_type) {
-            case JKSN_STRING:
-            case JKSN_BLOB:
-                delete this->data_string;
-                break;
-            case JKSN_ARRAY:
-                delete this->data_array;
-                break;
-            case JKSN_OBJECT:
-                delete this->data_object;
-                break;
-            default:
-                break;
-            }
+            union {
+                std::string *new_string;
+                std::vector<JKSNValue> *new_array;
+                std::map<JKSNValue, JKSNValue> *new_object;
+            } new_data;
             switch(that.getType()) {
             case JKSN_BOOL:
                 this->data_bool = that.toBool();
@@ -325,18 +314,32 @@ public:
                 break;
             case JKSN_STRING:
             case JKSN_BLOB:
-                this->data_string = new std::string(that.toString());
+                new_data.new_string = new std::string(that.toString());
                 break;
             case JKSN_ARRAY:
-                this->data_array = new std::vector<JKSNValue>(that.toVector());
+                new_data.new_array = new std::vector<JKSNValue>(that.toVector());
                 break;
             case JKSN_OBJECT:
-                this->data_object = new std::map<JKSNValue, JKSNValue>(that.toMap());
+                new_data.new_object = new std::map<JKSNValue, JKSNValue>(that.toMap());
                 break;
             default:
                 break;
             }
-            this->data_type = that.getType();
+            this->~JKSNValue();
+            switch((this->data_type = that.getType())) {
+            case JKSN_STRING:
+            case JKSN_BLOB:
+                this->data_string = new_data.new_string;
+                break;
+            case JKSN_ARRAY:
+                this->data_array = new_data.new_array;
+                break;
+            case JKSN_OBJECT:
+                this->data_object = new_data.new_object;
+                break;
+            default:
+                break;
+            }
         }
         return *this;
     }

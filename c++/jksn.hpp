@@ -130,9 +130,8 @@ public:
                                                                                { return JKSNValue(data); }
     static JKSNValue fromUnspecified(Unspecified &data)                        { return JKSNValue(data); }
     static JKSNValue fromUnspecified() {
-        JKSNValue res = JKSNValue();
-        res.data_type = JKSN_UNSPECIFIED;
-        return res;
+        static Unspecified data;
+        return JKSNValue(data);
     }
     ~JKSNValue() {
         switch(this->getType()) {

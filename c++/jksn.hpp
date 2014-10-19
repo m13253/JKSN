@@ -96,11 +96,35 @@ public:
     JKSNValue(std::initializer_list<JKSNValue> data) :         data_type(JKSN_ARRAY), data_array(new std::vector<JKSNValue>(data)) {}
     JKSNValue(const std::map<JKSNValue, JKSNValue> &data) :    data_type(JKSN_OBJECT), data_object(new std::map<JKSNValue, JKSNValue>(data)) {}
     JKSNValue(std::map<JKSNValue, JKSNValue> &&data) :         data_type(JKSN_OBJECT), data_object(new std::map<JKSNValue, JKSNValue>(std::move(data))) {}
-    JKSNValue(std::initializer_list<std::pair<const JKSNValue, JKSNValue> > data) :
-                                                               data_type(JKSN_OBJECT), data_object(new std::map<JKSNValue, JKSNValue>(data)) {}
     JKSNValue(const Unspecified &) : data_type(JKSN_UNSPECIFIED) {}
     JKSNValue(const JKSNValue &that) { this->operator=(that); }
     JKSNValue(const JKSNValue &&that) { this->operator=(that); }
+    static JKSNValue fromUndefined()                                           { return JKSNValue(); }
+    static JKSNValue fromNull(std::nullptr_t data = nullptr) { if(!data) return JKSNValue(nullptr); else throw JKSNTypeError(); }
+    static JKSNValue fromBool(bool data)                                       { return JKSNValue(data); }
+    static JKSNValue fromInt(intmax_t data)                                    { return JKSNValue(data); }
+    static JKSNValue fromUint(uintmax_t data)                                  { return JKSNValue(data); }
+    static JKSNValue fromFloat(float data)                                     { return JKSNValue(data); }
+    static JKSNValue fromDouble(double data)                                   { return JKSNValue(data); }
+    static JKSNValue fromLongDouble(long double data)                          { return JKSNValue(data); }
+    static JKSNValue fromNumber(float data)                                    { return JKSNValue(data); }
+    static JKSNValue fromNumber(double data)                                   { return JKSNValue(data); }
+    static JKSNValue fromNumber(long double data)                              { return JKSNValue(data); }
+    static JKSNValue fromString(const std::string &data, bool is_blob = false) { return JKSNValue(data, is_blob); }
+    static JKSNValue fromString(std::string &&data, bool is_blob = false)      { return JKSNValue(std::move(data), is_blob); }
+    static JKSNValue fromString(const char *data, bool is_blob = false)        { return JKSNValue(data, is_blob); }
+    static JKSNValue fromBlob(const std::string &data)                         { return JKSNValue(data, true); }
+    static JKSNValue fromBlob(std::string &&data)                              { return JKSNValue(std::move(data), true); }
+    static JKSNValue fromBlob(const char *data)                                { return JKSNValue(data, true); }
+    static JKSNValue fromVector(const std::vector<JKSNValue> &data)            { return JKSNValue(data); }
+    static JKSNValue fromVector(std::vector<JKSNValue> &&data)                 { return JKSNValue(std::move(data)); }
+    static JKSNValue fromVector(std::initializer_list<JKSNValue> data)         { return JKSNValue(data); }
+    static JKSNValue fromMap(const std::map<JKSNValue, JKSNValue> &data)       { return JKSNValue(data); }
+    static JKSNValue fromMap(std::map<JKSNValue, JKSNValue> &&data)            { return JKSNValue(std::move(data)); }
+    static JKSNValue fromMap(std::initializer_list<std::pair<const JKSNValue, JKSNValue> > data)
+                                                                               { return JKSNValue(data); }
+    static JKSNValue fromUnspecified(Unspecified &data)                        { return JKSNValue(data); }
+    static JKSNValue fromUnspecified() { JKSNValue res = JKSNValue(); res.data_type = JKSN_UNSPECIFIED; return res; }
     ~JKSNValue() {
         switch(this->getType()) {
         case JKSN_STRING:
@@ -283,11 +307,39 @@ public:
             throw JKSNTypeError();
         }
     }
+    JKSNValue &at(const std::string &index) {
+        if(this->isObject())
+            return this->toMap().at(JKSNValue(index));
+        else
+            throw JKSNTypeError();
+    }
+    const JKSNValue &at(const std::string &index) const {
+        if(this->isObject())
+            return this->toMap().at(JKSNValue(index));
+        else
+            throw JKSNTypeError();
+    }
+    JKSNValue &at(const char *index) {
+        if(this->isObject())
+            return this->toMap().at(JKSNValue(index));
+        else
+            throw JKSNTypeError();
+    }
+    const JKSNValue &at(const char *index) const {
+        if(this->isObject())
+            return this->toMap().at(JKSNValue(index));
+        else
+            throw JKSNTypeError();
+    }
 
-    JKSNValue &operator[](const JKSNValue &index)             { return this->at(index); }
-    const JKSNValue &operator[](const JKSNValue &index) const { return this->at(index); }
-    JKSNValue &operator[](size_t index)                       { return this->at(index); }
-    const JKSNValue &operator[](size_t index) const           { return this->at(index); }
+    JKSNValue &operator[](const JKSNValue &index)               { return this->at(index); }
+    const JKSNValue &operator[](const JKSNValue &index) const   { return this->at(index); }
+    JKSNValue &operator[](size_t index)                         { return this->at(index); }
+    const JKSNValue &operator[](size_t index) const             { return this->at(index); }
+    JKSNValue &operator[](const std::string &index)             { return this->at(index); }
+    const JKSNValue &operator[](const std::string &index) const { return this->at(index); }
+    JKSNValue &operator[](const char *index)                    { return this->at(index); }
+    const JKSNValue &operator[](const char *index) const        { return this->at(index); }
 
     JKSNValue &operator=(const JKSNValue &that) {
         if(this != &that) {
@@ -358,6 +410,7 @@ public:
 private:
     jksn_data_type data_type = JKSN_UNDEFINED;
     union {
+        const void *data_padding = nullptr;
         bool data_bool;
         intmax_t data_int;
         float data_float;

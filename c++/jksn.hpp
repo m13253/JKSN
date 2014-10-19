@@ -17,8 +17,9 @@
   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 */
 
-#ifndef _JKSN_HPP
-#define _JKSN_HPP
+#pragma once
+#ifndef _JKSN_HPP_INCLUDED
+#define _JKSN_HPP_INCLUDED
 
 #include <cstddef>
 #include <cstdint>

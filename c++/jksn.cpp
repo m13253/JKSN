@@ -24,6 +24,60 @@
 
 using namespace JKSN;
 
+bool JKSNValue::toBool() const {
+    switch(this->getType()) {
+    case JKSN_BOOL:
+        return this->data_bool;
+    case JKSN_UNDEFINED:
+    case JKSN_NULL:
+        return false;
+    case JKSN_INT:
+        return this->data_int != 0;
+    case JKSN_FLOAT:
+        return this->data_float != 0.0f;
+    case JKSN_DOUBLE:
+        return this->data_double != 0.0;
+    case JKSN_LONG_DOUBLE:
+        return this->data_long_double != 0.0L;
+    case JKSN_STRING:
+    case JKSN_BLOB:
+        return this->data_string->size() != 0;
+    case JKSN_ARRAY:
+        return this->data_array->size() != 0;
+    case JKSN_OBJECT:
+        return this->data_object->size() != 0;
+    default:
+        throw JKSNTypeError();
+    }
+};
+
+intmax_t JKSNValue::toInt() const {
+    switch(this->getType()) {
+    case JKSN_INT:
+        return this->data_int;
+    case JKSN_BOOL:
+        return this->data_bool;
+    case JKSN_FLOAT:
+        return this->data_float;
+    case JKSN_DOUBLE:
+        return this->data_double;
+    case JKSN_LONG_DOUBLE:
+        return this->data_long_double;
+    case JKSN_NULL:
+        return 0;
+    case JKSN_STRING:
+        try {
+            return std::stoll(*this->data_string);
+        } catch(std::invalid_argument) {
+            throw JKSNTypeError();
+        } catch(std::out_of_range) {
+            throw JKSNTypeError();
+        }
+    default:
+        throw JKSNTypeError();
+    }
+}
+
 template<typename T> T JKSNValue::toNumber() const {
     switch(this->getType()) {
     case JKSN_FLOAT:
@@ -300,4 +354,59 @@ bool JKSNValue::operator<(const JKSNValue &that) const {
         }
     else
         return this_type < that_type;
+}
+
+JKSNValue &JKSNValue::operator=(const JKSNValue &that) {
+    if(this != &that) {
+        union {
+            std::string *new_string = nullptr;
+            std::vector<JKSNValue> *new_array;
+            std::map<JKSNValue, JKSNValue> *new_object;
+        } new_data;
+        switch(that.getType()) {
+        case JKSN_BOOL:
+            this->data_bool = that.toBool();
+            break;
+        case JKSN_INT:
+            this->data_int = that.toInt();
+            break;
+        case JKSN_FLOAT:
+            this->data_float = that.toFloat();
+            break;
+        case JKSN_DOUBLE:
+            this->data_double = that.toDouble();
+            break;
+        case JKSN_LONG_DOUBLE:
+            this->data_long_double = that.toLongDouble();
+            break;
+        case JKSN_STRING:
+        case JKSN_BLOB:
+            new_data.new_string = new std::string(that.toString());
+            break;
+        case JKSN_ARRAY:
+            new_data.new_array = new std::vector<JKSNValue>(that.toVector());
+            break;
+        case JKSN_OBJECT:
+            new_data.new_object = new std::map<JKSNValue, JKSNValue>(that.toMap());
+            break;
+        default:
+            break;
+        }
+        this->~JKSNValue();
+        switch((this->data_type = that.getType())) {
+        case JKSN_STRING:
+        case JKSN_BLOB:
+            this->data_string = new_data.new_string;
+            break;
+        case JKSN_ARRAY:
+            this->data_array = new_data.new_array;
+            break;
+        case JKSN_OBJECT:
+            this->data_object = new_data.new_object;
+            break;
+        default:
+            break;
+        }
+    }
+    return *this;
 }

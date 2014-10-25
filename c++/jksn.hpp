@@ -394,7 +394,7 @@ public:
     std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool header = true, bool check_circular = true);
     std::string dumps(const JKSNValue &obj, bool header = true, bool check_circular = true);
 private:
-    class JKSNEncoderPrivate *p;
+    struct JKSNCache *p;
 };
 
 class JKSNDecoder {
@@ -408,7 +408,7 @@ public:
     JKSNValue parse(std::istream &s, bool header = true);
     JKSNValue parse(const std::string &s, bool header = true);
 private:
-    class JKSNEncoderPrivate *p;
+    struct JKSNCache *p;
 };
 
 inline std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool header = true, bool check_circular = true) {

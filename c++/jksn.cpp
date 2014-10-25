@@ -454,6 +454,14 @@ JKSNValue &JKSNValue::operator=(JKSNValue &&that) {
     return *this;
 }
 
+struct JKSNCache {
+    bool haslastint = false;
+    intmax_t lastint;
+    std::array<std::string *, 256> texthash{nullptr};
+    std::array<std::string *, 256> blobhash{nullptr};
+    std::unordered_set<const JKSNValue *> circular;
+};
+
 std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header, bool check_circular) {
     (void) obj; (void) header; (void) check_circular;
     return result;

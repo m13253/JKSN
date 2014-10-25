@@ -463,14 +463,14 @@ struct JKSNCache {
     std::array<std::string *, 256> blobhash = {{nullptr}};
 };
 
-std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header, bool check_circular) {
-    (void) obj; (void) header; (void) check_circular;
+std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj) {
+    (void) obj; (void) header;
     return result;
 }
 
-std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header, bool check_circular) {
+std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header) {
     std::ostringstream result;
-    this->dump(result, obj, header, check_circular);
+    this->dump(result, obj, header);
     return result.str();
 }
 

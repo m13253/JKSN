@@ -385,14 +385,30 @@ private:
 
 class JKSNEncoder {
 public:
+    JKSNEncoder();
+    JKSNEncoder(const JKSNEncoder &that);
+    JKSNEncoder(JKSNEncoder &&that);
+    JKSNEncoder &operator=(const JKSNEncoder &that);
+    JKSNEncoder &operator=(JKSNEncoder &&that);
+    ~JKSNEncoder();
     std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool header = true, bool check_circular = true);
     std::string dumps(const JKSNValue &obj, bool header = true, bool check_circular = true);
+private:
+    class JKSNEncoderPrivate *p;
 };
 
 class JKSNDecoder {
 public:
+    JKSNDecoder();
+    JKSNDecoder(const JKSNDecoder &that);
+    JKSNDecoder(JKSNDecoder &&that);
+    JKSNDecoder &operator=(const JKSNDecoder &that);
+    JKSNDecoder &operator=(JKSNDecoder &&that);
+    ~JKSNDecoder();
     JKSNValue parse(std::istream &s, bool header = true);
     JKSNValue parse(const std::string &s, bool header = true);
+private:
+    class JKSNEncoderPrivate *p;
 };
 
 inline std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool header = true, bool check_circular = true) {

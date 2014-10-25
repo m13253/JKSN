@@ -23,7 +23,9 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <istream>
 #include <map>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -99,7 +101,7 @@ public:
     JKSNValue(std::map<JKSNValue, JKSNValue> &&data) :         data_type(JKSN_OBJECT), data_object(new std::map<JKSNValue, JKSNValue>(std::move(data))) {}
     JKSNValue(const Unspecified &) : data_type(JKSN_UNSPECIFIED) {}
     JKSNValue(const JKSNValue &that)  { this->operator=(that); }
-    JKSNValue(const JKSNValue &&that) { this->operator=(that); }
+    JKSNValue(const JKSNValue &&that) { this->operator=(std::move(that)); }
     static JKSNValue fromUndefined()                                           { return JKSNValue(); }
     static JKSNValue fromNull(std::nullptr_t data = nullptr) {
         if(!data)
@@ -313,15 +315,47 @@ public:
         else
             throw JKSNTypeError();
     }
-
-    JKSNValue &operator[](const JKSNValue &index)               { return this->at(index); }
-    const JKSNValue &operator[](const JKSNValue &index) const   { return this->at(index); }
-    JKSNValue &operator[](size_t index)                         { return this->at(index); }
-    const JKSNValue &operator[](size_t index) const             { return this->at(index); }
-    JKSNValue &operator[](const std::string &index)             { return this->at(index); }
-    const JKSNValue &operator[](const std::string &index) const { return this->at(index); }
-    JKSNValue &operator[](const char *index)                    { return this->at(index); }
-    const JKSNValue &operator[](const char *index) const        { return this->at(index); }
+    JKSNValue &operator[](const JKSNValue &index) {
+        switch(this->getType()) {
+        case JKSN_ARRAY:
+            if(index.isInt())
+                return this->toVector()[index.toInt()];
+            else
+                throw JKSNTypeError();
+        case JKSN_OBJECT:
+            return this->toMap()[index];
+        default:
+            throw JKSNTypeError();
+        }
+    }
+    JKSNValue &operator[](size_t index) {
+        switch(this->getType()) {
+        case JKSN_ARRAY:
+            return this->toVector()[index];
+        case JKSN_OBJECT:
+            return this->toMap()[JKSNValue(index)];
+        default:
+            throw JKSNTypeError();
+        }
+    }
+    JKSNValue &operator[](const std::string &index) {
+        if(this->isObject())
+            return this->toMap().at(JKSNValue(index));
+        else
+            throw JKSNTypeError();
+    }
+    JKSNValue &operator[](std::string &&index) {
+        if(this->isObject())
+            return this->toMap().at(JKSNValue(std::move(index)));
+        else
+            throw JKSNTypeError();
+    }
+    JKSNValue &operator[](const char *index) {
+        if(this->isObject())
+            return this->toMap().at(JKSNValue(index));
+        else
+            throw JKSNTypeError();
+    }
 
     JKSNValue &operator=(const JKSNValue &that);
     JKSNValue &operator=(JKSNValue &&that);
@@ -351,7 +385,7 @@ private:
 
 class JKSNEncoder {
 public:
-    void dump(std::ostream &result, const JKSNValue &obj, bool header = true, bool check_circular = true);
+    std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool header = true, bool check_circular = true);
     std::string dumps(const JKSNValue &obj, bool header = true, bool check_circular = true);
 };
 
@@ -361,8 +395,8 @@ public:
     JKSNValue parse(const std::string &s, bool header = true);
 };
 
-inline void dump(std::ostream &result, const JKSNValue &obj, bool header = true, bool check_circular = true) {
-    JKSNEncoder().dump(result, obj, header, check_circular);
+inline std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool header = true, bool check_circular = true) {
+    return JKSNEncoder().dump(result, obj, header, check_circular);
 }
 inline std::string dumps(const JKSNValue &obj, bool header = true, bool check_circular = true) {
     return JKSNEncoder().dumps(obj, header, check_circular);

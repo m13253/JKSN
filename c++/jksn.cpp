@@ -18,8 +18,15 @@
 */
 
 #include "jksn.hpp"
+#include <array>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <sstream>
+#include <string>
+#include <vector>
 
 using namespace JKSN;
 
@@ -445,4 +452,25 @@ JKSNValue &JKSNValue::operator=(JKSNValue &&that) {
         that.data_type = JKSN_UNDEFINED;
     }
     return *this;
+}
+
+std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header, bool check_circular) {
+    (void) obj; (void) header; (void) check_circular;
+    return result;
+}
+
+std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header, bool check_circular) {
+    std::ostringstream result;
+    this->dump(result, obj, header, check_circular);
+    return result.str();
+}
+
+JKSNValue JKSNDecoder::parse(std::istream &s, bool header) {
+    (void) s; (void) header;
+    return JKSNValue();
+}
+
+JKSNValue JKSNDecoder::parse(const std::string &s, bool header) {
+    std::istringstream stream(s);
+    return this->parse(stream, header);
 }

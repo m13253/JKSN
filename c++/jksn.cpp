@@ -463,7 +463,7 @@ struct JKSNCache {
     std::array<std::string *, 256> blobhash = {{nullptr}};
 };
 
-std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj) {
+std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header) {
     (void) obj; (void) header;
     return result;
 }

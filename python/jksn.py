@@ -137,8 +137,7 @@ class JKSNEncoder:
             buf = io.BytesIO(b'\0' * result_len)
             result.output(buf)
             assert buf.tell() == result_len
-        buf.seek(0)
-        return buf.read()
+        return buf.getvalue()
 
     def dump(self, obj, fp, header=True, check_circular=True):
         '''Dump an object into a file object'''

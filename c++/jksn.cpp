@@ -20,7 +20,6 @@
 #include "jksn.hpp"
 #include <cassert>
 #include <cmath>
-#include <sstream>
 
 using namespace JKSN;
 
@@ -141,16 +140,16 @@ std::string JKSNValue::toString() const {
         return *this->data_string;
     case JKSN_ARRAY:
         {
-            std::stringstream res;
+            std::string res;
             bool first = true;
             for(const JKSNValue &i : *this->data_array) {
                 if(!first) {
-                    res << ',';
+                    res.append(1, ',');
                     first = false;
                 }
-                res << i.toString();
+                res.append(i.toString());
             }
-            return res.str();
+            return res;
         }
     case JKSN_OBJECT:
         return "[object Object]";

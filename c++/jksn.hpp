@@ -352,6 +352,30 @@ private:
     template<typename T> T toNumber() const;
 };
 
+class JKSNEncoder {
+public:
+    void dump(std::ostream &result, const JKSNValue &obj, bool header = true, bool check_circular = true);
+    std::string dumps(const JKSNValue &obj, bool header = true, bool check_circular = true);
+};
+
+class JKSNDecoder {
+public:
+    JKSNValue parse(std::istream &s, bool header = true);
+    JKSNValue parse(const std::string &s, bool header = true);
+};
+
+inline void dump(std::ostream &result, const JKSNValue &obj, bool header = true, bool check_circular = true) {
+    JKSNEncoder().dump(result, obj, header, check_circular);
+}
+inline std::string dumps(const JKSNValue &obj, bool header = true, bool check_circular = true) {
+    return JKSNEncoder().dumps(obj, header, check_circular);
+}
+inline JKSNValue parse(std::istream &s, bool header = true) {
+    return JKSNDecoder().parse(s, header);
+}
+inline JKSNValue parse(const std::string &s, bool header = true) {
+    return JKSNDecoder().parse(s, header);
+}
 
 }
 

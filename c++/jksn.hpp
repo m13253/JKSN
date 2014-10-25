@@ -148,6 +148,7 @@ public:
         default:
             break;
         };
+        this->data_type = JKSN_UNDEFINED;
     }
 
     jksn_data_type getType() const { return this->data_type; }

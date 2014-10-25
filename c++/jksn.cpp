@@ -464,7 +464,9 @@ struct JKSNCache {
 };
 
 std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header) {
-    (void) obj; (void) header;
+    (void) obj;
+    if(header)
+        result.write("jk!", 3);
     return result;
 }
 

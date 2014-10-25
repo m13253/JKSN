@@ -409,3 +409,40 @@ JKSNValue &JKSNValue::operator=(const JKSNValue &that) {
     }
     return *this;
 }
+
+JKSNValue &JKSNValue::operator=(JKSNValue &&that) {
+    if(this != &that) {
+        this->~JKSNValue();
+        switch(that.getType()) {
+        case JKSN_BOOL:
+            this->data_bool = that.toBool();
+            break;
+        case JKSN_INT:
+            this->data_int = that.toInt();
+            break;
+        case JKSN_FLOAT:
+            this->data_float = that.toFloat();
+            break;
+        case JKSN_DOUBLE:
+            this->data_double = that.toDouble();
+            break;
+        case JKSN_LONG_DOUBLE:
+            this->data_long_double = that.toLongDouble();
+            break;
+        case JKSN_STRING:
+        case JKSN_BLOB:
+            this->data_string = that.data_string;
+            break;
+        case JKSN_ARRAY:
+            this->data_array = that.data_array;
+            break;
+        case JKSN_OBJECT:
+            this->data_object = that.data_object;
+            break;
+        default:
+            break;
+        }
+        that.data_type = JKSN_UNDEFINED;
+    }
+    return *this;
+}

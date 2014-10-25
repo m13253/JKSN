@@ -323,11 +323,7 @@ public:
     const JKSNValue &operator[](const char *index) const        { return this->at(index); }
 
     JKSNValue &operator=(const JKSNValue &that);
-    JKSNValue &operator=(JKSNValue &&that) {
-        if(this != &that)
-            this->operator=(that);
-        return *this;
-    }
+    JKSNValue &operator=(JKSNValue &&that);
     bool operator==(const JKSNValue &that) const;
     bool operator!=(const JKSNValue &that) const { return !(*this == that); }
     bool operator<(const JKSNValue &that) const;

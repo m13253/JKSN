@@ -36,7 +36,7 @@ function JKSNEncoder() {
             "data": data || "",
             "buf": buf || "",
             "children": [],
-            "output": function (buf, offset, recursive) {
+            "output": function output(buf, offset, recursive) {
                 buf[offset++] = this.control;
                 for(var i = 0; i < this.data.length; i++)
                     buf[offset++] = this.data.charCodeAt(i);
@@ -47,13 +47,13 @@ function JKSNEncoder() {
                         offset = this.children[i].output(buf, offset);
                 return offset;
             },
-            "toString": function (recursive) {
+            "toString": function toString(recursive) {
                 var result = [String.fromCharCode(this.control), this.data, this.buf];
                 if(recursive !== false)
                     result.push.apply(result, this.children);
                 return result.join("");
             },
-            "getSize": function (depth) {
+            "getSize": function getSize(depth) {
                 var result = 1 + this.data.length + this.buf.length;
                 if(depth === undefined)
                     depth = 0;
@@ -325,7 +325,7 @@ function JKSNEncoder() {
         }
     }
     return {
-        "stringifyToArrayBuffer": function (obj, header) {
+        "stringifyToArrayBuffer": function stringifyToArrayBuffer(obj, header) {
             var result = dumpToProxy(obj);
             var result_size = result.getSize();
             var buf = new ArrayBuffer(header !== false ? result_size + 3 : result_size);
@@ -341,7 +341,7 @@ function JKSNEncoder() {
                     throw "Assersion failed: result.output(bufview, 0) != result.getSize()"
             return buf;
         },
-        "stringifyToString": function (obj, header) {
+        "stringifyToString": function stringifyToString(obj, header) {
             return String.fromCharCode.apply(null, new Uint8Array(this.stringifyToArrayBuffer(obj, header)));
         }
     };
@@ -663,13 +663,13 @@ function JKSNDecoder() {
         return result;
     }
     return {
-        "parseFromArrayBuffer": function (buf) {
+        "parseFromArrayBuffer": function parseFromArrayBuffer(buf) {
             var headerbuf = new Uint8Array(buf, 0, 3);
             if(headerbuf[0] == 106 && headerbuf[1] == 107 && headerbuf[2] == 33)
                 offset = 3;
             return loadValue(new DataView(buf));
         },
-        "parseFromString": function (str) {
+        "parseFromString": function parseFromString(str) {
             var buf = new ArrayBuffer(str.length);
             var bufview = new Uint8Array(buf);
             for(var i = 0; i < str.length; i++)
@@ -691,16 +691,16 @@ function DJBHash(arr) {
 var JKSN = {
     "encoder": JKSNEncoder,
     "decoder": JKSNDecoder,
-    "parseFromArrayBuffer": function (buf) {
+    "parseFromArrayBuffer": function parseFromArrayBuffer(buf) {
         return new JKSN.decoder().parseFromArrayBuffer(buf);
     },
-    "parseFromString": function (buf) {
+    "parseFromString": function parseFromString(buf) {
         return new JKSN.decoder().parseFromString(buf);
     },
-    "stringifyToArrayBuffer": function (obj, header) {
+    "stringifyToArrayBuffer": function stringifyToArrayBuffer(obj, header) {
         return new JKSN.encoder().stringifyToArrayBuffer(obj, header);
     },
-    "stringifyToString": function (obj, header) {
+    "stringifyToString": function stringifyToString(obj, header) {
         return new JKSN.encoder().stringifyToString(obj, header);
     }
 }

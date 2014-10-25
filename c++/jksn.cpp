@@ -24,6 +24,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <memory>
+#include <unordered_set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -457,9 +459,8 @@ JKSNValue &JKSNValue::operator=(JKSNValue &&that) {
 struct JKSNCache {
     bool haslastint = false;
     intmax_t lastint;
-    std::array<std::string *, 256> texthash{nullptr};
-    std::array<std::string *, 256> blobhash{nullptr};
-    std::unordered_set<const JKSNValue *> circular;
+    std::array<std::string *, 256> texthash = {{nullptr}};
+    std::array<std::string *, 256> blobhash = {{nullptr}};
 };
 
 std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header, bool check_circular) {

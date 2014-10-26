@@ -97,7 +97,27 @@ public:
 };
 
 class JKSNEncoderPrivate {
+public:
+    JKSNProxy dumpToProxy(const JKSNValue &obj);
+private:
     JKSNCache cache;
+    static JKSNProxy dumpValue(const JKSNValue &obj);
+    static JKSNProxy dumpNone(const JKSNValue &obj);
+    static JKSNProxy dumpUnspecified(const JKSNValue &obj);
+    static JKSNProxy dumpBool(const JKSNValue &obj);
+    static JKSNProxy dumpInt(const JKSNValue &obj);
+    static std::string encodeInt(intmax_t number, size_t size);
+    static JKSNProxy dumpFloat(const JKSNValue &obj);
+    static JKSNProxy dumpDouble(const JKSNValue &obj);
+    static JKSNProxy dumpLongDouble(const JKSNValue &obj);
+    static JKSNProxy dumpString(const JKSNValue &obj);
+    static JKSNProxy dumpBlob(const JKSNValue &obj);
+    static JKSNProxy dumpArray(const JKSNValue &obj);
+    static JKSNProxy textSwapAvailability(const JKSNValue &obj);
+    static JKSNProxy encodeStraightArray(const JKSNValue &obj);
+    static JKSNProxy encodeSwappedList(const JKSNValue &obj);
+    static JKSNProxy dumpObject(const JKSNValue &obj);
+    JKSNProxy optimize(JKSNProxy &obj);
 };
 
 JKSNEncoder::JKSNEncoder() :
@@ -131,9 +151,10 @@ JKSNEncoder::~JKSNEncoder() {
 }
 
 std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header) {
-    (void) obj;
+    JKSNProxy proxy = this->p->dumpToProxy(obj);
     if(header)
         result.write("jk!", 3);
+    proxy.output(result);
     return result;
 }
 
@@ -144,6 +165,9 @@ std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header) {
 }
 
 class JKSNDecoderPrivate {
+public:
+    JKSNValue parseValue(std::istream &fp);
+private:
     JKSNCache cache;
 };
 
@@ -178,13 +202,13 @@ JKSNDecoder::~JKSNDecoder() {
     delete p;
 }
 
-JKSNValue JKSNDecoder::parse(std::istream &s, bool header) {
-    (void) s; (void) header;
+JKSNValue JKSNDecoder::parse(std::istream &fp, bool header) {
+    (void) fp; (void) header;
     return JKSNValue();
 }
 
-JKSNValue JKSNDecoder::parse(const std::string &s, bool header) {
-    std::istringstream stream(s);
+JKSNValue JKSNDecoder::parse(const std::string &str, bool header) {
+    std::istringstream stream(str);
     return this->parse(stream, header);
 }
 

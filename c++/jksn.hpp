@@ -580,8 +580,8 @@ public:
     JKSNDecoder &operator=(const JKSNDecoder &that);
     JKSNDecoder &operator=(JKSNDecoder &&that);
     ~JKSNDecoder();
-    JKSNValue parse(std::istream &s, bool header = true);
-    JKSNValue parse(const std::string &s, bool header = true);
+    JKSNValue parse(std::istream &fp, bool header = true);
+    JKSNValue parse(const std::string &str, bool header = true);
 private:
     class JKSNDecoderPrivate *p = nullptr;
 };
@@ -592,11 +592,11 @@ inline std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool heade
 inline std::string dumps(const JKSNValue &obj, bool header = true) {
     return JKSNEncoder().dumps(obj, header);
 }
-inline JKSNValue parse(std::istream &s, bool header = true) {
-    return JKSNDecoder().parse(s, header);
+inline JKSNValue parse(std::istream &fp, bool header = true) {
+    return JKSNDecoder().parse(fp, header);
 }
-inline JKSNValue parse(const std::string &s, bool header = true) {
-    return JKSNDecoder().parse(s, header);
+inline JKSNValue parse(const std::string &str, bool header = true) {
+    return JKSNDecoder().parse(str, header);
 }
 
 }

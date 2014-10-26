@@ -171,7 +171,7 @@ module JKSN
           end
         end
       else
-        obj.children.each { |child| optimize(child) }
+        proxyobj.children.each { |child| optimize(child) }
       end
 
       return proxyobj

@@ -101,7 +101,7 @@ public:
     JKSNValue(std::map<JKSNValue, JKSNValue> &&data) :         data_type(JKSN_OBJECT), data_object(new std::map<JKSNValue, JKSNValue>(std::move(data))) {}
     JKSNValue(const Unspecified &) : data_type(JKSN_UNSPECIFIED) {}
     JKSNValue(const JKSNValue &that)  { this->operator=(that); }
-    JKSNValue(const JKSNValue &&that) { this->operator=(std::move(that)); }
+    JKSNValue(JKSNValue &&that)       { this->operator=(std::move(that)); }
     static JKSNValue fromUndefined()                                           { return JKSNValue(); }
     static JKSNValue fromNull(std::nullptr_t data = nullptr) {
         if(!data)
@@ -383,6 +383,8 @@ private:
     template<typename T> T toNumber() const;
 };
 
+class JKSNCache;
+
 class JKSNEncoder {
 public:
     JKSNEncoder();
@@ -394,7 +396,7 @@ public:
     std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool header = true);
     std::string dumps(const JKSNValue &obj, bool header = true);
 private:
-    struct JKSNCache *p;
+    JKSNCache *cache = nullptr;
 };
 
 class JKSNDecoder {
@@ -408,7 +410,7 @@ public:
     JKSNValue parse(std::istream &s, bool header = true);
     JKSNValue parse(const std::string &s, bool header = true);
 private:
-    struct JKSNCache *p;
+    JKSNCache *cache = nullptr;
 };
 
 inline std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool header = true) {

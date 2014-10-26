@@ -25,12 +25,90 @@
 #include <cstdint>
 #include <map>
 #include <memory>
-#include <unordered_set>
 #include <sstream>
 #include <string>
 #include <vector>
 
 using namespace JKSN;
+
+class JKSNUnicodeError : public JKSNError {
+    using JKSNError::JKSNError;
+};
+
+class JKSN::JKSNCache {
+public:
+    bool haslastint = false;
+    intmax_t lastint;
+    std::array<std::string *, 256> texthash = {{nullptr}};
+    std::array<std::string *, 256> blobhash = {{nullptr}};
+};
+
+JKSNEncoder::JKSNEncoder() : cache(new JKSNCache) {}
+
+JKSNEncoder::JKSNEncoder(const JKSNEncoder &that) : cache(new JKSNCache(*that.cache)) {}
+
+JKSNEncoder::JKSNEncoder(JKSNEncoder &&that) : cache(that.cache) {
+    that.cache = nullptr;
+}
+
+JKSNEncoder &JKSNEncoder::operator=(const JKSNEncoder &that) {
+    if(this != &that)
+        this->cache = new JKSNCache(*that.cache);
+    return *this;
+}
+
+JKSNEncoder &JKSNEncoder::operator=(JKSNEncoder &&that) {
+    if(this != &that) {
+        this->cache = that.cache;
+        that.cache = nullptr;
+    }
+    return *this;
+}
+
+std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header) {
+    (void) obj;
+    if(header)
+        result.write("jk!", 3);
+    return result;
+}
+
+std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header) {
+    std::ostringstream result;
+    this->dump(result, obj, header);
+    return result.str();
+}
+
+JKSNDecoder::JKSNDecoder() : cache(new JKSNCache) {}
+
+JKSNDecoder::JKSNDecoder(const JKSNDecoder &that) : cache(new JKSNCache(*that.cache)) {}
+
+JKSNDecoder::JKSNDecoder(JKSNDecoder &&that) : cache(that.cache) {
+    that.cache = nullptr;
+}
+
+JKSNDecoder &JKSNDecoder::operator=(const JKSNDecoder &that) {
+    if(this != &that)
+        this->cache = new JKSNCache(*that.cache);
+    return *this;
+}
+
+JKSNDecoder &JKSNDecoder::operator=(JKSNDecoder &&that) {
+    if(this != &that) {
+        this->cache = that.cache;
+        that.cache = nullptr;
+    }
+    return *this;
+}
+
+JKSNValue JKSNDecoder::parse(std::istream &s, bool header) {
+    (void) s; (void) header;
+    return JKSNValue();
+}
+
+JKSNValue JKSNDecoder::parse(const std::string &s, bool header) {
+    std::istringstream stream(s);
+    return this->parse(stream, header);
+}
 
 bool JKSNValue::toBool() const {
     switch(this->getType()) {
@@ -454,34 +532,4 @@ JKSNValue &JKSNValue::operator=(JKSNValue &&that) {
         that.data_type = JKSN_UNDEFINED;
     }
     return *this;
-}
-
-struct JKSNCache {
-    bool haslastint = false;
-    intmax_t lastint;
-    std::array<std::string *, 256> texthash = {{nullptr}};
-    std::array<std::string *, 256> blobhash = {{nullptr}};
-};
-
-std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header) {
-    (void) obj;
-    if(header)
-        result.write("jk!", 3);
-    return result;
-}
-
-std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header) {
-    std::ostringstream result;
-    this->dump(result, obj, header);
-    return result.str();
-}
-
-JKSNValue JKSNDecoder::parse(std::istream &s, bool header) {
-    (void) s; (void) header;
-    return JKSNValue();
-}
-
-JKSNValue JKSNDecoder::parse(const std::string &s, bool header) {
-    std::istringstream stream(s);
-    return this->parse(stream, header);
 }

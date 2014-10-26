@@ -29,7 +29,7 @@
 #include <string>
 #include <vector>
 
-using namespace JKSN;
+namespace JKSN {
 
 class JKSNUnicodeError : public JKSNError {
     using JKSNError::JKSNError;
@@ -96,7 +96,7 @@ public:
     std::array<std::string *, 256> blobhash = {{nullptr}};
 };
 
-class JKSN::JKSNEncoderPrivate {
+class JKSNEncoderPrivate {
     JKSNCache cache;
 };
 
@@ -143,7 +143,7 @@ std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header) {
     return result.str();
 }
 
-class JKSN::JKSNDecoderPrivate {
+class JKSNDecoderPrivate {
     JKSNCache cache;
 };
 
@@ -610,4 +610,6 @@ JKSNValue &JKSNValue::operator=(JKSNValue &&that) {
         that.data_type = JKSN_UNDEFINED;
     }
     return *this;
+}
+
 }

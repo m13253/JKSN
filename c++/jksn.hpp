@@ -383,8 +383,6 @@ private:
     template<typename T> T toNumber() const;
 };
 
-class JKSNCache;
-
 class JKSNEncoder {
 public:
     JKSNEncoder();
@@ -396,7 +394,7 @@ public:
     std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool header = true);
     std::string dumps(const JKSNValue &obj, bool header = true);
 private:
-    JKSNCache *cache = nullptr;
+    class JKSNEncoderPrivate *p = nullptr;
 };
 
 class JKSNDecoder {
@@ -410,7 +408,7 @@ public:
     JKSNValue parse(std::istream &s, bool header = true);
     JKSNValue parse(const std::string &s, bool header = true);
 private:
-    JKSNCache *cache = nullptr;
+    class JKSNDecoderPrivate *p = nullptr;
 };
 
 inline std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool header = true) {

@@ -35,7 +35,7 @@ class JKSNUnicodeError : public JKSNError {
     using JKSNError::JKSNError;
 };
 
-class JKSN::JKSNCache {
+class JKSNCache {
 public:
     bool haslastint = false;
     intmax_t lastint;
@@ -43,26 +43,34 @@ public:
     std::array<std::string *, 256> blobhash = {{nullptr}};
 };
 
-JKSNEncoder::JKSNEncoder() : cache(new JKSNCache) {}
+class JKSN::JKSNEncoderPrivate {
+    JKSNCache cache;
+};
 
-JKSNEncoder::JKSNEncoder(const JKSNEncoder &that) : cache(new JKSNCache(*that.cache)) {}
+JKSNEncoder::JKSNEncoder() : p(new JKSNEncoderPrivate) {}
 
-JKSNEncoder::JKSNEncoder(JKSNEncoder &&that) : cache(that.cache) {
-    that.cache = nullptr;
+JKSNEncoder::JKSNEncoder(const JKSNEncoder &that) : p(new JKSNEncoderPrivate(*that.p)) {}
+
+JKSNEncoder::JKSNEncoder(JKSNEncoder &&that) : p(that.p) {
+    that.p = nullptr;
 }
 
 JKSNEncoder &JKSNEncoder::operator=(const JKSNEncoder &that) {
     if(this != &that)
-        this->cache = new JKSNCache(*that.cache);
+        this->p = new JKSNEncoderPrivate(*that.p);
     return *this;
 }
 
 JKSNEncoder &JKSNEncoder::operator=(JKSNEncoder &&that) {
     if(this != &that) {
-        this->cache = that.cache;
-        that.cache = nullptr;
+        this->p = that.p;
+        that.p = nullptr;
     }
     return *this;
+}
+
+JKSNEncoder::~JKSNEncoder() {
+    delete p;
 }
 
 std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header) {
@@ -78,26 +86,34 @@ std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header) {
     return result.str();
 }
 
-JKSNDecoder::JKSNDecoder() : cache(new JKSNCache) {}
+class JKSN::JKSNDecoderPrivate {
+    JKSNCache cache;
+};
 
-JKSNDecoder::JKSNDecoder(const JKSNDecoder &that) : cache(new JKSNCache(*that.cache)) {}
+JKSNDecoder::JKSNDecoder() : p(new JKSNDecoderPrivate) {}
 
-JKSNDecoder::JKSNDecoder(JKSNDecoder &&that) : cache(that.cache) {
-    that.cache = nullptr;
+JKSNDecoder::JKSNDecoder(const JKSNDecoder &that) : p(new JKSNDecoderPrivate(*that.p)) {}
+
+JKSNDecoder::JKSNDecoder(JKSNDecoder &&that) : p(that.p) {
+    that.p = nullptr;
 }
 
 JKSNDecoder &JKSNDecoder::operator=(const JKSNDecoder &that) {
     if(this != &that)
-        this->cache = new JKSNCache(*that.cache);
+        this->p = new JKSNDecoderPrivate(*that.p);
     return *this;
 }
 
 JKSNDecoder &JKSNDecoder::operator=(JKSNDecoder &&that) {
     if(this != &that) {
-        this->cache = that.cache;
-        that.cache = nullptr;
+        this->p = that.p;
+        that.p = nullptr;
     }
     return *this;
+}
+
+JKSNDecoder::~JKSNDecoder() {
+    delete p;
 }
 
 JKSNValue JKSNDecoder::parse(std::istream &s, bool header) {

@@ -38,17 +38,29 @@ class JKSNUnicodeError : public JKSNError {
 class JKSNProxy {
 public:
     JKSNProxy() = delete;
-    JKSNProxy(JKSNValue *origin, uint8_t control, const std::string &data, const std::string &buf) :
+    JKSNProxy(const JKSNValue *origin, uint8_t control, const std::string &data, const std::string &buf) :
         origin(origin),
         control(control),
         data(data),
         buf(buf) {
     }
-    JKSNProxy(JKSNValue *origin, uint8_t control, std::string &&data, std::string &&buf) :
+    JKSNProxy(const JKSNValue *origin, uint8_t control, const std::string &data, std::string &&buf = std::string()) :
+        origin(origin),
+        control(control),
+        data(data),
+        buf(std::move(buf)) {
+    }
+    JKSNProxy(const JKSNValue *origin, uint8_t control, std::string &&data = std::string(), std::string &&buf = std::string()) :
         origin(origin),
         control(control),
         data(std::move(data)),
         buf(std::move(buf)) {
+    }
+    JKSNProxy(const JKSNValue *origin, uint8_t control, std::string &&data, const std::string &buf) :
+        origin(origin),
+        control(control),
+        data(std::move(data)),
+        buf(buf) {
     }
     std::ostream &output(std::ostream &stream, bool recursive = true) const {
         stream.put(char(this->control));
@@ -80,7 +92,7 @@ public:
                 result += i.size(depth-1);
         return result;
     }
-    JKSNValue *origin = nullptr; /* weak reference */
+    const JKSNValue *origin = nullptr; /* weak reference */
     uint8_t control;
     std::string data;
     std::string buf;
@@ -117,7 +129,7 @@ private:
     static JKSNProxy encodeStraightArray(const JKSNValue &obj);
     static JKSNProxy encodeSwappedList(const JKSNValue &obj);
     static JKSNProxy dumpObject(const JKSNValue &obj);
-    JKSNProxy optimize(JKSNProxy &obj);
+    JKSNProxy &optimize(JKSNProxy &obj);
 };
 
 JKSNEncoder::JKSNEncoder() :
@@ -148,6 +160,29 @@ JKSNEncoder &JKSNEncoder::operator=(JKSNEncoder &&that) {
 
 JKSNEncoder::~JKSNEncoder() {
     delete p;
+}
+
+JKSNProxy JKSNEncoderPrivate::dumpToProxy(const JKSNValue &obj) {
+    JKSNProxy proxy = this->dumpValue(obj);
+    this->optimize(proxy);
+    return proxy;
+}
+
+JKSNProxy &optimize(JKSNProxy &obj) {
+    return obj;
+}
+
+JKSNProxy JKSNEncoderPrivate::dumpValue(const JKSNValue &obj) {
+    switch(obj.getType()) {
+    case JKSN_UNDEFINED:
+        return JKSNProxy(&obj, 0x00);
+    case JKSN_NULL:
+        return JKSNProxy(&obj, 0x01);
+    case JKSN_BOOL:
+        return JKSNProxy(&obj, obj.toBool() ? 0x03 : 0x02);
+    default:
+        throw JKSNEncodeError("cannot encode unrecognizable type of value");
+    }
 }
 
 std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header) {

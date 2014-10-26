@@ -114,7 +114,7 @@ module JKSN
 
     def dumps(obj, header=true)
       result = dump_to_proxy(obj)
-      return header ? ('jk!' + result.to_s) : result.to_s
+      return header ? ('jk!'.b + result.to_s) : result.to_s
     end
 
     def dump(fd, obj, header=true)

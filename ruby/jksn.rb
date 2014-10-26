@@ -149,7 +149,7 @@ module JKSN
               new_control, new_data = 0xbe, (-delta).__jksn_encode(0)
             end
             if new_data.length < proxyobj.data.length
-              obj.control, obj.data = new_control, new_data
+              proxyobj.control, proxyobj.data = new_control, new_data
             end
             @lastint = proxyobj.origin
           end
@@ -157,7 +157,7 @@ module JKSN
       when 0x30, 0x40
         if proxyobj.buf.length > 1
           if @texthash[proxyobj.hash] == proxyobj.buf
-            obj.control, obj.data, obj.buf = 0x3c, proxyobj.hash.__jksn_encode(1), ''.b
+            proxyobj.control, proxyobj.data, proxyobj.buf = 0x3c, proxyobj.hash.__jksn_encode(1), ''.b
           else
             @texthash[proxyobj.hash] = proxyobj.buf
           end
@@ -165,7 +165,7 @@ module JKSN
       when 0x50
         if proxyobj.buf.length > 1
           if @blobhash[proxyobj.hash] == proxyobj.buf
-            obj.control, obj.data, obj.buf = 0x5c, proxyobj.hash.__jksn_encode(1), ''.b
+            proxyobj.control, proxyobj.data, proxyobj.buf = 0x5c, proxyobj.hash.__jksn_encode(1), ''.b
           else
             @blobhash[proxyobj.hash] = proxyobj.buf
           end

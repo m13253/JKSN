@@ -35,6 +35,59 @@ class JKSNUnicodeError : public JKSNError {
     using JKSNError::JKSNError;
 };
 
+class JKSNProxy {
+public:
+    JKSNProxy() = delete;
+    JKSNProxy(JKSNValue *origin, uint8_t control, const std::string &data, const std::string &buf) :
+        origin(origin),
+        control(control),
+        data(data),
+        buf(buf) {
+    }
+    JKSNProxy(JKSNValue *origin, uint8_t control, std::string &&data, std::string &&buf) :
+        origin(origin),
+        control(control),
+        data(std::move(data)),
+        buf(std::move(buf)) {
+    }
+    std::ostream &output(std::ostream &stream, bool recursive = true) const {
+        stream << char(this->control)
+               << this->data
+               << this->buf;
+        if(recursive)
+            for(const JKSNProxy &i : this->children)
+                i.output(stream);
+        return stream;
+    }
+    std::string toString(bool recursive = true) const {
+        std::string result;
+        result.reserve(1 + this->data.size() + this->buf.size());
+        result += char(this->control);
+        result += this->data;
+        result += this->buf;
+        if(recursive)
+            for(const JKSNProxy &i : this->children)
+                result += i.toString();
+        return result;
+    }
+    size_t size(size_t depth = 0) const {
+        size_t result = 1 + this->data.size() + this->buf.size();
+        if(depth == 0)
+            for(const JKSNProxy &i : this->children)
+                result += i.size();
+        else if(depth != 1)
+            for(const JKSNProxy &i : this->children)
+                result += i.size(depth-1);
+        return result;
+    }
+    JKSNValue *origin = nullptr; /* weak reference */
+    uint8_t control;
+    std::string data;
+    std::string buf;
+    std::vector<JKSNProxy> children;
+    uint16_t hash = 0;
+};
+
 class JKSNCache {
 public:
     bool haslastint = false;

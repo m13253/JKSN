@@ -47,9 +47,13 @@ class JKSN::JKSNEncoderPrivate {
     JKSNCache cache;
 };
 
-JKSNEncoder::JKSNEncoder() : p(new JKSNEncoderPrivate) {}
+JKSNEncoder::JKSNEncoder() :
+    p(new JKSNEncoderPrivate) {
+}
 
-JKSNEncoder::JKSNEncoder(const JKSNEncoder &that) : p(new JKSNEncoderPrivate(*that.p)) {}
+JKSNEncoder::JKSNEncoder(const JKSNEncoder &that) :
+    p(new JKSNEncoderPrivate(*that.p)) {
+}
 
 JKSNEncoder::JKSNEncoder(JKSNEncoder &&that) : p(that.p) {
     that.p = nullptr;
@@ -90,11 +94,16 @@ class JKSN::JKSNDecoderPrivate {
     JKSNCache cache;
 };
 
-JKSNDecoder::JKSNDecoder() : p(new JKSNDecoderPrivate) {}
+JKSNDecoder::JKSNDecoder() :
+    p(new JKSNDecoderPrivate) {
+}
 
-JKSNDecoder::JKSNDecoder(const JKSNDecoder &that) : p(new JKSNDecoderPrivate(*that.p)) {}
+JKSNDecoder::JKSNDecoder(const JKSNDecoder &that) :
+    p(new JKSNDecoderPrivate(*that.p)) {
+}
 
-JKSNDecoder::JKSNDecoder(JKSNDecoder &&that) : p(that.p) {
+JKSNDecoder::JKSNDecoder(JKSNDecoder &&that) :
+    p(that.p) {
     that.p = nullptr;
 }
 

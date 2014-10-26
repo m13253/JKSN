@@ -51,8 +51,8 @@ public:
         buf(std::move(buf)) {
     }
     std::ostream &output(std::ostream &stream, bool recursive = true) const {
-        stream << char(this->control)
-               << this->data
+        stream.put(char(this->control));
+        stream << this->data
                << this->buf;
         if(recursive)
             for(const JKSNProxy &i : this->children)

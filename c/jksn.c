@@ -24,13 +24,13 @@
 #include "jksn.h"
 
 typedef struct jksn_proxy {
-    const jksn_t *origin;
+    const jksn_t *origin; /* weak reference */
     uint8_t control;
     jksn_blobstring data;
     jksn_blobstring buf;
     uint8_t hash;
     struct jksn_proxy *first_child;
-    struct jksn_proxy *next_child;
+    struct jksn_proxy *next_sibling;
 } jksn_proxy;
 
 struct jksn_cache {
@@ -225,7 +225,7 @@ static jksn_proxy *jksn_proxy_free(jksn_proxy *object) {
             jksn_proxy_free(object->first_child);
             object->first_child = NULL;
         }
-        object = object->next_child;
+        object = object->next_sibling;
         free(this_object);
     }
     return NULL;
@@ -236,7 +236,7 @@ static size_t jksn_proxy_size(const jksn_proxy *object, int depth) {
     if(object) {
         result = 1 + object->data.size + object->buf.size;
         if(depth != 1)
-            for(object = object->first_child; object; object = object->next_child)
+            for(object = object->first_child; object; object = object->next_sibling)
                 result += jksn_proxy_size(object, depth-1);
     }
     return result;
@@ -255,7 +255,7 @@ static char *jksn_proxy_output(char output[], const jksn_proxy *object) {
         }
         if(object->first_child)
             output = jksn_proxy_output(output, object->first_child);
-        object = object->next_child;
+        object = object->next_sibling;
     }
     return output;
 }
@@ -663,12 +663,12 @@ static jksn_error_message_no jksn_encode_straight_array(jksn_proxy **result, con
         return JKSN_ENOMEM;
     else {
         size_t i;
-        jksn_proxy **next_child = &(*result)->first_child;
+        jksn_proxy **next_sibling = &(*result)->first_child;
         for(i = 0; i < object->data_array.size; i++) {
-            jksn_error_message_no retval = jksn_dump_value(next_child, object->data_array.children[i], cache);
+            jksn_error_message_no retval = jksn_dump_value(next_sibling, object->data_array.children[i], cache);
             if(retval != JKSN_EOK)
                 return retval;
-            next_child = &(*next_child)->next_child;
+            next_sibling = &(*next_sibling)->next_sibling;
         }
         return JKSN_EOK;
     }
@@ -729,7 +729,7 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_proxy **result, cons
         columns = jksn_swap_columns_free(columns);
         return JKSN_ENOMEM;
     } else {
-        jksn_proxy **next_child = &(*result)->first_child;
+        jksn_proxy **next_sibling = &(*result)->first_child;
         struct jksn_swap_columns *next_column = columns;
         while(next_column) {
             jksn_error_message_no retval;
@@ -757,22 +757,22 @@ static jksn_error_message_no jksn_encode_swapped_array(jksn_proxy **result, cons
                         break;
                     }
             }
-            retval = jksn_dump_value(next_child, next_column->key, cache);
+            retval = jksn_dump_value(next_sibling, next_column->key, cache);
             if(retval != JKSN_EOK) {
                 free(row_array->data_array.children);
                 free(row_array);
                 columns = jksn_swap_columns_free(columns);
                 return retval;
             }
-            next_child = &(*next_child)->next_child;
-            retval = jksn_dump_array(next_child, row_array, cache);
+            next_sibling = &(*next_sibling)->next_sibling;
+            retval = jksn_dump_array(next_sibling, row_array, cache);
             free(row_array->data_array.children);
             free(row_array);
             if(retval != JKSN_EOK) {
                 columns = jksn_swap_columns_free(columns);
                 return retval;
             }
-            next_child = &(*next_child)->next_child;
+            next_sibling = &(*next_sibling)->next_sibling;
             next_column = next_column->next;
             columns_size--;
         }
@@ -825,20 +825,20 @@ static jksn_error_message_no jksn_dump_object(jksn_proxy **result, const jksn_t 
         return JKSN_ENOMEM;
     else {
         size_t i;
-        jksn_proxy **next_child = &(*result)->first_child;
+        jksn_proxy **next_sibling = &(*result)->first_child;
         for(i = 0; i < object->data_object.size; i++) {
-            jksn_error_message_no retval = jksn_dump_value(next_child, object->data_object.children[i].key, cache);
+            jksn_error_message_no retval = jksn_dump_value(next_sibling, object->data_object.children[i].key, cache);
             if(retval != JKSN_EOK) {
                 *result = jksn_proxy_free(*result);
                 return retval;
             }
-            next_child = &(*next_child)->next_child;
-            retval = jksn_dump_value(next_child, object->data_object.children[i].value, cache);
+            next_sibling = &(*next_sibling)->next_sibling;
+            retval = jksn_dump_value(next_sibling, object->data_object.children[i].value, cache);
             if(retval != JKSN_EOK) {
                 *result = jksn_proxy_free(*result);
                 return retval;
             }
-            next_child = &(*next_child)->next_child;
+            next_sibling = &(*next_sibling)->next_sibling;
         }
         return JKSN_EOK;
     }
@@ -958,7 +958,7 @@ static void jksn_optimize(jksn_proxy *object, jksn_cache *cache) {
         default:
             jksn_optimize(object->first_child, cache);
         }
-        object = object->next_child;
+        object = object->next_sibling;
     }
 }
 

@@ -114,7 +114,7 @@ module JKSN
 
     def dumps(obj, header=true)
       result = dump_to_proxy(obj)
-      return header ? ('jk!' + result.to_s) : result.to_s
+      return header ? ('jk!'.b + result.to_s) : result.to_s
     end
 
     def dump(fd, obj, header=true)
@@ -141,7 +141,7 @@ module JKSN
               new_control, new_data = 0xbd, delta.__jksn_encode(1)
             elsif (-0x8000..0x7FFF).cover? delta
               new_control, new_data = 0xbc, delta.__jksn_encode(2)
-            elsif (-0x80000000..-0x200000).cover?(delta) || (0x200000..0x7FFFFFFF).cover? delta
+            elsif (-0x80000000..-0x200000).cover?(delta) || (0x200000..0x7FFFFFFF).cover?(delta)
               new_control, new_data = 0xbb, delta.__jksn_encode(4)
             elsif delta >= 0
               new_control, new_data = 0xbf, delta.__jksn_encode(0)
@@ -171,7 +171,7 @@ module JKSN
           end
         end
       else
-        obj.children.each { |child| optimize(child) }
+        proxyobj.children.each { |child| optimize(child) }
       end
 
       return proxyobj

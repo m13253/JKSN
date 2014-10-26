@@ -333,10 +333,9 @@ std::string JKSNValue::toString() const {
             std::string res;
             bool first = true;
             for(const JKSNValue &i : *this->data_array) {
-                if(!first) {
+                if(!first)
                     res.append(1, ',');
-                    first = false;
-                }
+                first = false;
                 res.append(i.toString());
             }
             return res;

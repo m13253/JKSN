@@ -127,6 +127,53 @@ module JKSN
 
     def optimize(proxyobj)
       # TODO
+      control = proxyobj.control & 0xF0
+      case control
+      when 0x10
+        if !@lastint.nil?
+          delta = proxyobj.origin - @lastint
+          if delta.abs < proxyobj.origin.abs
+            if (0..0x5).cover? delta
+              new_control, new_data = 0xb0 | delta, ''.b
+            elsif (-0x05..-0x01).cover? delta
+              new_control, new_data = 0xb0 | (delta + 11), ''.b
+            elsif (-0x80..0x7F).cover? delta
+              new_control, new_data = 0xbd, delta.__jksn_encode(1)
+            elsif (-0x8000..0x7FFF).cover? delta
+              new_control, new_data = 0xbc, delta.__jksn_encode(2)
+            elsif (-0x80000000..-0x200000).cover?(delta) || (0x200000..0x7FFFFFFF).cover? delta
+              new_control, new_data = 0xbb, delta.__jksn_encode(4)
+            elsif delta >= 0
+              new_control, new_data = 0xbf, delta.__jksn_encode(0)
+            else
+              new_control, new_data = 0xbe, (-delta).__jksn_encode(0)
+            end
+            if new_data.length < proxyobj.data.length
+              obj.control, obj.data = new_control, new_data
+            end
+            @lastint = proxyobj.origin
+          end
+        end
+      when 0x30, 0x40
+        if proxyobj.buf.length > 1
+          if @texthash[proxyobj.hash] == proxyobj.buf
+            obj.control, obj.data, obj.buf = 0x3c, proxyobj.hash.__jksn_encode(1), ''.b
+          else
+            @texthash[proxyobj.hash] = proxyobj.buf
+          end
+        end
+      when 0x50
+        if proxyobj.buf.length > 1
+          if @blobhash[proxyobj.hash] == proxyobj.buf
+            obj.control, obj.data, obj.buf = 0x5c, proxyobj.hash.__jksn_encode(1), ''.b
+          else
+            @blobhash[proxyobj.hash] = proxyobj.buf
+          end
+        end
+      else
+        obj.children.each { |child| optimize(child) }
+      end
+
       return proxyobj
     end
 

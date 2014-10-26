@@ -146,12 +146,13 @@ JKSNEncoder::JKSNEncoder(JKSNEncoder &&that) : p(that.p) {
 
 JKSNEncoder &JKSNEncoder::operator=(const JKSNEncoder &that) {
     if(this != &that)
-        this->p = new JKSNEncoderPrivate(*that.p);
+        *this->p = *that.p;
     return *this;
 }
 
 JKSNEncoder &JKSNEncoder::operator=(JKSNEncoder &&that) {
     if(this != &that) {
+        delete this->p;
         this->p = that.p;
         that.p = nullptr;
     }
@@ -221,12 +222,13 @@ JKSNDecoder::JKSNDecoder(JKSNDecoder &&that) :
 
 JKSNDecoder &JKSNDecoder::operator=(const JKSNDecoder &that) {
     if(this != &that)
-        this->p = new JKSNDecoderPrivate(*that.p);
+        *this->p = *that.p;
     return *this;
 }
 
 JKSNDecoder &JKSNDecoder::operator=(JKSNDecoder &&that) {
     if(this != &that) {
+        delete this->p;
         this->p = that.p;
         that.p = nullptr;
     }

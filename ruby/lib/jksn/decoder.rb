@@ -175,6 +175,7 @@ module JKSN
         if length != nil
           raise EOFError.new if result.length < length
         end
+        return result
       end
     end
   end

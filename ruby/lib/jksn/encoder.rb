@@ -15,7 +15,7 @@
 # THIS SOFTWARE IS PROVIDED ``AS IS'' AND WITHOUT ANY EXPRESS OR
 # IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
-
+require 'jksn/types'
 
 module JKSN
 
@@ -27,14 +27,6 @@ module JKSN
   class EncodeError < JKSNError
   end
 
-  # Exception class raised during JKSN decoding
-  class DecodeError < JKSNError
-  end
-
-  # Exception class raised during checksum verification when decoding
-  class ChecksumError < DecodeError
-  end
-
   class << self
     # Dump an object into a buffer
     def dumps(*args)
@@ -44,16 +36,6 @@ module JKSN
     # Dump an object into a file object
     def dump(*args)
       JKSNEncoder.new.dump(*args)
-    end
-
-    # load an object from a buffer
-    def loads(*args)
-      JKSNDecoder.new.loads(*args)
-    end
-
-    # Dump an object into a file object
-    def load(*args)
-      JKSNDecoder.new.load(*args)
     end
   end
 

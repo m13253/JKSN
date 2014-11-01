@@ -63,9 +63,9 @@ class Integer
     when 1
       return (self & 0x00FF).chr
     when 2
-      return [self & 0x00FFFF].pack('s>')[0]
+      return [self & 0x00FFFF].pack('S>')[0]
     when 4
-      return [self & 0x00FFFFFFFF].pack('l>')[0]
+      return [self & 0x00FFFFFFFF].pack('L>')[0]
     else
       raise ArgumentError.new
     end
@@ -75,7 +75,7 @@ class Integer
   def __jksn_dump_bignum
     raise unless self != 0
     minus = (self < 0)
-    return JKSN::JKSNProxy.new(self, (minus ? 0x1e : 0x1f), __jksn_encode_bignum)
+    return JKSN::JKSNProxy.new(self, (minus ? 0x1e : 0x1f), self.abs.__jksn_encode_bignum)
   end
 
   def __jksn_encode_bignum(num)

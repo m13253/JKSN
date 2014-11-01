@@ -144,9 +144,10 @@ class String
       result += (result << 5) + i
       result &= 0xFF
     end
+    return result
   end
 
-  private
+  #private
 
   def __jksn_dump_blob
     if length <= 0xB
@@ -176,6 +177,7 @@ class String
       result = JKSN::JKSNProxy.new(self, control | 0x0f, length.__jksn_encode(0), short)
     end
     result.hash = short.__jksn_djbhash
+    return result
   end
 end
 

@@ -96,7 +96,7 @@ module JKSN
 
     def dumps(obj, header=true)
       result = dump_to_proxy(obj)
-      return header ? ('jk!' + result.to_s) : result.to_s
+      return header ? ('jk!'.b + result.to_s) : result.to_s
     end
 
     def dump(fd, obj, header=true)
@@ -123,7 +123,7 @@ module JKSN
               new_control, new_data = 0xbd, delta.__jksn_encode(1)
             elsif (-0x8000..0x7FFF).cover? delta
               new_control, new_data = 0xbc, delta.__jksn_encode(2)
-            elsif (-0x80000000..-0x200000).cover?(delta) || (0x200000..0x7FFFFFFF).cover? delta
+            elsif (-0x80000000..-0x200000).cover?(delta) || (0x200000..0x7FFFFFFF).cover?(delta)
               new_control, new_data = 0xbb, delta.__jksn_encode(4)
             elsif delta >= 0
               new_control, new_data = 0xbf, delta.__jksn_encode(0)
@@ -131,7 +131,7 @@ module JKSN
               new_control, new_data = 0xbe, (-delta).__jksn_encode(0)
             end
             if new_data.length < proxyobj.data.length
-              obj.control, obj.data = new_control, new_data
+              proxyobj.control, proxyobj.data = new_control, new_data
             end
             @lastint = proxyobj.origin
           end
@@ -139,7 +139,7 @@ module JKSN
       when 0x30, 0x40
         if proxyobj.buf.length > 1
           if @texthash[proxyobj.hash] == proxyobj.buf
-            obj.control, obj.data, obj.buf = 0x3c, proxyobj.hash.__jksn_encode(1), ''.b
+            proxyobj.control, proxyobj.data, proxyobj.buf = 0x3c, proxyobj.hash.__jksn_encode(1), ''.b
           else
             @texthash[proxyobj.hash] = proxyobj.buf
           end
@@ -147,13 +147,13 @@ module JKSN
       when 0x50
         if proxyobj.buf.length > 1
           if @blobhash[proxyobj.hash] == proxyobj.buf
-            obj.control, obj.data, obj.buf = 0x5c, proxyobj.hash.__jksn_encode(1), ''.b
+            proxyobj.control, proxyobj.data, proxyobj.buf = 0x5c, proxyobj.hash.__jksn_encode(1), ''.b
           else
             @blobhash[proxyobj.hash] = proxyobj.buf
           end
         end
       else
-        obj.children.each { |child| optimize(child) }
+        proxyobj.children.each { |child| optimize(child) }
       end
 
       return proxyobj

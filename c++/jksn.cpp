@@ -104,8 +104,8 @@ class JKSNCache {
 public:
     bool haslastint = false;
     intmax_t lastint;
-    std::array<std::string *, 256> texthash = {{nullptr}};
-    std::array<std::string *, 256> blobhash = {{nullptr}};
+    std::shared_ptr<std::string> texthash[256] = {nullptr};
+    std::shared_ptr<std::string> blobhash[256] = {nullptr};
 };
 
 class JKSNEncoderPrivate {
@@ -163,6 +163,20 @@ JKSNEncoder::~JKSNEncoder() {
     delete p;
 }
 
+std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header) {
+    JKSNProxy proxy = this->p->dumpToProxy(obj);
+    if(header)
+        result.write("jk!", 3);
+    proxy.output(result);
+    return result;
+}
+
+std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header) {
+    std::ostringstream result;
+    this->dump(result, obj, header);
+    return result.str();
+}
+
 JKSNProxy JKSNEncoderPrivate::dumpToProxy(const JKSNValue &obj) {
     JKSNProxy proxy = this->dumpValue(obj);
     this->optimize(proxy);
@@ -181,23 +195,76 @@ JKSNProxy JKSNEncoderPrivate::dumpValue(const JKSNValue &obj) {
         return JKSNProxy(&obj, 0x01);
     case JKSN_BOOL:
         return JKSNProxy(&obj, obj.toBool() ? 0x03 : 0x02);
+    case JKSN_INT:
+        return dumpInt(obj);
+    case JKSN_FLOAT:
+        return dumpFloat(obj);
+    case JKSN_DOUBLE:
+        return dumpDouble(obj);
+    case JKSN_LONG_DOUBLE:
+        return dumpLongDouble(obj);
+    case JKSN_STRING:
+        return dumpString(obj);
+    case JKSN_BLOB:
+        return dumpBlob(obj);
+    case JKSN_ARRAY:
+        return dumpArray(obj);
+    case JKSN_OBJECT:
+        return dumpObject(obj);
     default:
         throw JKSNEncodeError("cannot encode unrecognizable type of value");
     }
 }
 
-std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header) {
-    JKSNProxy proxy = this->p->dumpToProxy(obj);
-    if(header)
-        result.write("jk!", 3);
-    proxy.output(result);
-    return result;
+static JKSNProxy JKSNEncoderPrivate::dumpInt(const JKSNValue &obj) {
+    intmax_t number = obj.toInt();
+    if(number >= 0 && number <= 0xa)
+        return JKSNProxy(obj, 0x10 | char(number));
+    else if(number >= -0x80 && number <= 0x7f)
+        return JKSNProxy(obj, 0x1d, encodeInt(number, 1));
+    else if(number >= -0x8000 && number <= 0x7fff)
+        return JKSNProxy(obj, 0x1c, encodeInt(number, 2));
+    else if((number >= -0x80000000L && number <= -0x200000L) ||
+            (number >= 0x200000L && number <= 0x7fffffffL))
+        return JKSNProxy(obj, 0x1b, encodeInt(number, 4));
+    else if(number >= 0)
+        return JKSNProxy(obj, 0x1f, encodeInt(number, 0));
+    else
+        return JKSNProxy(obj, 0x1e, encodeInt(-number, 0));
 }
 
-std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header) {
-    std::ostringstream result;
-    this->dump(result, obj, header);
-    return result.str();
+static std::string encodeInt(intmax_t number, size_t size) {
+    switch(size) {
+    case 1:
+        return std::string({
+            char(uint8_t(number))
+        });
+    case 2:
+        return std::string({
+            char(uint8_t(number) >> 8),
+            char(uint8_t(number))
+        });
+    case 4:
+        return std::string({
+            char(uint8_t(number) >> 24),
+            char(uint8_t(number) >> 16),
+            char(uint8_t(number) >> 8),
+            char(uint8_t(number))
+        });
+    case 0:
+        {
+            std::string result(1, char(number & 0x7f));
+            number >>= 7;
+            while(number != 0) {
+                result.append(1, char((number & 0x7f) | 0x80));
+                number >>= 7;
+            }
+            return std::string(result.crbegin(), result.crend());
+        }
+    default:
+        assert(size == 1 || size == 2 || size == 4 || size == 0);
+        abort();
+    }
 }
 
 class JKSNDecoderPrivate {

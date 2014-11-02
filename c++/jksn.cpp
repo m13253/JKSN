@@ -216,24 +216,24 @@ JKSNProxy JKSNEncoderPrivate::dumpValue(const JKSNValue &obj) {
     }
 }
 
-static JKSNProxy JKSNEncoderPrivate::dumpInt(const JKSNValue &obj) {
+JKSNProxy JKSNEncoderPrivate::dumpInt(const JKSNValue &obj) {
     intmax_t number = obj.toInt();
     if(number >= 0 && number <= 0xa)
-        return JKSNProxy(obj, 0x10 | char(number));
+        return JKSNProxy(&obj, 0x10 | uint8_t(number));
     else if(number >= -0x80 && number <= 0x7f)
-        return JKSNProxy(obj, 0x1d, encodeInt(number, 1));
+        return JKSNProxy(&obj, 0x1d, encodeInt(number, 1));
     else if(number >= -0x8000 && number <= 0x7fff)
-        return JKSNProxy(obj, 0x1c, encodeInt(number, 2));
+        return JKSNProxy(&obj, 0x1c, encodeInt(number, 2));
     else if((number >= -0x80000000L && number <= -0x200000L) ||
             (number >= 0x200000L && number <= 0x7fffffffL))
-        return JKSNProxy(obj, 0x1b, encodeInt(number, 4));
+        return JKSNProxy(&obj, 0x1b, encodeInt(number, 4));
     else if(number >= 0)
-        return JKSNProxy(obj, 0x1f, encodeInt(number, 0));
+        return JKSNProxy(&obj, 0x1f, encodeInt(number, 0));
     else
-        return JKSNProxy(obj, 0x1e, encodeInt(-number, 0));
+        return JKSNProxy(&obj, 0x1e, encodeInt(-number, 0));
 }
 
-static std::string encodeInt(intmax_t number, size_t size) {
+std::string JKSNEncoderPrivate::encodeInt(intmax_t number, size_t size) {
     switch(size) {
     case 1:
         return std::string({

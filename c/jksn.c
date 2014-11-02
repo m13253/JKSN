@@ -789,7 +789,6 @@ static jksn_error_message_no jksn_dump_array(jksn_proxy **result, const jksn_t *
     if(jksn_test_swap_availability(object)) {
         jksn_proxy *result_swapped = NULL;
         retval = jksn_encode_swapped_array(&result_swapped, object, cache);
-        assert(retval == JKSN_EOK);
         if(retval == JKSN_EOK && jksn_proxy_size(result_swapped, 3) < jksn_proxy_size(*result, 3)) {
             jksn_proxy_free(*result);
             *result = result_swapped;
@@ -990,6 +989,7 @@ static size_t jksn_encode_int(char result[], uintmax_t number, size_t size) {
         break;
     default:
         assert(size == 1 || size == 2 || size == 4 || size == 0);
+        abort();
     }
     return size;
 }
@@ -2129,6 +2129,7 @@ static jksn_error_message_no jksn_decode_int(uintmax_t *result, const char *buff
         break;
     default:
         assert(size == 1 || size == 2 || size == 4 || size == 0);
+        abort();
     }
     return JKSN_EOK;
 }

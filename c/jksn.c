@@ -82,7 +82,7 @@ static jksn_proxy *jksn_proxy_free(jksn_proxy *object);
 static size_t jksn_proxy_size(const jksn_proxy *object, int depth);
 static char *jksn_proxy_output(char output[], const jksn_proxy *object);
 static jksn_error_message_no jksn_dump_value(jksn_proxy **result, const jksn_t *object, jksn_cache *cache);
-static jksn_error_message_no jksn_dump_int(jksn_proxy **result, const jksn_t *object, jksn_cache *cache);
+static jksn_error_message_no jksn_dump_int(jksn_proxy **result, const jksn_t *object);
 static jksn_error_message_no jksn_dump_float(jksn_proxy **result, const jksn_t *object);
 static jksn_error_message_no jksn_dump_double(jksn_proxy **result, const jksn_t *object);
 static jksn_error_message_no jksn_dump_longdouble(jksn_proxy **result, const jksn_t *object);
@@ -318,7 +318,7 @@ static jksn_error_message_no jksn_dump_value(jksn_proxy **result, const jksn_t *
         retval = *result ? JKSN_EOK : JKSN_ENOMEM;
         break;
     case JKSN_INT:
-        retval = jksn_dump_int(result, object, cache);
+        retval = jksn_dump_int(result, object);
         break;
     case JKSN_FLOAT:
         retval = jksn_dump_float(result, object);
@@ -351,8 +351,7 @@ static jksn_error_message_no jksn_dump_value(jksn_proxy **result, const jksn_t *
     return retval;
 }
 
-static jksn_error_message_no jksn_dump_int(jksn_proxy **result, const jksn_t *object, jksn_cache *cache) {
-    cache->lastint = object->data_int;
+static jksn_error_message_no jksn_dump_int(jksn_proxy **result, const jksn_t *object) {
     if(object->data_int >= 0 && object->data_int <= 0xa)
         *result = jksn_proxy_new(object, 0x10 | object->data_int, NULL, NULL);
     else if(object->data_int >= -0x80 && object->data_int <= 0x7f) {

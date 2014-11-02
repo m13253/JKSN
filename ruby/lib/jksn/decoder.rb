@@ -113,11 +113,52 @@ module JKSN
             return Float::INFINITY
           end
         when 0x30 # UTF-16 strings
-          raise NotImplementedError.new
+          case control
+          when 0x30..0x3B
+            return load_str(io, (control & 0xf) << 1, 'utf-16le')
+          when 0x3C
+            hashvalue = io.readchar.ord
+            if @texthash[hashvalue]
+              return @texthash[hashvalue]
+            else
+              raise JKSNDecodeError.new('JKSN stream requires a non-existing hash: 0x%02x' % hashvalue)
+            end
+          when 0x3D
+            return load_str(io, decode_int(io, 2) << 1, 'utf-16le')
+          when 0x3E
+            return load_str(io, decode_int(io, 1) << 1, 'utf-16le')
+          when 0x3F
+            return load_str(io, decode_int(io, 0) << 1, 'utf-16le')
+          end
         when 0x40 # UTF-8 strings
-          raise NotImplementedError.new
+          case control
+          when 0x40..0x4B
+            return load_str(io, (control & 0xf) << 1, 'utf-8le')
+          when 0x4D
+            return load_str(io, decode_int(io, 2) << 1, 'utf-8le')
+          when 0x4E
+            return load_str(io, decode_int(io, 1) << 1, 'utf-8le')
+          when 0x4F
+            return load_str(io, decode_int(io, 0) << 1, 'utf-8le')
+          end
         when 0x50 # Blob strings
-          raise NotImplementedError.new
+          case control
+          when 0x50..0x5B
+            return load_str(io, control & 0xf)
+          when 0x5C
+            hashvalue = io.readchar.ord
+            if @texthash[hashvalue]
+              return @texthash[hashvalue]
+            else
+              raise JKSNDecodeError.new('JKSN stream requires a non-existing hash: 0x%02x' % hashvalue)
+            end
+          when 0x5D
+            return load_str(io, decode_int(io, 2))
+          when 0x5E
+            return load_str(io, decode_int(io, 1))
+          when 0x5F
+            return load_str(io, decode_int(io, 0))
+          end
         when 0x70 # Hashtable refreshers
           raise NotImplementedError.new
         when 0x80 # Arrays
@@ -162,21 +203,38 @@ module JKSN
       x - ((x >> (bits - 1)) << bits)
     end
 
+    def load_str(io, length, encoding=nil)
+      buf = io.read length
+      if encoding
+        result = buf.force_encoding(encoding).encode(Encoding.default_external)
+        @texthash[buf.__jksn_djbhash] = result
+      else
+        result = buf
+        @blobhash[buf.__jksn_djbhash] = result
+      end
+      return result
+    end
+
   end
 
   class IODieWhenEOFRead
-    def self.from(io)
-      obj = self.new
-      io.instance_methods.each do |name|
-        obj.define_singleton_method(name) { |*args, &block| io.send(name, *args, &block) } 
-      end
-      obj.define_singleton_method :read do |length=nil, strbuf=nil|
-        result = io.read(length, strbuf)
-        if length != nil
-          raise EOFError.new if result.length < length
-        end
-        return result
+    def initialize(io)
+      # StringIO is not IO
+      @io = io
+      @io.public_methods.each do |name|
+        next if self.respond_to? name
+        self.define_singleton_method(name) { |*args, &block| @io.send(name, *args, &block) }
       end
     end
+
+    def read(length=nil, strbuf=nil)
+      result = @io.read(length, strbuf)
+      raise EOFError.new if result == nil or result == ""
+      if length != nil
+        raise EOFError.new if result.length < length
+      end
+      return result
+    end
   end
+
 end

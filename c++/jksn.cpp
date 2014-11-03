@@ -114,8 +114,8 @@ public:
 private:
     JKSNCache cache;
     static JKSNProxy dumpValue(const JKSNValue &obj);
-    static JKSNProxy dumpNone(const JKSNValue &obj);
-    static JKSNProxy dumpUnspecified(const JKSNValue &obj);
+    static JKSNProxy dumpUndefined(const JKSNValue &obj);
+    static JKSNProxy dumpNull(const JKSNValue &obj);
     static JKSNProxy dumpBool(const JKSNValue &obj);
     static JKSNProxy dumpInt(const JKSNValue &obj);
     static std::string encodeInt(intmax_t number, size_t size);
@@ -129,6 +129,7 @@ private:
     static JKSNProxy encodeStraightArray(const JKSNValue &obj);
     static JKSNProxy encodeSwappedList(const JKSNValue &obj);
     static JKSNProxy dumpObject(const JKSNValue &obj);
+    static JKSNProxy dumpUnspecified(const JKSNValue &obj);
     JKSNProxy &optimize(JKSNProxy &obj);
 };
 
@@ -190,11 +191,11 @@ JKSNProxy &optimize(JKSNProxy &obj) {
 JKSNProxy JKSNEncoderPrivate::dumpValue(const JKSNValue &obj) {
     switch(obj.getType()) {
     case JKSN_UNDEFINED:
-        return JKSNProxy(&obj, 0x00);
+        return dumpUndefined(obj);
     case JKSN_NULL:
-        return JKSNProxy(&obj, 0x01);
+        return dumpNull(obj);
     case JKSN_BOOL:
-        return JKSNProxy(&obj, obj.toBool() ? 0x03 : 0x02);
+        return dumpBool(obj);
     case JKSN_INT:
         return dumpInt(obj);
     case JKSN_FLOAT:
@@ -211,9 +212,23 @@ JKSNProxy JKSNEncoderPrivate::dumpValue(const JKSNValue &obj) {
         return dumpArray(obj);
     case JKSN_OBJECT:
         return dumpObject(obj);
+    case JKSN_UNSPECIFIED:
+        return dumpUnspecified(obj);
     default:
         throw JKSNEncodeError("cannot encode unrecognizable type of value");
     }
+}
+
+JKSNProxy JKSNEncoderPrivate::dumpUndefined(const JKSNValue &obj) {
+    return JKSNProxy(&obj, 0x00);
+}
+
+JKSNProxy JKSNEncoderPrivate::dumpNull(const JKSNValue &obj) {
+    return JKSNProxy(&obj, 0x01);
+}
+
+JKSNProxy JKSNEncoderPrivate::dumpBool(const JKSNValue &obj) {
+    return JKSNProxy(&obj, obj.toBool() ? 0x03 : 0x02);
 }
 
 JKSNProxy JKSNEncoderPrivate::dumpInt(const JKSNValue &obj) {
@@ -231,6 +246,10 @@ JKSNProxy JKSNEncoderPrivate::dumpInt(const JKSNValue &obj) {
         return JKSNProxy(&obj, 0x1f, encodeInt(number, 0));
     else
         return JKSNProxy(&obj, 0x1e, encodeInt(-number, 0));
+}
+
+JKSNProxy JKSNEncoderPrivate::dumpUnspecified(const JKSNValue &obj) {
+    return JKSNProxy(&obj, 0xa0);
 }
 
 std::string JKSNEncoderPrivate::encodeInt(intmax_t number, size_t size) {

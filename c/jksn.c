@@ -79,7 +79,7 @@ static inline void *jksn_calloc(size_t nmemb, size_t size);
 static inline void *jksn_realloc(void *ptr, size_t size);
 static jksn_proxy *jksn_proxy_new(const jksn_t *origin, uint8_t control, const jksn_blobstring *data, const jksn_blobstring *buf);
 static jksn_proxy *jksn_proxy_free(jksn_proxy *object);
-static size_t jksn_proxy_size(const jksn_proxy *object, int depth);
+static size_t jksn_proxy_size(const jksn_proxy *object, size_t depth);
 static char *jksn_proxy_output(char output[], const jksn_proxy *object);
 static jksn_error_message_no jksn_dump_value(jksn_proxy **result, const jksn_t *object, jksn_cache *cache);
 static jksn_error_message_no jksn_dump_int(jksn_proxy **result, const jksn_t *object);
@@ -231,11 +231,14 @@ static jksn_proxy *jksn_proxy_free(jksn_proxy *object) {
     return NULL;
 }
 
-static size_t jksn_proxy_size(const jksn_proxy *object, int depth) {
+static size_t jksn_proxy_size(const jksn_proxy *object, size_t depth) {
     size_t result = 0;
     if(object) {
         result = 1 + object->data.size + object->buf.size;
-        if(depth != 1)
+        if(depth == 0)
+            for(object = object->first_child; object; object = object->next_sibling)
+                result += jksn_proxy_size(object, 0);
+        else if(depth != 1)
             for(object = object->first_child; object; object = object->next_sibling)
                 result += jksn_proxy_size(object, depth-1);
     }

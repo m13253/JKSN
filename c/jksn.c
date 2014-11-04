@@ -305,53 +305,39 @@ int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int heade
 }
 
 static jksn_error_message_no jksn_dump_value(jksn_proxy **result, const jksn_t *object, jksn_cache *cache) {
-    jksn_error_message_no retval = JKSN_EOK;
     *result = NULL;
     switch(object->data_type) {
     case JKSN_UNDEFINED:
         *result = jksn_proxy_new(object, 0x00, NULL, NULL);
-        retval = *result ? JKSN_EOK : JKSN_ENOMEM;
-        break;
+        return *result ? JKSN_EOK : JKSN_ENOMEM;
     case JKSN_NULL:
         *result = jksn_proxy_new(object, 0x01, NULL, NULL);
-        retval = *result ? JKSN_EOK : JKSN_ENOMEM;
-        break;
+        return *result ? JKSN_EOK : JKSN_ENOMEM;
     case JKSN_BOOL:
         *result = jksn_proxy_new(object, object->data_bool ? 0x03 : 0x02, NULL, NULL);
-        retval = *result ? JKSN_EOK : JKSN_ENOMEM;
-        break;
+        return *result ? JKSN_EOK : JKSN_ENOMEM;
     case JKSN_INT:
-        retval = jksn_dump_int(result, object);
-        break;
+        return jksn_dump_int(result, object);
     case JKSN_FLOAT:
-        retval = jksn_dump_float(result, object);
-        break;
+        return jksn_dump_float(result, object);
     case JKSN_DOUBLE:
-        retval = jksn_dump_double(result, object);
-        break;
+        return jksn_dump_double(result, object);
     case JKSN_LONG_DOUBLE:
-        retval = jksn_dump_longdouble(result, object);
-        break;
+        return jksn_dump_longdouble(result, object);
     case JKSN_STRING:
-        retval = jksn_dump_string(result, object);
-        break;
+        return jksn_dump_string(result, object);
     case JKSN_BLOB:
-        retval = jksn_dump_blob(result, object);
-        break;
+        return jksn_dump_blob(result, object);
     case JKSN_ARRAY:
-        retval = jksn_dump_array(result, object, cache);
-        break;
+        return jksn_dump_array(result, object, cache);
     case JKSN_OBJECT:
-        retval = jksn_dump_object(result, object, cache);
-        break;
+        return jksn_dump_object(result, object, cache);
     case JKSN_UNSPECIFIED:
         *result = jksn_proxy_new(object, 0xa0, NULL, NULL);
-        retval = *result ? JKSN_EOK : JKSN_ENOMEM;
-        break;
+        return *result ? JKSN_EOK : JKSN_ENOMEM;
     default:
-        retval = JKSN_ETYPE;
+        return JKSN_ETYPE;
     }
-    return retval;
 }
 
 static jksn_error_message_no jksn_dump_int(jksn_proxy **result, const jksn_t *object) {

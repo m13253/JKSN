@@ -57,7 +57,9 @@ function JKSNEncoder() {
                 var result = 1 + this.data.length + this.buf.length;
                 if(depth === undefined)
                     depth = 0;
-                if(depth != 1)
+                if(depth == 0)
+                    result = this.children.reduce(function (a, b) { return a + b.getSize(0); }, result);
+                else if(depth != 1)
                     result = this.children.reduce(function (a, b) { return a + b.getSize(depth-1); }, result);
                 return result;
             }

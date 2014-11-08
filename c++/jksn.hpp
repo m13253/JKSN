@@ -23,6 +23,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <istream>
 #include <map>
 #include <ostream>

@@ -104,7 +104,7 @@ static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2);
 static jksn_t *jksn_duplicate(const jksn_t *object);
 static uint8_t jksn_djbhash(const char *buf, size_t size);
 static inline int jksn_is_little_endian(void);
-static inline uintmax_t jksn_intmaxabs(intmax_t x) { return x >= 0 ? x : -x; };
+static inline uintmax_t jksn_intmaxabs(intmax_t x) { return x >= 0 ? (uintmax_t) x : (uintmax_t) -x; };
 
 static inline void *jksn_malloc(size_t size) {
     return malloc(size != 0 ? size : 1);
@@ -529,7 +529,7 @@ static jksn_error_message_no jksn_dump_longdouble(jksn_proxy **result, const jks
 
 static jksn_error_message_no jksn_dump_string(jksn_proxy **result, const jksn_t *object) {
     size_t utf16size = jksn_utf8_to_utf16(NULL, object->data_string.str, object->data_string.size, 1);
-    if(utf16size != (size_t) (ptrdiff_t) -1 && utf16size*2 < object->data_string.size) {
+    if(utf16size != (size_t) (ssize_t) -1 && utf16size*2 < object->data_string.size) {
         uint16_t *utf16str = jksn_malloc(utf16size*2);
         jksn_blobstring buf = {0, (char *) utf16str};
         size_t i;
@@ -1760,7 +1760,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         return JKSN_EVARINT;
                     if(!cache->haslastint)
                         return JKSN_EDELTA;
-                    cache->lastint -= delta;
+                    cache->lastint -= (intmax_t) delta;
                     break;
                 case 0xbf:
                     retval = jksn_decode_int(&delta, buffer, size, 0, bytes_parsed);
@@ -1770,7 +1770,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                         return JKSN_EVARINT;
                     if(!cache->haslastint)
                         return JKSN_EDELTA;
-                    cache->lastint += delta;
+                    cache->lastint += (intmax_t) delta;
                     break;
                 }
                 cache->haslastint = 1;
@@ -2128,7 +2128,7 @@ static jksn_error_message_no jksn_decode_int(uintmax_t *result, const char *buff
                     return JKSN_ETRUNC;
                 if(*result & ~((~(uintmax_t) 0) >> 7))
                     return JKSN_EVARINT;
-                thisbyte = (buffer++)[0];
+                thisbyte = (uint8_t) (buffer++)[0];
                 *result = (*result << 7) | (thisbyte & 0x7f);
                 if(bytes_parsed)
                     (*bytes_parsed)++;
@@ -2157,7 +2157,7 @@ static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t
     while(utf8size) {
         if((uint8_t) utf8str[0] < 0x80) {
             if(utf16str)
-                utf16str[reslen] = utf8str[0];
+                utf16str[reslen] = (uint16_t) (uint8_t) utf8str[0];
             reslen++;
             utf8str++;
             utf8size--;
@@ -2165,7 +2165,7 @@ static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t
         } else if((uint8_t) utf8str[0] < 0xc0) {
         } else if((uint8_t) utf8str[0] < 0xe0) {
             if(jksn_utf8_check_continuation(utf8str, utf8size, 1)) {
-                uint32_t ucs4 = (utf8str[0] & 0x1f) << 6 | (utf8str[1] & 0x3f);
+                uint32_t ucs4 = (uint32_t) ((uint8_t) utf8str[0] & 0x1f) << 6 | (uint32_t) ((uint8_t) utf8str[1] & 0x3f);
                 if(ucs4 >= 0x80) {
                     if(utf16str)
                         utf16str[reslen] = ucs4;
@@ -2177,7 +2177,7 @@ static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t
             }
         } else if((uint8_t) utf8str[0] < 0xf0) {
             if(jksn_utf8_check_continuation(utf8str, utf8size, 2)) {
-                uint32_t ucs4 = (utf8str[0] & 0xf) << 12 | (utf8str[1] & 0x3f) << 6 | (utf8str[2] & 0x3f);
+                uint32_t ucs4 = (uint32_t) ((uint8_t) utf8str[0] & 0xf) << 12 | (uint32_t) ((uint8_t) utf8str[1] & 0x3f) << 6 | (uint32_t) ((uint8_t) utf8str[2] & 0x3f);
                 if(ucs4 >= 0x800 && (ucs4 & 0xf800) != 0xd800) {
                     if(utf16str)
                         utf16str[reslen] = ucs4;
@@ -2189,7 +2189,7 @@ static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t
             }
         } else if((uint8_t) utf8str[0] < 0xf8) {
             if(jksn_utf8_check_continuation(utf8str, utf8size, 3)) {
-                uint32_t ucs4 = (utf8str[0] & 0x7) << 18 | (utf8str[1] & 0x3f) << 12 | (utf8str[2] & 0x3f) << 6 | (utf8str[3] & 0x3f);
+                uint32_t ucs4 = (uint32_t) ((uint8_t) utf8str[0] & 0x7) << 18 | (uint32_t) ((uint8_t) utf8str[1] & 0x3f) << 12 | (uint32_t) ((uint8_t) utf8str[2] & 0x3f) << 6 | (uint32_t) ((uint8_t) utf8str[3] & 0x3f);
                 if(ucs4 >= 0x10000 && ucs4 < 0x110000) {
                     if(utf16str) {
                         ucs4 -= 0x10000;
@@ -2204,7 +2204,7 @@ static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t
             }
         }
         if(strict)
-            return (size_t) (ptrdiff_t) -1;
+            return (size_t) (ssize_t) -1;
         else {
             if(utf16str)
                 utf16str[reslen] = 0xfffd;
@@ -2243,7 +2243,7 @@ static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t
             utf16str++;
             utf16size--;
         } else if(utf16size != 1 && (utf16str[0] & 0xfc00) == 0xd800 && (utf16str[1] & 0xfc00) == 0xdc00) {
-            uint32_t ucs4 = ((utf16str[0] & 0x3ff) << 10 | (utf16str[1] & 0x3ff)) + 0x10000;
+            uint32_t ucs4 = ((uint32_t) (utf16str[0] & 0x3ff) << 10 | (uint32_t) (utf16str[1] & 0x3ff)) + 0x10000;
             if(utf8str) {
                 utf8str[reslen] = ucs4 >> 18 | 0xf0;
                 utf8str[reslen+1] = ((ucs4 >> 12) & 0x3f) | 0x80;

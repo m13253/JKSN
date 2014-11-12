@@ -23,6 +23,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <initializer_list>
 #include <istream>
 #include <map>
@@ -599,6 +600,61 @@ inline JKSNValue parse(std::istream &fp, bool header = true) {
 inline JKSNValue parse(const std::string &str, bool header = true) {
     return JKSNDecoder().parse(str, header);
 }
+
+}
+
+namespace std {
+
+template<>
+struct hash<JKSN::JKSNValue> {
+public:
+    size_t operator()(const JKSN::JKSNValue &value) const {
+        switch(value.getType()) {
+        case JKSN::JKSN_UNDEFINED:
+            return 0x0;
+        case JKSN::JKSN_NULL:
+            return 0x1;
+        case JKSN::JKSN_BOOL:
+            return hasher_bool(value.toBool());
+        case JKSN::JKSN_INT:
+            return hasher_int(value.toInt());
+        case JKSN::JKSN_FLOAT:
+            return hasher_float(value.toFloat());
+        case JKSN::JKSN_DOUBLE:
+            return hasher_double(value.toDouble());
+        case JKSN::JKSN_LONG_DOUBLE:
+            return hasher_long_double(value.toLongDouble());
+        case JKSN::JKSN_STRING:
+        case JKSN::JKSN_BLOB:
+            return hasher_string_blob(value.toString());
+        case JKSN::JKSN_ARRAY:
+            {
+                size_t result = 0;
+                for(const JKSN::JKSNValue &i : value.toVector())
+                    result ^= operator()(i);
+            }
+        case JKSN::JKSN_OBJECT:
+            {
+                size_t result = 0;
+                for(const pair<JKSN::JKSNValue, JKSN::JKSNValue> &i : value.toMap()) {
+                    result ^= operator()(i.first);
+                    result ^= operator()(i.second);
+                }
+            }
+        case JKSN::JKSN_UNSPECIFIED:
+            return 0xa0;
+        default:
+            return size_t(ssize_t(-1));
+        }
+    }
+private:
+    std::hash<bool> hasher_bool;
+    std::hash<intmax_t> hasher_int;
+    std::hash<float> hasher_float;
+    std::hash<double> hasher_double;
+    std::hash<long double> hasher_long_double;
+    std::hash<string> hasher_string_blob;
+};
 
 }
 

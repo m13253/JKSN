@@ -631,14 +631,14 @@ public:
             {
                 size_t result = 0;
                 for(const JKSN::JKSNValue &i : value.toVector())
-                    result ^= operator()(i);
+                    result ^= (*this)(i);
             }
         case JKSN::JKSN_OBJECT:
             {
                 size_t result = 0;
                 for(const pair<JKSN::JKSNValue, JKSN::JKSNValue> &i : value.toMap()) {
-                    result ^= operator()(i.first);
-                    result ^= operator()(i.second);
+                    result ^= (*this)(i.first);
+                    result ^= (*this)(i.second);
                 }
             }
         case JKSN::JKSN_UNSPECIFIED:
@@ -648,12 +648,12 @@ public:
         }
     }
 private:
-    std::hash<bool> hasher_bool;
-    std::hash<intmax_t> hasher_int;
-    std::hash<float> hasher_float;
-    std::hash<double> hasher_double;
-    std::hash<long double> hasher_long_double;
-    std::hash<string> hasher_string_blob;
+    static std::hash<bool> hasher_bool;
+    static std::hash<intmax_t> hasher_int;
+    static std::hash<float> hasher_float;
+    static std::hash<double> hasher_double;
+    static std::hash<long double> hasher_long_double;
+    static std::hash<string> hasher_string_blob;
 };
 
 }

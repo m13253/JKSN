@@ -247,16 +247,16 @@ JKSNProxy JKSNEncoderPrivate::dumpInt(const JKSNValue &obj) {
     if(number >= 0 && number <= 0xa)
         return JKSNProxy(&obj, 0x10 | uint8_t(number));
     else if(number >= -0x80 && number <= 0x7f)
-        return JKSNProxy(&obj, 0x1d, encodeInt(number, 1));
+        return JKSNProxy(&obj, 0x1d, encodeInt(uintmax_t(number), 1));
     else if(number >= -0x8000 && number <= 0x7fff)
-        return JKSNProxy(&obj, 0x1c, encodeInt(number, 2));
+        return JKSNProxy(&obj, 0x1c, encodeInt(uintmax_t(number), 2));
     else if((number >= -0x80000000L && number <= -0x200000L) ||
             (number >= 0x200000L && number <= 0x7fffffffL))
-        return JKSNProxy(&obj, 0x1b, encodeInt(number, 4));
+        return JKSNProxy(&obj, 0x1b, encodeInt(uintmax_t(number), 4));
     else if(number >= 0)
-        return JKSNProxy(&obj, 0x1f, encodeInt(number, 0));
+        return JKSNProxy(&obj, 0x1f, encodeInt(uintmax_t(number), 0));
     else
-        return JKSNProxy(&obj, 0x1e, encodeInt(-number, 0));
+        return JKSNProxy(&obj, 0x1e, encodeInt(uintmax_t(-number), 0));
 }
 
 JKSNProxy JKSNEncoderPrivate::dumpFloat(const JKSNValue &obj) {

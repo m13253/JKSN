@@ -322,7 +322,7 @@ public:
     uintmax_t toUInt() const {
         intmax_t res = this->toInt();
         if(res >= 0)
-            return res;
+            return uintmax_t(res);
         else
             throw JKSNTypeError();
     }
@@ -417,7 +417,7 @@ public:
         switch(this->getType()) {
         case JKSN_ARRAY:
             if(index.isInt())
-                return this->toVector().at(index.toInt());
+                return this->toVector().at(index.toUInt());
             else
                 throw JKSNTypeError();
         case JKSN_OBJECT:
@@ -430,7 +430,7 @@ public:
         switch(this->getType()) {
         case JKSN_ARRAY:
             if(index.isInt())
-                return this->toVector().at(index.toInt());
+                return this->toVector().at(index.toUInt());
             else
                 throw JKSNTypeError();
         case JKSN_OBJECT:
@@ -487,7 +487,7 @@ public:
         switch(this->getType()) {
         case JKSN_ARRAY:
             if(index.isInt())
-                return this->toVector()[index.toInt()];
+                return this->toVector()[index.toUInt()];
             else
                 throw JKSNTypeError();
         case JKSN_OBJECT:

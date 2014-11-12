@@ -648,12 +648,12 @@ public:
         }
     }
 private:
-    static std::hash<bool> hasher_bool;
-    static std::hash<intmax_t> hasher_int;
-    static std::hash<float> hasher_float;
-    static std::hash<double> hasher_double;
-    static std::hash<long double> hasher_long_double;
-    static std::hash<string> hasher_string_blob;
+    static hash<bool> hasher_bool;
+    static hash<intmax_t> hasher_int;
+    static hash<float> hasher_float;
+    static hash<double> hasher_double;
+    static hash<long double> hasher_long_double;
+    static hash<string> hasher_string_blob;
 };
 
 }

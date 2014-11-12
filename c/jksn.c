@@ -104,7 +104,7 @@ static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2);
 static jksn_t *jksn_duplicate(const jksn_t *object);
 static uint8_t jksn_djbhash(const char *buf, size_t size);
 static inline int jksn_is_little_endian(void);
-static inline uintmax_t jksn_int64abs(intmax_t x) { return x >= 0 ? x : -x; };
+static inline uintmax_t jksn_intmaxabs(intmax_t x) { return x >= 0 ? x : -x; };
 
 static inline void *jksn_malloc(size_t size) {
     return malloc(size != 0 ? size : 1);
@@ -388,16 +388,25 @@ static jksn_error_message_no jksn_dump_float(jksn_proxy **result, const jksn_t *
     } else {
         const union {
             float data_float;
-            uint32_t data_int;
+            uint8_t data_int[4];
         } conv = {object->data_float};
         jksn_blobstring data = {4, jksn_malloc(4)};
         assert(sizeof (float) == 4);
-        if(data.buf) {
-            jksn_encode_int(data.buf, conv.data_int, 4);
-            *result = jksn_proxy_new(object, 0x2d, &data, NULL);
-            return *result ? JKSN_EOK : JKSN_ENOMEM;
-        } else
+        if(!data.buf)
             return JKSN_ENOMEM;
+        if(jksn_is_little_endian()) {
+            data.buf[0] = (char) conv.data_int[3];
+            data.buf[1] = (char) conv.data_int[2];
+            data.buf[2] = (char) conv.data_int[1];
+            data.buf[3] = (char) conv.data_int[0];
+        } else {
+            data.buf[0] = (char) conv.data_int[0];
+            data.buf[1] = (char) conv.data_int[1];
+            data.buf[2] = (char) conv.data_int[2];
+            data.buf[3] = (char) conv.data_int[3];
+        }
+        *result = jksn_proxy_new(object, 0x2d, &data, NULL);
+        return *result ? JKSN_EOK : JKSN_ENOMEM;
     }
 }
 
@@ -411,22 +420,33 @@ static jksn_error_message_no jksn_dump_double(jksn_proxy **result, const jksn_t 
     } else {
         const union {
             double data_double;
-            uint32_t data_int[2];
+            uint8_t data_int[8];
         } conv = {object->data_double};
         jksn_blobstring data = {8, jksn_malloc(8)};
         assert(sizeof (double) == 8);
-        if(data.buf) {
-            if(jksn_is_little_endian()) {
-                jksn_encode_int(data.buf, conv.data_int[1], 4);
-                jksn_encode_int(data.buf+4, conv.data_int[0], 4);
-            } else {
-                jksn_encode_int(data.buf, conv.data_int[0], 4);
-                jksn_encode_int(data.buf+4, conv.data_int[1], 4);
-            }
-            *result = jksn_proxy_new(object, 0x2c, &data, NULL);
-            return *result ? JKSN_EOK : JKSN_ENOMEM;
-        } else
+        if(!data.buf)
             return JKSN_ENOMEM;
+        if(jksn_is_little_endian()) {
+            data.buf[0] = (char) conv.data_int[7];
+            data.buf[1] = (char) conv.data_int[6];
+            data.buf[2] = (char) conv.data_int[5];
+            data.buf[3] = (char) conv.data_int[4];
+            data.buf[4] = (char) conv.data_int[3];
+            data.buf[5] = (char) conv.data_int[2];
+            data.buf[6] = (char) conv.data_int[1];
+            data.buf[7] = (char) conv.data_int[0];
+        } else {
+            data.buf[0] = (char) conv.data_int[0];
+            data.buf[1] = (char) conv.data_int[1];
+            data.buf[2] = (char) conv.data_int[2];
+            data.buf[3] = (char) conv.data_int[3];
+            data.buf[4] = (char) conv.data_int[4];
+            data.buf[5] = (char) conv.data_int[5];
+            data.buf[6] = (char) conv.data_int[6];
+            data.buf[7] = (char) conv.data_int[7];
+        }
+        *result = jksn_proxy_new(object, 0x2c, &data, NULL);
+        return *result ? JKSN_EOK : JKSN_ENOMEM;
     }
 }
 
@@ -838,7 +858,7 @@ static void jksn_optimize(jksn_proxy *object, jksn_cache *cache) {
         case 0x10:
             if(cache->haslastint) {
                 intmax_t delta = object->origin->data_int - cache->lastint;
-                if(jksn_int64abs(delta) < jksn_int64abs(object->origin->data_int)) {
+                if(jksn_intmaxabs(delta) < jksn_intmaxabs(object->origin->data_int)) {
                     uint8_t new_control = 0;
                     jksn_blobstring new_data = {0, NULL};
                     if(delta >= 0 && delta <= 0x5)
@@ -1953,17 +1973,17 @@ static jksn_error_message_no jksn_parse_double(jksn_t **result, const char *buff
         return JKSN_ETRUNC;
     else {
         const union {
-            uintmax_t data_int;
+            uint64_t data_int;
             double data_double;
         } conv = {
-            ((uintmax_t) (uint8_t) buffer[0]) << 56 |
-            ((uintmax_t) (uint8_t) buffer[1]) << 48 |
-            ((uintmax_t) (uint8_t) buffer[2]) << 40 |
-            ((uintmax_t) (uint8_t) buffer[3]) << 32 |
-            ((uintmax_t) (uint8_t) buffer[4]) << 24 |
-            ((uintmax_t) (uint8_t) buffer[5]) << 16 |
-            ((uintmax_t) (uint8_t) buffer[6]) << 8 |
-            ((uintmax_t) (uint8_t) buffer[7])
+            ((uint64_t) (uint8_t) buffer[0]) << 56 |
+            ((uint64_t) (uint8_t) buffer[1]) << 48 |
+            ((uint64_t) (uint8_t) buffer[2]) << 40 |
+            ((uint64_t) (uint8_t) buffer[3]) << 32 |
+            ((uint64_t) (uint8_t) buffer[4]) << 24 |
+            ((uint64_t) (uint8_t) buffer[5]) << 16 |
+            ((uint64_t) (uint8_t) buffer[6]) << 8 |
+            ((uint64_t) (uint8_t) buffer[7])
         };
         *result = jksn_malloc(sizeof (jksn_t));
         if(!*result)

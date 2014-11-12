@@ -145,6 +145,7 @@ private:
 static inline bool isLittleEndian();
 static std::string UTF8ToUTF16LE(const std::string &utf8str, bool strict = false);
 static std::string UTF16ToUTF8(const std::u16string &utf16str);
+static uint8_t DJBHash(const std::string &obj, uint8_t iv = 0);
 
 JKSNEncoder::JKSNEncoder() :
     p(new JKSNEncoderPrivate) {
@@ -353,6 +354,60 @@ JKSNProxy JKSNEncoderPrivate::dumpLongDouble(const JKSNValue &obj) {
         throw JKSNEncodeError("this build of JKSN decoder does not support long double numbers");
 }
 
+JKSNProxy JKSNEncoderPrivate::dumpString(const JKSNValue &obj) {
+    std::string obj_short = obj.toString();
+    bool is_utf16 = false;
+    try {
+        std::string obj_utf16 = UTF8ToUTF16LE(obj_short, true);
+        if(obj_utf16.size() < obj_short.size()) {
+            obj_short = std::move(obj_utf16);
+            is_utf16 = true;
+        }
+    } catch(JKSNTypeError) {
+    }
+    uint8_t control = is_utf16 ? 0x30 : 0x40;
+    uintmax_t length = is_utf16 ? obj_short.size()/2 : obj_short.size();
+    if(length <= (is_utf16 ? 0xb : 0xc)) {
+        JKSNProxy result = JKSNProxy(&obj, control | uint8_t(length), std::string(), std::move(obj_short));
+        result.hash = DJBHash(result.buf);
+        return result;
+    } else if(length <= 0xff) {
+        JKSNProxy result = JKSNProxy(&obj, control | 0xe, encodeInt(length, 1), std::move(obj_short));
+        result.hash = DJBHash(result.buf);
+        return result;
+    } else if(length <= 0xffff) {
+        JKSNProxy result = JKSNProxy(&obj, control | 0xd, encodeInt(length, 2), std::move(obj_short));
+        result.hash = DJBHash(result.buf);
+        return result;
+    } else {
+        JKSNProxy result = JKSNProxy(&obj, control | 0xf, encodeInt(length, 0), std::move(obj_short));
+        result.hash = DJBHash(result.buf);
+        return result;
+    }
+}
+
+JKSNProxy JKSNEncoderPrivate::dumpBlob(const JKSNValue &obj) {
+    std::string blob = obj.toBlob();
+    size_t length = blob.size();
+    if(length <= 0xb) {
+        JKSNProxy result = JKSNProxy(&obj, 0x50 | uint8_t(length), std::string(), std::move(blob));
+        result.hash = DJBHash(result.buf);
+        return result;
+    } else if(length <= 0xff) {
+        JKSNProxy result = JKSNProxy(&obj, 0x5e, encodeInt(length, 1), std::move(blob));
+        result.hash = DJBHash(result.buf);
+        return result;
+    } else if(length <= 0xffff) {
+        JKSNProxy result = JKSNProxy(&obj, 0x5d, encodeInt(length, 2), std::move(blob));
+        result.hash = DJBHash(result.buf);
+        return result;
+    } else {
+        JKSNProxy result = JKSNProxy(&obj, 0x5f, encodeInt(length, 0), std::move(blob));
+        result.hash = DJBHash(result.buf);
+        return result;
+    }
+}
+
 JKSNProxy JKSNEncoderPrivate::dumpUnspecified(const JKSNValue &obj) {
     return JKSNProxy(&obj, 0xa0);
 }
@@ -549,6 +604,13 @@ static std::string UTF16ToUTF8(const std::u16string &utf16str) {
     }
     utf8str.shrink_to_fit();
     return utf8str;
+}
+
+static uint8_t DJBHash(const std::string &buf, uint8_t iv) {
+    unsigned int result = iv;
+    for(char i : buf)
+        result += (result << 5) + uint8_t(i);
+    return result;
 }
 
 bool JKSNValue::toBool() const {

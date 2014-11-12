@@ -120,7 +120,7 @@ private:
     static JKSNProxy dumpNull(const JKSNValue &obj);
     static JKSNProxy dumpBool(const JKSNValue &obj);
     static JKSNProxy dumpInt(const JKSNValue &obj);
-    static std::string encodeInt(intmax_t number, size_t size);
+    static std::string encodeInt(uintmax_t number, size_t size);
     static JKSNProxy dumpFloat(const JKSNValue &obj);
     static JKSNProxy dumpDouble(const JKSNValue &obj);
     static JKSNProxy dumpLongDouble(const JKSNValue &obj);
@@ -134,6 +134,15 @@ private:
     static JKSNProxy dumpUnspecified(const JKSNValue &obj);
     JKSNProxy &optimize(JKSNProxy &obj);
 };
+
+class JKSNDecoderPrivate {
+public:
+    JKSNValue parseValue(std::istream &fp);
+private:
+    JKSNCache cache;
+};
+
+static inline bool isLittleEndian();
 
 JKSNEncoder::JKSNEncoder() :
     p(new JKSNEncoderPrivate) {
@@ -234,7 +243,7 @@ JKSNProxy JKSNEncoderPrivate::dumpBool(const JKSNValue &obj) {
 }
 
 JKSNProxy JKSNEncoderPrivate::dumpInt(const JKSNValue &obj) {
-    intmax_t number = obj.toInt();
+    const intmax_t number = obj.toInt();
     if(number >= 0 && number <= 0xa)
         return JKSNProxy(&obj, 0x10 | uint8_t(number));
     else if(number >= -0x80 && number <= 0x7f)
@@ -250,11 +259,59 @@ JKSNProxy JKSNEncoderPrivate::dumpInt(const JKSNValue &obj) {
         return JKSNProxy(&obj, 0x1e, encodeInt(-number, 0));
 }
 
+JKSNProxy JKSNEncoderPrivate::dumpFloat(const JKSNValue &obj) {
+    const float number = obj.toFloat();
+    if(isnan(number))
+        return JKSNProxy(&obj, 0x20);
+    else if(isinf(number))
+        return JKSNProxy(&obj, number >= 0 ? 0x2f : 0x2e);
+    else {
+        static_assert(sizeof (float) == 4, "sizeof (float) should be 4");
+        const union {
+            float data_float;
+            char data_int[4];
+        } conv = {number};
+        if(isLittleEndian())
+            return JKSNProxy(&obj, 0x2d, std::string({
+                conv.data_int[3], conv.data_int[2], conv.data_int[1], conv.data_int[0]
+            }));
+        else
+            return JKSNProxy(&obj, 0x2d, std::string({
+                conv.data_int[0], conv.data_int[1], conv.data_int[2], conv.data_int[3]
+            }));
+    }
+}
+
+JKSNProxy JKSNEncoderPrivate::dumpDouble(const JKSNValue &obj) {
+    const double number = obj.toDouble();
+    if(isnan(number))
+        return JKSNProxy(&obj, 0x20);
+    else if(isinf(number))
+        return JKSNProxy(&obj, number >= 0 ? 0x2f : 0x2e);
+    else {
+        static_assert(sizeof (double) == 8, "sizeof (double) should be 8");
+        const union {
+            double data_double;
+            char data_int[8];
+        } conv = {number};
+        if(isLittleEndian())
+            return JKSNProxy(&obj, 0x2c, std::string({
+                conv.data_int[7], conv.data_int[6], conv.data_int[5], conv.data_int[4],
+                conv.data_int[3], conv.data_int[2], conv.data_int[1], conv.data_int[0]
+            }));
+        else
+            return JKSNProxy(&obj, 0x2c, std::string({
+                conv.data_int[0], conv.data_int[1], conv.data_int[2], conv.data_int[3],
+                conv.data_int[4], conv.data_int[5], conv.data_int[6], conv.data_int[7]
+            }));
+    }
+}
+
 JKSNProxy JKSNEncoderPrivate::dumpUnspecified(const JKSNValue &obj) {
     return JKSNProxy(&obj, 0xa0);
 }
 
-std::string JKSNEncoderPrivate::encodeInt(intmax_t number, size_t size) {
+std::string JKSNEncoderPrivate::encodeInt(uintmax_t number, size_t size) {
     switch(size) {
     case 1:
         return std::string({
@@ -287,13 +344,6 @@ std::string JKSNEncoderPrivate::encodeInt(intmax_t number, size_t size) {
         abort();
     }
 }
-
-class JKSNDecoderPrivate {
-public:
-    JKSNValue parseValue(std::istream &fp);
-private:
-    JKSNCache cache;
-};
 
 JKSNDecoder::JKSNDecoder() :
     p(new JKSNDecoderPrivate) {
@@ -335,6 +385,14 @@ JKSNValue JKSNDecoder::parse(std::istream &fp, bool header) {
 JKSNValue JKSNDecoder::parse(const std::string &str, bool header) {
     std::istringstream stream(str);
     return this->parse(stream, header);
+}
+
+static inline bool isLittleEndian() {
+    static const union {
+        uint16_t word;
+        uint8_t byte;
+    } endiantest = {1};
+    return endiantest.byte == 1;
 }
 
 bool JKSNValue::toBool() const {

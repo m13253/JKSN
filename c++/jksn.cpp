@@ -143,6 +143,8 @@ private:
 };
 
 static inline bool isLittleEndian();
+static std::string UTF8ToUTF16LE(const std::string &utf8str, bool strict = false);
+static std::string UTF16ToUTF8(const std::u16string &utf16str);
 
 JKSNEncoder::JKSNEncoder() :
     p(new JKSNEncoderPrivate) {
@@ -437,6 +439,116 @@ static inline bool isLittleEndian() {
         uint8_t byte;
     } endiantest = {1};
     return endiantest.byte == 1;
+}
+
+static bool UTF8CheckContinuation(const std::string &utf8str, size_t start, size_t check_length) {
+    if(utf8str.size() > start + check_length) {
+        while(check_length--)
+            if((uint8_t(utf8str[++start]) & 0xc0) != 0x80)
+                return false;
+        return true;
+    } else
+        return false;
+}
+
+static std::string UTF8ToUTF16LE(const std::string &utf8str, bool strict) {
+    std::string utf16str;
+    size_t i = 0;
+    utf16str.reserve(utf8str.size());
+    while(i < utf8str.size()) {
+        if(uint8_t(utf8str[i]) < 0x80) {
+            utf16str.append({utf8str[i], '\0'});
+            ++i;
+            continue;
+        } else if(uint8_t(utf8str[i]) < 0xc0) {
+        } else if(uint8_t(utf8str[i]) < 0xe0) {
+            if(UTF8CheckContinuation(utf8str, i, 1)) {
+                uint32_t ucs4 = uint32_t(utf8str[i] & 0x1f) << 6 | uint32_t(utf8str[i+1] & 0x3f);
+                if(ucs4 >= 0x80) {
+                    utf16str.append({
+                        char(ucs4),
+                        char(ucs4 >> 16)
+                    });
+                    i += 2;
+                    continue;
+                }
+            }
+        } else if(uint8_t(utf8str[i]) < 0xf0) {
+            if(UTF8CheckContinuation(utf8str, i, 2)) {
+                uint32_t ucs4 = uint32_t(utf8str[i] & 0xf) << 12 | uint32_t(utf8str[i+1] & 0x3f) << 6 | (utf8str[i+2] & 0x3f);
+                if(ucs4 >= 0x800 && (ucs4 & 0xf800) != 0xd800) {
+                    utf16str.append({
+                        char(ucs4),
+                        char(ucs4 >> 16)
+                    });
+                    i += 3;
+                    continue;
+                }
+            }
+        } else if(uint8_t(utf8str[i]) < 0xf8) {
+            if(UTF8CheckContinuation(utf8str, i, 3)) {
+                uint32_t ucs4 = uint32_t(utf8str[i] & 0x7) << 18 | uint32_t(utf8str[i+1] & 0x3f) << 12 | uint32_t(utf8str[i+2] & 0x3f) << 6 | uint32_t(utf8str[i+3] & 0x3f);
+                if(ucs4 >= 0x10000 && ucs4 < 0x110000) {
+                    ucs4 -= 0x10000;
+                    utf16str.append({
+                        char(ucs4 >> 10),
+                        char((ucs4 >> 18) | 0xd8),
+                        char(ucs4),
+                        char((ucs4 & 0x3f) | 0xdc)
+                    });
+                    i += 4;
+                    continue;
+                }
+            }
+        }
+        if(strict)
+            throw JKSNTypeError();
+        else {
+            utf16str.append("\xfd\xff", 2);
+            ++i;
+        }
+    }
+    utf16str.shrink_to_fit();
+    return utf16str;
+}
+
+static std::string UTF16ToUTF8(const std::u16string &utf16str) {
+    std::string utf8str;
+    size_t i = 0;
+    utf8str.reserve(utf16str.size()*2);
+    while(i < utf16str.size()) {
+        if(uint32_t(utf16str[i]) < 0x80) {
+            utf8str.push_back(char(utf16str[i]));
+            ++i;
+        } else if(uint32_t(utf16str[i]) < 0x800) {
+            utf8str.append({
+                char(utf16str[i] >> 6 | 0xc0),
+                char((utf16str[i] & 0x3f) | 0x80)
+            });
+            ++i;
+        } else if((uint32_t(utf16str[i]) & 0xf800) != 0xd800) {
+                utf8str.append({
+                    char(utf16str[i] >> 12 | 0xe0),
+                    char(((utf16str[i] >> 6) & 0x3f) | 0x80),
+                    char((utf16str[i] & 0x3f) | 0x80)
+                });
+                ++i;
+        } else if(i+1 < utf16str.size() && uint32_t(utf16str[i] & 0xfc00) == 0xd800 && uint32_t(utf16str[i+1] & 0xfc00) == 0xdc00) {
+            uint32_t ucs4 = uint32_t((utf16str[i] & 0x3ff) << 10 | (utf16str[i+1] & 0x3ff)) + 0x10000;
+            utf8str.append({
+                char(ucs4 >> 18 | 0xf0),
+                char(((ucs4 >> 12) & 0x3f) | 0x80),
+                char(((ucs4 >> 6) & 0x3f) | 0x80),
+                char((ucs4 & 0x3f) | 0x80),
+            });
+            i += 2;
+        } else {
+            utf8str.append("\xef\xbf\xbd", 3);
+            ++i;
+        }
+    }
+    utf8str.shrink_to_fit();
+    return utf8str;
 }
 
 bool JKSNValue::toBool() const {

@@ -1,7 +1,7 @@
 AR=ar
 CXX=g++
 RM=rm -f
-override CXXFLAGS:=-std=c++11 -fPIC -Wall -Wextra -O3 $(CFLAGS)
+override CXXFLAGS:=-std=c++11 -fPIC -Wall -Wextra -Wsign-compare -Wsign-conversion -Wsign-promo -O3 $(CFLAGS)
 override LIB:=-lm $(LIB)
 
 .PHONY: all clean tests

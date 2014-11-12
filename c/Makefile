@@ -1,7 +1,7 @@
 AR=ar
 CC=gcc
 RM=rm -f
-override CFLAGS:=-fPIC -Wall -Wextra -O3 $(CFLAGS)
+override CFLAGS:=-fPIC -Wall -Wextra -Wsign-compare -Wsign-conversion -O3 $(CFLAGS)
 override LIB:=-lm $(LIB)
 
 .PHONY: all clean tests

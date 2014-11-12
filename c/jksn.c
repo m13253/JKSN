@@ -355,8 +355,8 @@ static jksn_error_message_no jksn_dump_int(jksn_proxy **result, const jksn_t *ob
             return JKSN_ENOMEM;
         jksn_encode_int(data.buf, (uintmax_t) object->data_int, 2);
         *result = jksn_proxy_new(object, 0x1c, &data, NULL);
-    } else if((object->data_int >= -0x80000000L && object->data_int <= -0x200000L) ||
-              (object->data_int >= 0x200000L && object->data_int <= 0x7fffffffL)) {
+    } else if((object->data_int >= -0x80000000 && object->data_int <= -0x200000) ||
+              (object->data_int >= 0x200000 && object->data_int <= 0x7fffffff)) {
         jksn_blobstring data = {4, jksn_malloc(4)};
         if(!data.buf)
             return JKSN_ENOMEM;
@@ -879,8 +879,8 @@ static void jksn_optimize(jksn_proxy *object, jksn_cache *cache) {
                             new_control = 0xbc;
                             jksn_encode_int(new_data.buf, (uintmax_t) delta, 2);
                         }
-                    } else if((delta >= -0x80000000L && delta <= -0x200000L) ||
-                              (delta >= 0x200000L && delta <= 0x7fffffffL)) {
+                    } else if((delta >= -0x80000000 && delta <= -0x200000) ||
+                              (delta >= 0x200000 && delta <= 0x7fffffff)) {
                         new_data.size = 4;
                         new_data.buf = jksn_malloc(4);
                         if(new_data.buf) {

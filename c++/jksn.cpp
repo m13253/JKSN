@@ -307,6 +307,50 @@ JKSNProxy JKSNEncoderPrivate::dumpDouble(const JKSNValue &obj) {
     }
 }
 
+JKSNProxy JKSNEncoderPrivate::dumpLongDouble(const JKSNValue &obj) {
+    const long double number = obj.toLongDouble();
+    if(isnan(number))
+        return JKSNProxy(&obj, 0x20);
+    else if(isinf(number))
+        return JKSNProxy(&obj, number >= 0 ? 0x2f : 0x2e);
+    else if(sizeof (long double) == 12) {
+        const union {
+            long double data_long_double;
+            char data_int[12];
+        } conv = {number};
+        if(isLittleEndian())
+            return JKSNProxy(&obj, 0x2b, std::string({
+                conv.data_int[9], conv.data_int[8],
+                conv.data_int[7], conv.data_int[6], conv.data_int[5], conv.data_int[4],
+                conv.data_int[3], conv.data_int[2], conv.data_int[1], conv.data_int[0]
+            }));
+        else
+            return JKSNProxy(&obj, 0x2b, std::string({
+                conv.data_int[2], conv.data_int[3],
+                conv.data_int[4], conv.data_int[5], conv.data_int[6], conv.data_int[7],
+                conv.data_int[8], conv.data_int[9], conv.data_int[10], conv.data_int[11]
+            }));
+    } else if(sizeof (long double) == 16) {
+        const union {
+            long double data_long_double;
+            char data_int[16];
+        } conv = {number};
+        if(isLittleEndian())
+            return JKSNProxy(&obj, 0x2b, std::string({
+                conv.data_int[9], conv.data_int[8],
+                conv.data_int[7], conv.data_int[6], conv.data_int[5], conv.data_int[4],
+                conv.data_int[3], conv.data_int[2], conv.data_int[1], conv.data_int[0]
+            }));
+        else
+            return JKSNProxy(&obj, 0x2b, std::string({
+                conv.data_int[6], conv.data_int[7],
+                conv.data_int[8], conv.data_int[9], conv.data_int[10], conv.data_int[11],
+                conv.data_int[12], conv.data_int[13], conv.data_int[14], conv.data_int[15]
+            }));
+    } else
+        throw JKSNEncodeError("this build of JKSN decoder does not support long double numbers");
+}
+
 JKSNProxy JKSNEncoderPrivate::dumpUnspecified(const JKSNValue &obj) {
     return JKSNProxy(&obj, 0xa0);
 }

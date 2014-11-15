@@ -537,7 +537,7 @@ JKSNProxy &JKSNEncoderPrivate::optimize(JKSNProxy &obj) {
         case 0x30:
         case 0x40:
             if(obj.buf.size() > 1) {
-                if(*this->cache.texthash[obj.hash] == obj.buf) {
+                if(this->cache.texthash[obj.hash] && *this->cache.texthash[obj.hash] == obj.buf) {
                     obj.control = 0x3c;
                     obj.data = encodeInt(obj.hash, 1);
                     obj.buf.clear();
@@ -547,7 +547,7 @@ JKSNProxy &JKSNEncoderPrivate::optimize(JKSNProxy &obj) {
             break;
         case 0x50:
             if(obj.buf.size() > 1) {
-                if(*this->cache.blobhash[obj.hash] == obj.buf) {
+                if(this->cache.blobhash[obj.hash] && *this->cache.blobhash[obj.hash] == obj.buf) {
                     obj.control = 0x3c;
                     obj.data = encodeInt(obj.hash, 1);
                     obj.buf.clear();

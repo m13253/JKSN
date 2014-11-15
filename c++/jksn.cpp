@@ -24,10 +24,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <initializer_list>
+#include <list>
 #include <map>
 #include <memory>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -98,7 +100,7 @@ public:
     uint8_t control;
     std::string data;
     std::string buf;
-    std::vector<JKSNProxy> children;
+    std::list<JKSNProxy> children;
     uint16_t hash = 0;
 };
 
@@ -127,9 +129,9 @@ private:
     static JKSNProxy dumpString(const JKSNValue &obj);
     static JKSNProxy dumpBlob(const JKSNValue &obj);
     static JKSNProxy dumpArray(const JKSNValue &obj);
-    static JKSNProxy textSwapAvailability(const JKSNValue &obj);
+    static bool testSwapAvailability(const JKSNValue &obj);
     static JKSNProxy encodeStraightArray(const JKSNValue &obj);
-    static JKSNProxy encodeSwappedList(const JKSNValue &obj);
+    static JKSNProxy encodeSwappedArray(const JKSNValue &obj);
     static JKSNProxy dumpObject(const JKSNValue &obj);
     static JKSNProxy dumpUnspecified(const JKSNValue &obj);
     JKSNProxy &optimize(JKSNProxy &obj);
@@ -367,45 +369,100 @@ JKSNProxy JKSNEncoderPrivate::dumpString(const JKSNValue &obj) {
     }
     uint8_t control = is_utf16 ? 0x30 : 0x40;
     uintmax_t length = is_utf16 ? obj_short.size()/2 : obj_short.size();
-    if(length <= (is_utf16 ? 0xb : 0xc)) {
-        JKSNProxy result = JKSNProxy(&obj, control | uint8_t(length), std::string(), std::move(obj_short));
-        result.hash = DJBHash(result.buf);
-        return result;
-    } else if(length <= 0xff) {
-        JKSNProxy result = JKSNProxy(&obj, control | 0xe, encodeInt(length, 1), std::move(obj_short));
-        result.hash = DJBHash(result.buf);
-        return result;
-    } else if(length <= 0xffff) {
-        JKSNProxy result = JKSNProxy(&obj, control | 0xd, encodeInt(length, 2), std::move(obj_short));
-        result.hash = DJBHash(result.buf);
-        return result;
-    } else {
-        JKSNProxy result = JKSNProxy(&obj, control | 0xf, encodeInt(length, 0), std::move(obj_short));
-        result.hash = DJBHash(result.buf);
-        return result;
-    }
+    std::unique_ptr<JKSNProxy> result;
+    if(length <= (is_utf16 ? 0xb : 0xc))
+        result.reset(new JKSNProxy(&obj, control | uint8_t(length), std::string(), std::move(obj_short)));
+    else if(length <= 0xff)
+        result.reset(new JKSNProxy(&obj, control | 0xe, encodeInt(length, 1), std::move(obj_short)));
+    else if(length <= 0xffff)
+        result.reset(new JKSNProxy(&obj, control | 0xd, encodeInt(length, 2), std::move(obj_short)));
+    else
+        result.reset(new JKSNProxy(&obj, control | 0xf, encodeInt(length, 0), std::move(obj_short)));
+    result->hash = DJBHash(result->buf);
+    return *result;
 }
 
 JKSNProxy JKSNEncoderPrivate::dumpBlob(const JKSNValue &obj) {
     std::string blob = obj.toBlob();
     size_t length = blob.size();
-    if(length <= 0xb) {
-        JKSNProxy result = JKSNProxy(&obj, 0x50 | uint8_t(length), std::string(), std::move(blob));
-        result.hash = DJBHash(result.buf);
-        return result;
-    } else if(length <= 0xff) {
-        JKSNProxy result = JKSNProxy(&obj, 0x5e, encodeInt(length, 1), std::move(blob));
-        result.hash = DJBHash(result.buf);
-        return result;
-    } else if(length <= 0xffff) {
-        JKSNProxy result = JKSNProxy(&obj, 0x5d, encodeInt(length, 2), std::move(blob));
-        result.hash = DJBHash(result.buf);
-        return result;
-    } else {
-        JKSNProxy result = JKSNProxy(&obj, 0x5f, encodeInt(length, 0), std::move(blob));
-        result.hash = DJBHash(result.buf);
-        return result;
+    std::unique_ptr<JKSNProxy> result;
+    if(length <= 0xb)
+        result.reset(new JKSNProxy(&obj, 0x50 | uint8_t(length), std::string(), std::move(blob)));
+    else if(length <= 0xff)
+        result.reset(new JKSNProxy(&obj, 0x5e, encodeInt(length, 1), std::move(blob)));
+    else if(length <= 0xffff)
+        result.reset(new JKSNProxy(&obj, 0x5d, encodeInt(length, 2), std::move(blob)));
+    else
+        result.reset(new JKSNProxy(&obj, 0x5f, encodeInt(length, 0), std::move(blob)));
+    result->hash = DJBHash(result->buf);
+    return *result;
+}
+
+bool JKSNEncoderPrivate::testSwapAvailability(const JKSNValue &obj) {
+    bool columns = false;
+    for(const JKSNValue &row : obj.toVector())
+        if(!row.isObject())
+            return false;
+        else
+            columns = columns || !row.toMap().empty();
+    return columns;
+}
+
+JKSNProxy JKSNEncoderPrivate::encodeStraightArray(const JKSNValue &obj) {
+    size_t length = obj.toVector().size();
+    std::unique_ptr<JKSNProxy> result;
+    if(length <= 0xc)
+        result.reset(new JKSNProxy(&obj, 0x80 | uint8_t(length)));
+    else if(length <= 0xff)
+        result.reset(new JKSNProxy(&obj, 0x8e, encodeInt(length, 1)));
+    else if(length <= 0xffff)
+        result.reset(new JKSNProxy(&obj, 0x8d, encodeInt(length, 2)));
+    else
+        result.reset(new JKSNProxy(&obj, 0x8f, encodeInt(length, 0)));
+    for(const JKSNValue &i : obj.toVector())
+        result->children.push_back(dumpValue(i));
+    assert(result->children.size() == length);
+    return *result;
+}
+
+JKSNProxy JKSNEncoderPrivate::encodeSwappedArray(const JKSNValue &obj) {
+    std::list<JKSNValue> columns;
+    std::unordered_set<JKSNValue> columns_set;
+    for(const JKSNValue &row : obj.toVector())
+        for(const std::pair<JKSNValue, JKSNValue> &column : row.toMap())
+            if(columns_set.find(column.first) == columns_set.end()) {
+                columns.push_back(column.first);
+                columns_set.insert(column.first);
+            }
+    size_t collen = columns.size();
+    std::unique_ptr<JKSNProxy> result;
+    if(collen <= 0xc)
+        result.reset(new JKSNProxy(&obj, 0xa0 | uint8_t(collen)));
+    else if(collen <= 0xff)
+        result.reset(new JKSNProxy(&obj, 0xae, encodeInt(collen, 1)));
+    else if(collen <= 0xffff)
+        result.reset(new JKSNProxy(&obj, 0xad, encodeInt(collen, 2)));
+    else
+        result.reset(new JKSNProxy(&obj, 0xaf, encodeInt(collen, 0)));
+    for(const JKSNValue &column : columns) {
+        result->children.push_back(dumpValue(column));
+        for(const JKSNValue &row : obj.toVector()) {
+            std::map<JKSNValue, JKSNValue>::const_iterator it = row.toMap().find(column);
+            result->children.push_back(dumpValue(it != row.toMap().end() ? it->first : JKSNValue::fromUnspecified()));
+        }
     }
+    assert(result->children.size() == columns.size()*2);
+    return *result;
+}
+
+JKSNProxy JKSNEncoderPrivate::dumpArray(const JKSNValue &obj) {
+    JKSNProxy result = encodeStraightArray(obj);
+    if(testSwapAvailability(obj)) {
+        JKSNProxy result_swapped = encodeSwappedArray(obj);
+        if(result_swapped.size(3) < result.size(3))
+            result = std::move(result_swapped);
+    }
+    return result;
 }
 
 JKSNProxy JKSNEncoderPrivate::dumpUnspecified(const JKSNValue &obj) {

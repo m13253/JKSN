@@ -24,6 +24,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <initializer_list>
 #include <list>
 #include <map>
@@ -68,12 +69,16 @@ public:
         buf(buf) {
     }
     std::ostream &output(std::ostream &stream, bool recursive = true) const {
-        stream.put(char(this->control));
-        stream << this->data
-               << this->buf;
+        if(!stream.put(char(this->control)))
+            return stream;
+        if(!(stream << this->data))
+            return stream;
+        if(!(stream << this->buf))
+            return stream;
         if(recursive)
             for(const JKSNProxy &i : this->children)
-                i.output(stream);
+                if(!i.output(stream))
+                    return stream;
         return stream;
     }
     std::string toString(bool recursive = true) const {
@@ -143,6 +148,10 @@ public:
     JKSNValue parseValue(std::istream &fp);
 private:
     JKSNCache cache;
+    static uintmax_t decodeInt(std::istream &fp, size_t size);
+    static JKSNValue parseFloat(std::istream &fp);
+    static JKSNValue parseDouble(std::istream &fp);
+    static JKSNValue parseLongDouble(std::istream &fp);
 };
 
 static inline bool isLittleEndian();
@@ -183,15 +192,16 @@ JKSNEncoder::~JKSNEncoder() {
 
 std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header) {
     JKSNProxy proxy = this->p->dumpToProxy(obj);
-    if(header)
-        result.write("jk!", 3);
+    if(header && !result.write("jk!", 3))
+        return result;
     proxy.output(result);
     return result;
 }
 
 std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header) {
     std::ostringstream result;
-    this->dump(result, obj, header);
+    if(!this->dump(result, obj, header))
+        throw JKSNEncodeError("no enough memory");
     return result.str();
 }
 
@@ -619,13 +629,73 @@ JKSNDecoder::~JKSNDecoder() {
 }
 
 JKSNValue JKSNDecoder::parse(std::istream &fp, bool header) {
-    (void) fp; (void) header;
-    return JKSNValue();
+    if(header) {
+        char header_buf[3];
+        if(!fp.read(header_buf, 3) || fp.gcount() != 3 || std::memcmp(header_buf, "jk!", 3))
+            fp.seekg(-fp.gcount(), fp.cur);
+    }
+    return this->p->parseValue(fp);
 }
 
 JKSNValue JKSNDecoder::parse(const std::string &str, bool header) {
     std::istringstream stream(str);
     return this->parse(stream, header);
+}
+
+JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
+    for(;;) {
+        uint8_t control;
+        {
+            char signed_control;
+            if(!fp.get(signed_control))
+                throw "JKSN stream may be truncated or corrupted";
+            control = uint8_t(signed_control);
+        }
+        uint8_t ctrlhi = control & 0xf0;
+        switch(ctrlhi) {
+        case 0x00:
+            switch(control) {
+            case 0x00:
+                return JKSNValue();
+            case 0x01:
+                return JKSNValue(nullptr);
+            case 0x02:
+                return JKSNValue(false);
+            case 0x03:
+                return JKSNValue(true);
+            case 0x0f:
+                throw JKSNDecodeError("this JKSN decoder does not support JSON literals");
+            }
+            break;
+        case 0x10:
+            this->cache.haslastint = true;
+            switch(control) {
+            case 0x1b:
+                this->cache.lastint = intmax_t(int32_t(this->decodeInt(fp, 4)));
+                break;
+            case 0x1c:
+                this->cache.lastint = intmax_t(int16_t(this->decodeInt(fp, 2)));
+                break;
+            case 0x1d:
+                this->cache.lastint = intmax_t(int8_t(this->decodeInt(fp, 1)));
+                break;
+            case 0x1e:
+                this->cache.lastint = -intmax_t(this->decodeInt(fp, 0));
+                if(this->cache.lastint >= 0)
+                    throw JKSNDecodeError("this build of JKSN decoder does not support variable length integers");
+                break;
+            case 0x1f:
+                this->cache.lastint = intmax_t(this->decodeInt(fp, 0));
+                if(this->cache.lastint < 0)
+                    throw JKSNDecodeError("this build of JKSN decoder does not support variable length integers");
+                break;
+            default:
+                this->cache.lastint = control & 0xf;
+            }
+            return JKSNValue(this->cache.lastint);
+        }
+        throw JKSNDecodeError("cannot encode unrecognizable type of value");
+    }
 }
 
 static inline bool isLittleEndian() {

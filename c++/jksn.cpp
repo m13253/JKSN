@@ -451,7 +451,7 @@ JKSNProxy JKSNEncoderPrivate::encodeSwappedArray(const JKSNValue &obj) {
             result->children.push_back(dumpValue(it != row.toMap().end() ? it->first : JKSNValue::fromUnspecified()));
         }
     }
-    assert(result->children.size() == columns.size()*2);
+    assert(result->children.size() == collen*2);
     return *result;
 }
 
@@ -463,6 +463,25 @@ JKSNProxy JKSNEncoderPrivate::dumpArray(const JKSNValue &obj) {
             result = std::move(result_swapped);
     }
     return result;
+}
+
+JKSNProxy JKSNEncoderPrivate::dumpObject(const JKSNValue &obj) {
+    size_t length = obj.toMap().size();
+    std::unique_ptr<JKSNProxy> result;
+    if(length <= 0xc)
+        result.reset(new JKSNProxy(&obj, 0x90 | uint8_t(length)));
+    else if(length <= 0xff)
+        result.reset(new JKSNProxy(&obj, 0x9e, encodeInt(length, 1)));
+    else if(length <= 0xffff)
+        result.reset(new JKSNProxy(&obj, 0x9d, encodeInt(length, 2)));
+    else
+        result.reset(new JKSNProxy(&obj, 0x9f, encodeInt(length, 0)));
+    for(const std::pair<JKSNValue, JKSNValue> &item : obj.toMap()) {
+        result->children.push_back(dumpValue(item.first));
+        result->children.push_back(dumpValue(item.second));
+    }
+    assert(result->children.size() == length*2);
+    return *result;
 }
 
 JKSNProxy JKSNEncoderPrivate::dumpUnspecified(const JKSNValue &obj) {

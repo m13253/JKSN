@@ -278,18 +278,19 @@ class JKSNEncoder:
 
         def encode_swapped_list(obj):
             columns = collections.OrderedDict().fromkeys((column for row in obj for column in row))
-            if len(columns) <= 0xc:
-                result = JKSNProxy(obj, 0xa0 | len(columns))
-            elif len(columns) <= 0xff:
-                result = JKSNProxy(obj, 0xae, self._encode_int(length, 1))
-            elif len(columns) <= 0xffff:
-                result = JKSNProxy(obj, 0xad, self._encode_int(length, 2))
+            collen = len(columns)
+            if collen <= 0xc:
+                result = JKSNProxy(obj, 0xa0 | collen)
+            elif collen <= 0xff:
+                result = JKSNProxy(obj, 0xae, self._encode_int(collen, 1))
+            elif collen <= 0xffff:
+                result = JKSNProxy(obj, 0xad, self._encode_int(collen, 2))
             else:
-                result = JKSNProxy(obj, 0xaf, self._encode_int(length, 0))
+                result = JKSNProxy(obj, 0xaf, self._encode_int(collen, 0))
             for column in columns:
                 result.children.append(self._dump_value(column))
                 result.children.append(self._dump_list([row.get(column, _unspecified_value) for row in obj]))
-            assert len(result.children) == len(columns) * 2
+            assert len(result.children) == collen * 2
             return result
 
         result = encode_straight_list(obj)

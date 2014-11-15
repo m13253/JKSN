@@ -564,7 +564,7 @@ class JKSNDecoder:
                     raise JKSNDecodeError('JKSN stream contains an invalid delta encoded integer')
             elif ctrlhi == 0xf0:
                 # Checksums
-                if control <= 0xf4:
+                if control <= 0xf5:
                     if control == 0xf0:
                         checksum = fp.read(1)
                         fp = _hashed_file(fp, _djb_hasher)

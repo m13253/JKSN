@@ -1049,6 +1049,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
         if(bytes_parsed)
             (*bytes_parsed)++;
         switch(ctrlhi) {
+        /* Special values */
         case 0x00:
             switch(control) {
             case 0x00:
@@ -1081,6 +1082,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 return JKSN_EJSON;
             }
             break;
+        /* Integers */
         case 0x10:
             {
                 jksn_error_message_no retval;
@@ -1133,6 +1135,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 cache->haslastint = 1;
                 return JKSN_EOK;
             }
+        /* Float point numbers */
         case 0x20:
             switch(control) {
             case 0x20:
@@ -1163,6 +1166,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 (*result)->data_double = INFINITY;
                 return JKSN_EOK;
             }
+        /* UTF-16 strings */
         case 0x30:
             {
                 jksn_error_message_no retval;
@@ -1264,6 +1268,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 }
                 return JKSN_EOK;
             }
+        /* UTF-8 strings */
         case 0x40:
             {
                 jksn_error_message_no retval;
@@ -1331,6 +1336,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 }
                 return JKSN_EOK;
             }
+        /* Blob strings */
         case 0x50:
             {
                 jksn_error_message_no retval;
@@ -1398,6 +1404,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 }
                 return JKSN_EOK;
             }
+        /* Hashtable refreshers */
         case 0x70:
             {
                 jksn_error_message_no retval;
@@ -1457,6 +1464,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 }
                 return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
             }
+        /* Arrays */
         case 0x80:
             {
                 jksn_error_message_no retval;
@@ -1515,6 +1523,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 }
                 return JKSN_EOK;
             }
+        /* Objects */
         case 0x90:
             {
                 jksn_error_message_no retval;
@@ -1583,6 +1592,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 }
                 return JKSN_EOK;
             }
+        /* Row-col swapped arrays */
         case 0xa0:
             {
                 jksn_error_message_no retval;
@@ -1713,6 +1723,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 }
                 return JKSN_EOK;
             }
+        /* Delta encoded integers */
         case 0xb0:
             {
                 jksn_error_message_no retval;
@@ -1787,6 +1798,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 jksn_t *tmp;
                 size_t child_size = 0;
                 switch(control) {
+                /* Checksums */
                 case 0xf0:
                     if(size < 1)
                         return JKSN_ETRUNC;
@@ -1925,6 +1937,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     if(bytes_parsed)
                         *bytes_parsed += 64;
                     return JKSN_EOK;
+                /* Ignore pragmas */
                 case 0xff:
                     retval = jksn_parse_value(&tmp, buffer, size, &child_size, cache);
                     if(retval != JKSN_EOK)

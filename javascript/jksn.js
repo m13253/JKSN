@@ -358,6 +358,7 @@ function JKSNDecoder() {
             var control = buf.getUint8(offset++);
             var ctrlhi = control & 0xf0;
             switch(ctrlhi) {
+            /* Special values */
             case 0x00:
                 switch(control) {
                 case 0x00:
@@ -375,6 +376,7 @@ function JKSNDecoder() {
                     return JSON.parse(s);
                 }
                 break;
+            /* Integers */
             case 0x10:
                 switch(control) {
                 case 0x1b:
@@ -398,6 +400,7 @@ function JKSNDecoder() {
                     lastint = control & 0xf;
                 }
                 return lastint;
+            /* Float point numbers */
             case 0x20:
                 switch(control) {
                 case 0x20:
@@ -418,6 +421,7 @@ function JKSNDecoder() {
                     return Infinity;
                 }
                 break;
+            /* UTF-16 strings */
             case 0x30:
                 var strlen;
                 switch(control) {
@@ -446,6 +450,7 @@ function JKSNDecoder() {
                 texthash[DJBHash(strbuf)] = result;
                 offset += strlen;
                 return result;
+            /* UTF-8 strings */
             case 0x40:
                 var strlen;
                 switch(control) {
@@ -467,6 +472,7 @@ function JKSNDecoder() {
                 texthash[DJBHash(strbuf)] = result;
                 offset += strlen;
                 return result;
+            /* Blob strings */
             case 0x50:
                 var strlen;
                 switch(control) {
@@ -488,6 +494,7 @@ function JKSNDecoder() {
                 blobhash[DJBHash(strbuf)] = result;
                 offset += strlen;
                 return result;
+            /* Hashtable refreshers */
             case 0x70:
                 var objlen;
                 switch(control) {
@@ -511,6 +518,7 @@ function JKSNDecoder() {
                 for(; objlen > 0; objlen--)
                     loadValue(buf);
                 continue;
+            /* Arrays */
             case 0x80:
                 var objlen;
                 switch(control) {
@@ -531,6 +539,7 @@ function JKSNDecoder() {
                 for(var i = 0; i < objlen; i++)
                     result[i] = loadValue(buf);
                 return result;
+            /* Objects */
             case 0x90:
                 var objlen;
                 switch(control) {
@@ -553,6 +562,7 @@ function JKSNDecoder() {
                     result[key] = loadValue(buf);
                 }
                 return result;
+            /* Row-col swapped arrays */
             case 0xa0:
                 var collen;
                 switch(control) {
@@ -585,6 +595,7 @@ function JKSNDecoder() {
                     }
                 }
                 return result;
+            /* Delta encoded integers */
             case 0xb0:
                 var delta;
                 switch(control) {
@@ -617,6 +628,7 @@ function JKSNDecoder() {
                 else
                     throw "JKSNDecodeError: JKSN stream contains an invalid delta encoded integer"
             case 0xf0:
+                /* Checksums */
                 if(control <= 0xf5 || (control >= 0xf8 && control <= 0xfd)) {
                     console.warn("JKSNDecodeWarning: checksum is not supported")
                     switch(control) {
@@ -640,6 +652,7 @@ function JKSNDecoder() {
                         continue;
                     }
                     continue;
+                /* Ignore pragmas */
                 } else if(control == 0xff) {
                     loadValue(buf);
                     continue;

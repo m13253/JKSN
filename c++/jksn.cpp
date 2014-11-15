@@ -653,6 +653,7 @@ JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
         }
         uint8_t ctrlhi = control & 0xf0;
         switch(ctrlhi) {
+        /* Special values */
         case 0x00:
             switch(control) {
             case 0x00:
@@ -667,6 +668,7 @@ JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
                 throw JKSNDecodeError("this JKSN decoder does not support JSON literals");
             }
             break;
+        /* Integers */
         case 0x10:
             this->cache.haslastint = true;
             switch(control) {
@@ -693,6 +695,23 @@ JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
                 this->cache.lastint = control & 0xf;
             }
             return JKSNValue(this->cache.lastint);
+        /* Float point numbers */
+        case 0x20:
+            switch(control) {
+            case 0x20:
+                return JKSNValue(NAN);
+            case 0x2b:
+                return this->parseLongDouble(fp);
+            case 0x2c:
+                return this->parseDouble(fp);
+            case 0x2d:
+                return this->parseFloat(fp);
+            case 0x2e:
+                return JKSNValue(-INFINITY);
+            case 0x2f:
+                return JKSNValue(INFINITY);
+            }
+            break;
         }
         throw JKSNDecodeError("cannot encode unrecognizable type of value");
     }

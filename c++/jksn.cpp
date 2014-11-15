@@ -23,6 +23,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <initializer_list>
 #include <list>
 #include <map>
@@ -198,10 +199,6 @@ JKSNProxy JKSNEncoderPrivate::dumpToProxy(const JKSNValue &obj) {
     JKSNProxy proxy = this->dumpValue(obj);
     this->optimize(proxy);
     return proxy;
-}
-
-JKSNProxy &optimize(JKSNProxy &obj) {
-    return obj;
 }
 
 JKSNProxy JKSNEncoderPrivate::dumpValue(const JKSNValue &obj) {
@@ -486,6 +483,73 @@ JKSNProxy JKSNEncoderPrivate::dumpObject(const JKSNValue &obj) {
 
 JKSNProxy JKSNEncoderPrivate::dumpUnspecified(const JKSNValue &obj) {
     return JKSNProxy(&obj, 0xa0);
+}
+
+JKSNProxy &JKSNEncoderPrivate::optimize(JKSNProxy &obj) {
+    uint8_t control = obj.control & 0xf0;
+    switch(control) {
+        case 0x10:
+            if (this->cache.haslastint) {
+                intmax_t delta = obj.origin->toInt() - this->cache.lastint;
+                if(abs(delta) < abs(obj.origin->toInt())) {
+                    uint8_t new_control;
+                    std::string new_data;
+                    if(delta >= 0 && delta <= 0x5)
+                        new_control = 0xb0 | uint8_t(delta);
+                    else if(delta >= -0x5 && delta <= -0x1)
+                        new_control = 0xb0 | uint8_t(delta+11);
+                    else if(delta >= -0x80 && delta <= 0x7f) {
+                        new_control = 0xbd;
+                        new_data = encodeInt(uintmax_t(delta), 1);
+                    } else if(delta >= -0x8000 && delta <= 0x7fff) {
+                        new_control = 0xbc;
+                        new_data = encodeInt(uintmax_t(delta), 2);
+                    } else if((delta >= -0x80000000 && delta <= -0x200000) ||
+                              (delta >= 0x200000 && delta <= 0x7fffffff)) {
+                        new_control = 0xbb;
+                        new_data = encodeInt(uintmax_t(delta), 4);
+                    } else if(delta >= 0) {
+                        new_control = 0xbf;
+                        new_data = encodeInt(uintmax_t(delta), 0);
+                    } else {
+                        new_control = 0xbe;
+                        new_data = encodeInt(uintmax_t(-delta), 0);
+                    }
+                    if(new_data.size() < obj.data.size()) {
+                        obj.control = new_control;
+                        obj.data = std::move(new_data);
+                    }
+                }
+            }
+            this->cache.haslastint = true;
+            this->cache.lastint = obj.origin->toInt();
+            break;
+        case 0x30:
+        case 0x40:
+            if(obj.buf.size() > 1) {
+                if(*this->cache.texthash[obj.hash] == obj.buf) {
+                    obj.control = 0x3c;
+                    obj.data = encodeInt(obj.hash, 1);
+                    obj.buf.clear();
+                } else
+                    this->cache.texthash[obj.hash] = std::make_shared<std::string>(obj.buf);
+            }
+            break;
+        case 0x50:
+            if(obj.buf.size() > 1) {
+                if(*this->cache.blobhash[obj.hash] == obj.buf) {
+                    obj.control = 0x3c;
+                    obj.data = encodeInt(obj.hash, 1);
+                    obj.buf.clear();
+                } else
+                    this->cache.blobhash[obj.hash] = std::make_shared<std::string>(obj.buf);
+            }
+            break;
+        default:
+            for(JKSNProxy &child : obj.children)
+                this->optimize(child);
+    }
+    return obj;
 }
 
 std::string JKSNEncoderPrivate::encodeInt(uintmax_t number, size_t size) {

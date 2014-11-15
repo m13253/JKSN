@@ -698,6 +698,52 @@ JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
     }
 }
 
+uintmax_t JKSNDecoderPrivate::decodeInt(std::istream &fp, size_t size) {
+    switch(size) {
+    case 1:
+        {
+            char buffer;
+            if(!fp.get(buffer))
+                throw "JKSN stream may be truncated or corrupted";
+            return uintmax_t(uint8_t(buffer));
+        }
+    case 2:
+        {
+            char buffer[2];
+            if(!fp.read(buffer, 2))
+                throw "JKSN stream may be truncated or corrupted";
+            return uintmax_t(uint8_t(buffer[0])) << 8 |
+                   uintmax_t(uint8_t(buffer[1]));
+        }
+    case 4:
+        {
+            char buffer[4];
+            if(!fp.read(buffer, 4))
+                throw "JKSN stream may be truncated or corrupted";
+            return uintmax_t(uint8_t(buffer[0])) << 24 |
+                   uintmax_t(uint8_t(buffer[1])) << 16 |
+                   uintmax_t(uint8_t(buffer[2])) << 8 |
+                   uintmax_t(uint8_t(buffer[3]));
+        }
+    case 0:
+        {
+            char thisbyte;
+            uintmax_t result = 0;
+            do {
+                if(result & ~(~ uintmax_t(0) >> 7))
+                    throw JKSNDecodeError("this build of JKSN decoder does not support variable length integers");
+                if(!fp.get(thisbyte))
+                    throw "JKSN stream may be truncated or corrupted";
+                result = (result << 7) | (uint8_t(thisbyte) & 0x7f);
+            } while(uint8_t(thisbyte) & 0x80);
+            return result;
+        }
+    default:
+        assert(size == 1 || size == 2 || size == 4 || size == 0);
+        abort();
+    }
+}
+
 static inline bool isLittleEndian() {
     static const union {
         uint16_t word;

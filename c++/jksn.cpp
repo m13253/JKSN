@@ -49,36 +49,24 @@ public:
         control(control),
         data(data),
         buf(buf) {
-        /* During row-col swapped array construction,
-           temporary JKSNValue objects may be created.
-           The integer value will be preserved here
-           for the delta encoding process. */
-        if(origin && origin->isInt())
-            this->origin_int = origin->toInt();
     }
     JKSNProxy(const JKSNValue *origin, uint8_t control, const std::string &data, std::string &&buf = std::string()) :
         origin(origin),
         control(control),
         data(data),
         buf(std::move(buf)) {
-        if(origin && origin->isInt())
-            this->origin_int = origin->toInt();
     }
     JKSNProxy(const JKSNValue *origin, uint8_t control, std::string &&data = std::string(), std::string &&buf = std::string()) :
         origin(origin),
         control(control),
         data(std::move(data)),
         buf(std::move(buf)) {
-        if(origin && origin->isInt())
-            this->origin_int = origin->toInt();
     }
     JKSNProxy(const JKSNValue *origin, uint8_t control, std::string &&data, const std::string &buf) :
         origin(origin),
         control(control),
         data(std::move(data)),
         buf(buf) {
-        if(origin && origin->isInt())
-            this->origin_int = origin->toInt();
     }
     std::ostream &output(std::ostream &stream, bool recursive = true) const {
         if(!stream.put(char(this->control)))
@@ -119,8 +107,7 @@ public:
     std::string data;
     std::string buf;
     std::list<JKSNProxy> children;
-    uint16_t hash = 0;
-    intmax_t origin_int;
+    uint8_t hash = 0;
 };
 
 class JKSNCache {
@@ -527,8 +514,8 @@ JKSNProxy &JKSNEncoderPrivate::optimize(JKSNProxy &obj) {
     switch(control) {
         case 0x10:
             if (this->cache.haslastint) {
-                intmax_t delta = obj.origin_int - this->cache.lastint;
-                if(std::abs(delta) < std::abs(obj.origin_int)) {
+                intmax_t delta = obj.origin->toInt() - this->cache.lastint;
+                if(std::abs(delta) < std::abs(obj.origin->toInt())) {
                     uint8_t new_control;
                     std::string new_data;
                     if(delta >= 0 && delta <= 0x5)
@@ -559,7 +546,7 @@ JKSNProxy &JKSNEncoderPrivate::optimize(JKSNProxy &obj) {
                 }
             }
             this->cache.haslastint = true;
-            this->cache.lastint = obj.origin_int;
+            this->cache.lastint = obj.origin->toInt();
             break;
         case 0x30:
         case 0x40:

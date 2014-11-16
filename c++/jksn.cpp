@@ -1069,6 +1069,134 @@ uintmax_t JKSNDecoderPrivate::decodeInt(std::istream &fp, size_t size) {
     }
 }
 
+JKSNValue JKSNDecoderPrivate::parseFloat(std::istream &fp) {
+    static_assert(sizeof (float) == 4, "sizeof (float) should be 4");
+    char buffer[4];
+    if(!fp.read(buffer, 4))
+        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+    const union {
+        uint32_t data_int;
+        float data_float;
+    } conv = {
+        uint32_t(uint8_t(buffer[0])) << 24 |
+        uint32_t(uint8_t(buffer[1])) << 16 |
+        uint32_t(uint8_t(buffer[2])) << 8 |
+        uint32_t(uint8_t(buffer[3]))
+    };
+    return JKSNValue(conv.data_float);
+}
+
+JKSNValue JKSNDecoderPrivate::parseDouble(std::istream &fp) {
+    static_assert(sizeof (double) == 8, "sizeof (double) should be 8");
+    char buffer[8];
+    if(!fp.read(buffer, 8))
+        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+    const union {
+        uint64_t data_int;
+        double data_double;
+    } conv = {
+        uint64_t(uint8_t(buffer[0])) << 56 |
+        uint64_t(uint8_t(buffer[1])) << 48 |
+        uint64_t(uint8_t(buffer[2])) << 40 |
+        uint64_t(uint8_t(buffer[3])) << 32 |
+        uint64_t(uint8_t(buffer[4])) << 24 |
+        uint64_t(uint8_t(buffer[5])) << 16 |
+        uint64_t(uint8_t(buffer[6])) << 8 |
+        uint64_t(uint8_t(buffer[7]))
+    };
+    return JKSNValue(conv.data_double);
+}
+
+JKSNValue JKSNDecoderPrivate::parseLongDouble(std::istream &fp) {
+    if(sizeof (long double) == 12) {
+        char buffer[10];
+        if(!fp.read(buffer, 10))
+            throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+        union {
+            uint8_t data_int[12];
+            long double data_long_double;
+        } conv;
+        if(isLittleEndian()) {
+            conv.data_int[0] = uint8_t(buffer[9]);
+            conv.data_int[1] = uint8_t(buffer[8]);
+            conv.data_int[2] = uint8_t(buffer[7]);
+            conv.data_int[3] = uint8_t(buffer[6]);
+            conv.data_int[4] = uint8_t(buffer[5]);
+            conv.data_int[5] = uint8_t(buffer[4]);
+            conv.data_int[6] = uint8_t(buffer[3]);
+            conv.data_int[7] = uint8_t(buffer[2]);
+            conv.data_int[8] = uint8_t(buffer[1]);
+            conv.data_int[9] = uint8_t(buffer[0]);
+            conv.data_int[10] = 0;
+            conv.data_int[11] = 0;
+        } else {
+            conv.data_int[0] = 0;
+            conv.data_int[1] = 0;
+            conv.data_int[2] = uint8_t(buffer[0]);
+            conv.data_int[3] = uint8_t(buffer[1]);
+            conv.data_int[4] = uint8_t(buffer[2]);
+            conv.data_int[5] = uint8_t(buffer[3]);
+            conv.data_int[6] = uint8_t(buffer[4]);
+            conv.data_int[7] = uint8_t(buffer[5]);
+            conv.data_int[8] = uint8_t(buffer[6]);
+            conv.data_int[9] = uint8_t(buffer[7]);
+            conv.data_int[10] = uint8_t(buffer[8]);
+            conv.data_int[11] = uint8_t(buffer[9]);
+        }
+        return JKSNValue(conv.data_long_double);
+    } else if(sizeof (long double) == 16) {
+        char buffer[10];
+        if(!fp.read(buffer, 10))
+            throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+        union {
+            uint8_t data_int[16];
+            long double data_long_double;
+        } conv;
+        if(isLittleEndian()) {
+            conv.data_int[0] = uint8_t(buffer[9]);
+            conv.data_int[1] = uint8_t(buffer[8]);
+            conv.data_int[2] = uint8_t(buffer[7]);
+            conv.data_int[3] = uint8_t(buffer[6]);
+            conv.data_int[4] = uint8_t(buffer[5]);
+            conv.data_int[5] = uint8_t(buffer[4]);
+            conv.data_int[6] = uint8_t(buffer[3]);
+            conv.data_int[7] = uint8_t(buffer[2]);
+            conv.data_int[8] = uint8_t(buffer[1]);
+            conv.data_int[9] = uint8_t(buffer[0]);
+            conv.data_int[10] = 0;
+            conv.data_int[11] = 0;
+            conv.data_int[12] = 0;
+            conv.data_int[13] = 0;
+            conv.data_int[14] = 0;
+            conv.data_int[15] = 0;
+        } else {
+            conv.data_int[0] = 0;
+            conv.data_int[1] = 0;
+            conv.data_int[2] = 0;
+            conv.data_int[3] = 0;
+            conv.data_int[4] = 0;
+            conv.data_int[5] = 0;
+            conv.data_int[6] = uint8_t(buffer[0]);
+            conv.data_int[7] = uint8_t(buffer[1]);
+            conv.data_int[8] = uint8_t(buffer[2]);
+            conv.data_int[9] = uint8_t(buffer[3]);
+            conv.data_int[10] = uint8_t(buffer[4]);
+            conv.data_int[11] = uint8_t(buffer[5]);
+            conv.data_int[12] = uint8_t(buffer[6]);
+            conv.data_int[13] = uint8_t(buffer[7]);
+            conv.data_int[14] = uint8_t(buffer[8]);
+            conv.data_int[15] = uint8_t(buffer[9]);
+        }
+        return JKSNValue(conv.data_long_double);
+    } else
+        throw JKSNEncodeError("this build of JKSN decoder does not support long double numbers");
+}
+
+JKSNValue JKSNDecoderPrivate::parseSwappedList(std::istream &fp, size_t column_length) {
+
+}
+
+
 static inline bool isLittleEndian() {
     static const union {
         uint16_t word;

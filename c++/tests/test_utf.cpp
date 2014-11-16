@@ -12,23 +12,19 @@ int main(int argc, char *argv[]) {
             break;
         }
     if(to_utf8) {
-        std::stringstream sstr;
-        if(sstr << std::cin.rdbuf()) {
-            sstr.seekg(0);
-            std::u16string utf16str;
-            char buf[2];
-            while(sstr.read(buf, 2))
-                utf16str.push_back(char16_t(buf[0]) | char16_t(buf[1]) << 8);
-            std::cerr << "Input UTF-16 size: " << utf16str.size() << std::endl;
-            std::cout << JKSN::UTF16ToUTF8(utf16str);
-        }
+        std::u16string utf16str;
+        char buf[2];
+        while(std::cin.read(buf, 2))
+            utf16str.push_back(char16_t(uint8_t(buf[0]) | uint16_t(uint8_t(buf[1])) << 8));
+        std::cerr << "Input UTF-16 size: " << utf16str.size() << std::endl;
+        std::cout << JKSN::UTF16ToUTF8(utf16str);
     } else {
         std::stringstream sstr;
-        if(sstr << std::cin.rdbuf()) {
-            const std::string &utf8str = sstr.str();
-            std::cerr << "Input UTF-8 size: " << utf8str.size() << std::endl;
-            std::cout << JKSN::UTF8ToUTF16LE(utf8str);
+        while(sstr << std::cin.rdbuf()) {
         }
+        const std::string &utf8str = sstr.str();
+        std::cerr << "Input UTF-8 size: " << utf8str.size() << std::endl;
+        std::cout << JKSN::UTF8ToUTF16LE(utf8str);
     }
     return 0;
 }

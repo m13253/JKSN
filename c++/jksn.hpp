@@ -542,6 +542,105 @@ public:
     bool operator>=(const JKSNValue &that) const {
         return !(*this < that);
     }
+    size_t hash() const {
+        if(this->hashashcode)
+            return this->hashcode;
+        size_t result = 0;
+        switch(this->getType()) {
+        case JKSN::JKSN_UNDEFINED:
+            result = 0x0;
+            break;
+        case JKSN::JKSN_NULL:
+            result = 0x1;
+            break;
+        case JKSN::JKSN_BOOL:
+            result = std::hash<bool>()(this->toBool());
+            break;
+        case JKSN::JKSN_INT:
+            result = std::hash<int>()(this->toInt());
+            break;
+        case JKSN::JKSN_FLOAT:
+            result = std::hash<float>()(this->toFloat());
+            break;
+        case JKSN::JKSN_DOUBLE:
+            result = std::hash<double>()(this->toDouble());
+            break;
+        case JKSN::JKSN_LONG_DOUBLE:
+            result = std::hash<long double>()(this->toLongDouble());
+            break;
+        case JKSN::JKSN_STRING:
+        case JKSN::JKSN_BLOB:
+            result = std::hash<std::string>()(this->toString());
+            break;
+        case JKSN::JKSN_ARRAY:
+            for(const JKSN::JKSNValue &i : this->toVector())
+                result ^= i.hash();
+            break;
+        case JKSN::JKSN_OBJECT:
+            for(const std::pair<JKSN::JKSNValue, JKSN::JKSNValue> &i : this->toMap()) {
+                result ^= i.first.hash();
+                result ^= i.second.hash();
+            }
+            break;
+        case JKSN::JKSN_UNSPECIFIED:
+            result = 0xa0;
+            break;
+        default:
+            result = size_t(ssize_t(-1));
+        }
+        return result;
+    }
+    size_t hash() {
+        if(this->hashashcode)
+            return this->hashcode;
+        size_t result = 0;
+        switch(this->getType()) {
+        case JKSN::JKSN_UNDEFINED:
+            result = 0x0;
+            break;
+        case JKSN::JKSN_NULL:
+            result = 0x1;
+            break;
+        case JKSN::JKSN_BOOL:
+            result = std::hash<bool>()(this->toBool());
+            break;
+        case JKSN::JKSN_INT:
+            result = std::hash<int>()(this->toInt());
+            break;
+        case JKSN::JKSN_FLOAT:
+            result = std::hash<float>()(this->toFloat());
+            break;
+        case JKSN::JKSN_DOUBLE:
+            result = std::hash<double>()(this->toDouble());
+            break;
+        case JKSN::JKSN_LONG_DOUBLE:
+            result = std::hash<long double>()(this->toLongDouble());
+            break;
+        case JKSN::JKSN_STRING:
+        case JKSN::JKSN_BLOB:
+            result = std::hash<std::string>()(this->toString());
+            break;
+        case JKSN::JKSN_ARRAY:
+            for(JKSN::JKSNValue &i : this->toVector())
+                result ^= i.hash();
+            break;
+        case JKSN::JKSN_OBJECT:
+            for(std::pair<const JKSN::JKSNValue, JKSN::JKSNValue> &i : this->toMap()) {
+                result ^= i.first.hash();
+                result ^= i.second.hash();
+            }
+            break;
+        case JKSN::JKSN_UNSPECIFIED:
+            result = 0xa0;
+            break;
+        default:
+            result = size_t(ssize_t(-1));
+        }
+        return result;
+        this->hashcode = result;
+        this->hashashcode = true;
+        return result;
+    }
 
 private:
     jksn_data_type data_type = JKSN_UNDEFINED;
@@ -556,6 +655,8 @@ private:
         std::vector<JKSNValue> *data_array;
         std::map<JKSNValue, JKSNValue> *data_object;
     };
+    bool hashashcode = false;
+    size_t hashcode;
 
     template<typename T> T toNumber() const;
 };
@@ -607,51 +708,12 @@ namespace std {
 
 template<>
 struct hash<JKSN::JKSNValue> {
-public:
-    size_t operator()(const JKSN::JKSNValue &value) const {
-        switch(value.getType()) {
-        case JKSN::JKSN_UNDEFINED:
-            return 0x0;
-        case JKSN::JKSN_NULL:
-            return 0x1;
-        case JKSN::JKSN_BOOL:
-            return hasher_bool(value.toBool());
-        case JKSN::JKSN_INT:
-            return hasher_int(value.toInt());
-        case JKSN::JKSN_FLOAT:
-            return hasher_float(value.toFloat());
-        case JKSN::JKSN_DOUBLE:
-        case JKSN::JKSN_LONG_DOUBLE:
-            return hasher_double(value.toDouble());
-        case JKSN::JKSN_STRING:
-        case JKSN::JKSN_BLOB:
-            return hasher_string_blob(value.toString());
-        case JKSN::JKSN_ARRAY:
-            {
-                size_t result = 0;
-                for(const JKSN::JKSNValue &i : value.toVector())
-                    result ^= (*this)(i);
-            }
-        case JKSN::JKSN_OBJECT:
-            {
-                size_t result = 0;
-                for(const pair<JKSN::JKSNValue, JKSN::JKSNValue> &i : value.toMap()) {
-                    result ^= (*this)(i.first);
-                    result ^= (*this)(i.second);
-                }
-            }
-        case JKSN::JKSN_UNSPECIFIED:
-            return 0xa0;
-        default:
-            return size_t(ssize_t(-1));
-        }
+    size_t operator()(JKSN::JKSNValue &value) const {
+        return value.hash();
     }
-private:
-    static hash<bool> hasher_bool;
-    static hash<intmax_t> hasher_int;
-    static hash<float> hasher_float;
-    static hash<double> hasher_double;
-    static hash<string> hasher_string_blob;
+    size_t operator()(const JKSN::JKSNValue &value) const {
+        return value.hash();
+    }
 };
 
 }

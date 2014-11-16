@@ -409,7 +409,7 @@ JKSNProxy JKSNEncoderPrivate::dumpBlob(const JKSNValue &obj) {
 
 bool JKSNEncoderPrivate::testSwapAvailability(const std::vector<const JKSNValue *> &obj) {
     bool columns = false;
-    for(const JKSNValue *const &row : obj)
+    for(const JKSNValue *const row : obj)
         if(!row->isObject())
             return false;
         else
@@ -428,7 +428,7 @@ JKSNProxy JKSNEncoderPrivate::encodeStraightArray(const std::vector<const JKSNVa
         result.reset(new JKSNProxy(origin, 0x8d, encodeInt(length, 2)));
     else
         result.reset(new JKSNProxy(origin, 0x8f, encodeInt(length, 0)));
-    for(const JKSNValue *const &i : obj)
+    for(const JKSNValue *const i : obj)
         result->children.push_back(dumpValue(*i));
     assert(result->children.size() == length);
     return *result;
@@ -437,7 +437,7 @@ JKSNProxy JKSNEncoderPrivate::encodeStraightArray(const std::vector<const JKSNVa
 JKSNProxy JKSNEncoderPrivate::encodeSwappedArray(const std::vector<const JKSNValue *> &obj, const JKSNValue *origin) {
     std::list<JKSNValue> columns;
     std::unordered_set<JKSNValue> columns_set;
-    for(const JKSNValue *const &row : obj)
+    for(const JKSNValue *const row : obj)
         for(const std::pair<JKSNValue, JKSNValue> &column : row->toMap())
             if(columns_set.find(column.first) == columns_set.end()) {
                 columns.push_back(column.first);
@@ -457,7 +457,7 @@ JKSNProxy JKSNEncoderPrivate::encodeSwappedArray(const std::vector<const JKSNVal
         result->children.push_back(dumpValue(column));
         std::vector<const JKSNValue *> columns_value;
         columns_value.reserve(obj.size());
-        for(const JKSNValue *const &row : obj) {
+        for(const JKSNValue *const row : obj) {
             static JKSNValue unspecified_value = JKSNValue::fromUnspecified();
             std::map<JKSNValue, JKSNValue>::const_iterator it = row->toMap().find(column);
             columns_value.push_back(it != row->toMap().end() ? &it->second : &unspecified_value);

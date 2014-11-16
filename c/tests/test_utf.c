@@ -17,8 +17,8 @@ int main(int argc, char *argv[]) {
             for(len = 0; buf[len]; len++) {
             }
             fprintf(stderr, "Input UTF-16 size: %zu\n", len);
-            char *out = malloc(jksn_utf16_to_utf8(NULL, buf, len));
-            fwrite(out, 1, jksn_utf16_to_utf8(out, buf, len), stdout);
+            char *out = malloc(jksn_utf16_to_utf8(buf, NULL, len));
+            fwrite(out, 1, jksn_utf16_to_utf8(buf, out, len), stdout);
             free(out);
         }
     } else {
@@ -28,8 +28,8 @@ int main(int argc, char *argv[]) {
             for(len = 0; buf[len]; len++) {
             }
             fprintf(stderr, "Input UTF-8 size: %zu\n", len);
-            uint16_t *out = malloc(jksn_utf8_to_utf16(NULL, buf, len, 0) * sizeof (uint16_t));
-            fwrite(out, sizeof (uint16_t), jksn_utf8_to_utf16(out, buf, len, 0), stdout);
+            uint16_t *out = malloc(jksn_utf8_to_utf16(buf, NULL, len, 0) * sizeof (uint16_t));
+            fwrite(out, sizeof (uint16_t), jksn_utf8_to_utf16(buf, out, len, 0), stdout);
             free(out);
         }
     }

@@ -98,8 +98,8 @@ static jksn_error_message_no jksn_parse_float(jksn_t **result, const char *buffe
 static jksn_error_message_no jksn_parse_double(jksn_t **result, const char *buffer, size_t size, size_t *bytes_parsed);
 static jksn_error_message_no jksn_parse_longdouble(jksn_t **result, const char *buffer, size_t size, size_t *bytes_parsed);
 static jksn_error_message_no jksn_decode_int(uintmax_t *result, const char *buffer, size_t bufsize, size_t size, size_t *bytes_parsed);
-static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size, int strict);
-static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size);
+static size_t jksn_utf8_to_utf16(const char *utf8str, uint16_t *utf16str, size_t utf8size, int strict);
+static size_t jksn_utf16_to_utf8(const uint16_t *utf16str, char *utf8str, size_t utf16size);
 static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2);
 static jksn_t *jksn_duplicate(const jksn_t *object);
 static uint8_t jksn_djbhash(const char *buf, size_t size);
@@ -263,7 +263,7 @@ static char *jksn_proxy_output(char output[], const jksn_proxy *object) {
     return output;
 }
 
-int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int header, jksn_cache *cache_) {
+int jksn_dump(const jksn_t *object, jksn_blobstring **result, /*bool*/ int header, jksn_cache *cache_) {
     *result = NULL;
     if(!object)
         return JKSN_ETYPE;
@@ -528,14 +528,14 @@ static jksn_error_message_no jksn_dump_longdouble(jksn_proxy **result, const jks
 }
 
 static jksn_error_message_no jksn_dump_string(jksn_proxy **result, const jksn_t *object) {
-    size_t utf16size = jksn_utf8_to_utf16(NULL, object->data_string.str, object->data_string.size, 1);
+    size_t utf16size = jksn_utf8_to_utf16(object->data_string.str, NULL, object->data_string.size, 1);
     if(utf16size != (size_t) (ssize_t) -1 && utf16size*2 < object->data_string.size) {
         uint16_t *utf16str = jksn_malloc(utf16size*2);
         jksn_blobstring buf = {0, (char *) utf16str};
         size_t i;
         if(!utf16str)
             return JKSN_ENOMEM;
-        buf.size = jksn_utf8_to_utf16(utf16str, object->data_string.str, object->data_string.size, 1) * 2;
+        buf.size = jksn_utf8_to_utf16(object->data_string.str, utf16str, object->data_string.size, 1) * 2;
         assert(buf.size == utf16size * 2);
         if(!jksn_is_little_endian())
             for(i = 0; i < utf16size; i++)
@@ -1012,7 +1012,7 @@ static struct jksn_swap_columns *jksn_swap_columns_free(struct jksn_swap_columns
     return NULL;
 }
 
-int jksn_parse(jksn_t **result, const jksn_blobstring *buffer, size_t *bytes_parsed, jksn_cache *cache_) {
+int jksn_parse(const jksn_blobstring *buffer, jksn_t **result, size_t *bytes_parsed, jksn_cache *cache_) {
     *result = NULL;
     if(bytes_parsed)
         *bytes_parsed = 0;
@@ -1238,7 +1238,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 if(!*result)
                     return JKSN_ENOMEM;
                 (*result)->data_type = JKSN_STRING;
-                (*result)->data_string.size = jksn_utf16_to_utf8(NULL, utf16str, str_size);
+                (*result)->data_string.size = jksn_utf16_to_utf8(utf16str, NULL, str_size);
                 (*result)->data_string.str = jksn_malloc((*result)->data_string.size + 1);
                 if(!(*result)->data_string.str) {
                     free(utf16str);
@@ -1246,7 +1246,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     *result = NULL;
                     return JKSN_ENOMEM;
                 }
-                jksn_utf16_to_utf8((*result)->data_string.str, utf16str, str_size);
+                jksn_utf16_to_utf8(utf16str, (*result)->data_string.str, str_size);
                 free(utf16str);
                 utf16str = NULL;
                 (*result)->data_string.str[(*result)->data_string.size] = '\0';
@@ -2165,7 +2165,7 @@ static int jksn_utf8_check_continuation(const char *utf8str, size_t length, size
         return 0;
 }
 
-static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t utf8size, int strict) {
+static size_t jksn_utf8_to_utf16(const char *utf8str, uint16_t *utf16str, size_t utf8size, int strict) {
     size_t reslen = 0;
     while(utf8size) {
         if((uint8_t) utf8str[0] < 0x80) {
@@ -2229,7 +2229,7 @@ static size_t jksn_utf8_to_utf16(uint16_t *utf16str, const char *utf8str, size_t
     return reslen;
 }
 
-static size_t jksn_utf16_to_utf8(char *utf8str, const uint16_t *utf16str, size_t utf16size) {
+static size_t jksn_utf16_to_utf8(const uint16_t *utf16str, char *utf8str, size_t utf16size) {
     size_t reslen = 0;
     while(utf16size) {
         if(utf16str[0] < 0x80) {

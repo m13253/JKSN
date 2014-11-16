@@ -87,8 +87,8 @@ extern "C" {
 
 jksn_cache *jksn_cache_new(void);
 jksn_cache *jksn_cache_free(jksn_cache *cache);
-int jksn_dump(jksn_blobstring **result, const jksn_t *object, /*bool*/ int header, jksn_cache *cache);
-int jksn_parse(jksn_t **result, const jksn_blobstring *buffer, size_t *bytes_parsed, jksn_cache *cache);
+int jksn_dump(const jksn_t *object, jksn_blobstring **result, /*bool*/ int header, jksn_cache *cache);
+int jksn_parse(const jksn_blobstring *buffer, jksn_t **result, size_t *bytes_parsed, jksn_cache *cache);
 jksn_t *jksn_free(jksn_t *object);
 jksn_blobstring *jksn_blobstring_free(jksn_blobstring *blobstring);
 const char *jksn_errcode(int errcode);

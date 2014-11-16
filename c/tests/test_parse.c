@@ -11,13 +11,13 @@ int main(void) {
     jksn_t *result;
     size_t bytes_parsed = 0xcccccccc;
     bufin.size = fread(bufin.buf, 1, 4096, stdin);
-    retval = jksn_parse(&result, &bufin, &bytes_parsed, NULL);
+    retval = jksn_parse(&bufin, &result, &bytes_parsed, NULL);
     if(retval != 0) {
         fprintf(stderr, "Parse error %d: %s\n", retval, jksn_errcode(retval));
         return retval;
     }
     assert(bufin.size == bytes_parsed);
-    retval = jksn_dump(&bufout, result, 1, NULL);
+    retval = jksn_dump(result, &bufout, 1, NULL);
     result = jksn_free(result);
     if(retval != 0) {
         fprintf(stderr, "Dump error %d: %s\n", retval, jksn_errcode(retval));

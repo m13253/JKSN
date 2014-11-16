@@ -27,7 +27,7 @@ jksn_t object = {
 
 int main(void) {
     jksn_blobstring *result;
-    int retval = jksn_dump(&result, &object, 1, NULL);
+    int retval = jksn_dump(&object, &result, 1, NULL);
     fprintf(stderr, "retval = %d (%s)\n", retval, jksn_errcode(retval));
     fwrite(result->buf, 1, result->size, stdout);
     result = jksn_blobstring_free(result);

@@ -462,7 +462,7 @@ JKSNProxy JKSNEncoderPrivate::encodeSwappedArray(const std::vector<const JKSNVal
             std::map<JKSNValue, JKSNValue>::const_iterator it = row->toMap().find(column);
             columns_value.push_back(it != row->toMap().end() ? &it->second : &unspecified_value);
         }
-        result->children.push_back(dumpArray(std::move(columns_value)));
+        result->children.push_back(dumpArray(columns_value));
     }
     assert(result->children.size() == collen*2);
     return *result;

@@ -587,14 +587,14 @@ std::string JKSNEncoderPrivate::encodeInt(uintmax_t number, size_t size) {
         });
     case 2:
         return std::string({
-            char(uint8_t(number) >> 8),
+            char(uint8_t(number >> 8)),
             char(uint8_t(number))
         });
     case 4:
         return std::string({
-            char(uint8_t(number) >> 24),
-            char(uint8_t(number) >> 16),
-            char(uint8_t(number) >> 8),
+            char(uint8_t(number >> 24)),
+            char(uint8_t(number >> 16)),
+            char(uint8_t(number >> 8)),
             char(uint8_t(number))
         });
     case 0:

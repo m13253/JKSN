@@ -1798,7 +1798,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 jksn_t *tmp;
                 size_t child_size = 0;
                 switch(control) {
-                /* Checksums */
+                /* Ignore checksums */
                 case 0xf0:
                     if(size < 1)
                         return JKSN_ETRUNC;

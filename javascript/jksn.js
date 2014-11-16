@@ -628,7 +628,7 @@ function JKSNDecoder() {
                 else
                     throw "JKSNDecodeError: JKSN stream contains an invalid delta encoded integer"
             case 0xf0:
-                /* Checksums */
+                /* Ignore checksums */
                 if(control <= 0xf5 || (control >= 0xf8 && control <= 0xfd)) {
                     console.warn("JKSNDecodeWarning: checksum is not supported")
                     switch(control) {

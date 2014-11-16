@@ -114,8 +114,8 @@ class JKSNCache {
 public:
     bool haslastint = false;
     intmax_t lastint;
-    std::shared_ptr<std::string> texthash[256] = {nullptr};
-    std::shared_ptr<std::string> blobhash[256] = {nullptr};
+    std::array<std::shared_ptr<std::string>, 256> texthash = {{nullptr}};
+    std::array<std::shared_ptr<std::string>, 256> blobhash = {{nullptr}};
 };
 
 class JKSNEncoderPrivate {
@@ -152,6 +152,7 @@ private:
     static JKSNValue parseFloat(std::istream &fp);
     static JKSNValue parseDouble(std::istream &fp);
     static JKSNValue parseLongDouble(std::istream &fp);
+    static JKSNValue parseSwappedList(std::istream &fp, size_t column_length);
 };
 
 static inline bool isLittleEndian();
@@ -644,13 +645,10 @@ JKSNValue JKSNDecoder::parse(const std::string &str, bool header) {
 
 JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
     for(;;) {
-        uint8_t control;
-        {
-            char signed_control;
-            if(!fp.get(signed_control))
-                throw "JKSN stream may be truncated or corrupted";
-            control = uint8_t(signed_control);
-        }
+        char signed_control;
+        if(!fp.get(signed_control))
+            throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+        uint8_t control = uint8_t(signed_control);
         uint8_t ctrlhi = control & 0xf0;
         switch(ctrlhi) {
         /* Special values */
@@ -712,6 +710,314 @@ JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
                 return JKSNValue(INFINITY);
             }
             break;
+        /* UTF-16 strings */
+        case 0x30:
+            {
+                size_t strsize;
+                switch(control) {
+                case 0x3c:
+                    {
+                        char hashvalue;
+                        if(!fp.get(hashvalue))
+                            throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                        if(this->cache.texthash[uint8_t(hashvalue)])
+                            return JKSNValue(*this->cache.texthash[uint8_t(hashvalue)]);
+                        else
+                            throw JKSNDecodeError("JKSN stream requires a non-existing hash");
+                    }
+                case 0x3d:
+                    strsize = this->decodeInt(fp, 2);
+                    break;
+                case 0x3e:
+                    strsize = this->decodeInt(fp, 1);
+                    break;
+                case 0x3f:
+                    strsize = this->decodeInt(fp, 0);
+                    break;
+                default:
+                    strsize = control & 0xf;
+                }
+                std::vector<char16_t> strbuf(strsize);
+                if(!fp.read(reinterpret_cast<char *>(strbuf.data()), std::streamsize(strsize*2)))
+                    throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                if(!isLittleEndian())
+                    for(char16_t &i : strbuf)
+                        i = char16_t(uint16_t(i) >> 8 | uint16_t(i) << 8);
+                std::string result = UTF16ToUTF8(std::u16string(strbuf.cbegin(), strbuf.cend()));
+                this->cache.texthash[DJBHash(result)].reset(new std::string(result));
+                return JKSNValue(std::move(result));
+            }
+        /* UTF-8 strings */
+        case 0x40:
+            {
+                size_t strsize;
+                switch(control) {
+                case 0x4d:
+                    strsize = this->decodeInt(fp, 2);
+                    break;
+                case 0x4e:
+                    strsize = this->decodeInt(fp, 1);
+                    break;
+                case 0x3f:
+                    strsize = this->decodeInt(fp, 0);
+                    break;
+                default:
+                    strsize = control & 0xf;
+                }
+                std::vector<char> strbuf(strsize);
+                if(!fp.read(strbuf.data(), std::streamsize(strsize)))
+                    throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                std::string result = std::string(strbuf.cbegin(), strbuf.cend());
+                this->cache.texthash[DJBHash(result)].reset(new std::string(result));
+                return JKSNValue(std::move(result));
+            }
+        /* Blob strings */
+        case 0x50:
+            {
+                size_t strsize;
+                switch(control) {
+                case 0x5c:
+                    {
+                        char hashvalue;
+                        if(!fp.get(hashvalue))
+                            throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                        if(this->cache.blobhash[uint8_t(hashvalue)])
+                            return JKSNValue(*this->cache.blobhash[uint8_t(hashvalue)]);
+                        else
+                            throw JKSNDecodeError("JKSN stream requires a non-existing hash");
+                    }
+                case 0x5d:
+                    strsize = this->decodeInt(fp, 2);
+                    break;
+                case 0x5e:
+                    strsize = this->decodeInt(fp, 1);
+                    break;
+                case 0x5f:
+                    strsize = this->decodeInt(fp, 0);
+                    break;
+                default:
+                    strsize = control & 0xf;
+                }
+                std::vector<char> strbuf(strsize);
+                if(!fp.read(strbuf.data(), std::streamsize(strsize)))
+                    throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                std::string result = std::string(strbuf.cbegin(), strbuf.cend());
+                this->cache.blobhash[DJBHash(result)].reset(new std::string(result));
+                return JKSNValue(std::move(result), true);
+            }
+        /* Hashtable refreshers */
+        case 0x70:
+            {
+                size_t objlen;
+                switch(control) {
+                case 0x70:
+                    this->cache.texthash.fill(nullptr);
+                    this->cache.texthash.fill(nullptr);
+                    continue;
+                case 0x7d:
+                    objlen = this->decodeInt(fp, 2);
+                    break;
+                case 0x7e:
+                    objlen = this->decodeInt(fp, 1);
+                    break;
+                case 0x7f:
+                    objlen = this->decodeInt(fp, 0);
+                    break;
+                default:
+                    objlen = control & 0xf;
+                }
+                while(objlen--)
+                    this->parseValue(fp);
+                continue;
+            }
+        /* Arrays */
+        case 0x80:
+            {
+                size_t objlen;
+                switch(control) {
+                case 0x8d:
+                    objlen = this->decodeInt(fp, 2);
+                    break;
+                case 0x8e:
+                    objlen = this->decodeInt(fp, 1);
+                    break;
+                case 0x8f:
+                    objlen = this->decodeInt(fp, 0);
+                    break;
+                default:
+                    objlen = control & 0xf;
+                }
+                std::vector<JKSNValue> result;
+                result.reserve(objlen);
+                while(objlen--)
+                    result.push_back(this->parseValue(fp));
+                return JKSNValue(std::move(result));
+            }
+        /* Objects */
+        case 0x90:
+            {
+                size_t objlen;
+                switch(control) {
+                case 0x9d:
+                    objlen = this->decodeInt(fp, 2);
+                    break;
+                case 0x9e:
+                    objlen = this->decodeInt(fp, 1);
+                    break;
+                case 0x9f:
+                    objlen = this->decodeInt(fp, 0);
+                    break;
+                default:
+                    objlen = control & 0xf;
+                }
+                std::map<JKSNValue, JKSNValue> result;
+                while(objlen--) {
+                    JKSNValue key = this->parseValue(fp);
+                    result[std::move(key)] = this->parseValue(fp);
+                }
+                return JKSNValue(std::move(result));
+            }
+        /* Row-col swapped arrays */
+        case 0xa0:
+            {
+                size_t collen;
+                switch(control) {
+                case 0xa0:
+                    return JKSNValue::fromUnspecified();
+                case 0xad:
+                    collen = this->decodeInt(fp, 2);
+                    break;
+                case 0xae:
+                    collen = this->decodeInt(fp, 1);
+                    break;
+                case 0xaf:
+                    collen = this->decodeInt(fp, 0);
+                    break;
+                default:
+                    collen = control & 0xf;
+                }
+                return this->parseSwappedList(fp, collen);
+            }
+        /* Delta encoded integers */
+        case 0xb0:
+            {
+                intmax_t delta;
+                switch(control) {
+                case 0xb0: case 0xb1: case 0xb2: case 0xb3: case 0xb4: case 0xb5:
+                    delta = control & 0xf;
+                    break;
+                case 0xb6: case 0xb7: case 0xb8: case 0xb9: case 0xba:
+                    delta = intmax_t(control & 0xf)-11;
+                    break;
+                case 0xbb:
+                    delta = intmax_t(int32_t(this->decodeInt(fp, 4)));
+                    break;
+                case 0xbc:
+                    delta = intmax_t(int16_t(this->decodeInt(fp, 2)));
+                    break;
+                case 0xbd:
+                    delta = intmax_t(int8_t(this->decodeInt(fp, 1)));
+                    break;
+                case 0xbe:
+                    delta = intmax_t(-this->decodeInt(fp, 0));
+                    if(delta >= 0)
+                        throw JKSNDecodeError("this build of JKSN decoder does not support variable length integers");
+                    break;
+                case 0xbf:
+                    delta = intmax_t(this->decodeInt(fp, 0));
+                    if(delta < 0)
+                        throw JKSNDecodeError("this build of JKSN decoder does not support variable length integers");
+                    break;
+                }
+                if(!this->cache.haslastint)
+                    throw JKSNDecodeError("JKSN stream contains an invalid delta encoded integer");
+                this->cache.haslastint = true;
+                this->cache.lastint += delta;
+                return JKSNValue(this->cache.lastint);
+            }
+        case 0xf0:
+            /* Ignore checksums */
+            if(control <= 0xf5) {
+                std::vector<char> buf;
+                switch(control) {
+                case 0xf0:
+                    buf.reserve(1);
+                    if(!fp.read(buf.data(), 1))
+                        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                    continue;
+                case 0xf1:
+                    buf.reserve(4);
+                    if(!fp.read(buf.data(), 4))
+                        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                    continue;
+                case 0xf2:
+                    buf.reserve(16);
+                    if(!fp.read(buf.data(), 16))
+                        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                    continue;
+                case 0xf3:
+                    buf.reserve(20);
+                    if(!fp.read(buf.data(), 20))
+                        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                    continue;
+                case 0xf4:
+                    buf.reserve(32);
+                    if(!fp.read(buf.data(), 32))
+                        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                    continue;
+                case 0xf5:
+                    buf.reserve(64);
+                    if(!fp.read(buf.data(), 64))
+                        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                    continue;
+                }
+            } else if (control >= 0xf8 && control <= 0xfd) {
+                std::vector<char> buf;
+                JKSNValue result;
+                switch(control) {
+                case 0xf8:
+                    result = parseValue(fp);
+                    buf.reserve(1);
+                    if(!fp.read(buf.data(), 1))
+                        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                    continue;
+                case 0xf9:
+                    result = parseValue(fp);
+                    buf.reserve(4);
+                    if(!fp.read(buf.data(), 4))
+                        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                    continue;
+                case 0xfa:
+                    result = parseValue(fp);
+                    buf.reserve(16);
+                    if(!fp.read(buf.data(), 16))
+                        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                    continue;
+                case 0xfb:
+                    result = parseValue(fp);
+                    buf.reserve(20);
+                    if(!fp.read(buf.data(), 20))
+                        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                    continue;
+                case 0xfc:
+                    result = parseValue(fp);
+                    buf.reserve(32);
+                    if(!fp.read(buf.data(), 32))
+                        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                    continue;
+                case 0xfd:
+                    result = parseValue(fp);
+                    buf.reserve(64);
+                    if(!fp.read(buf.data(), 64))
+                        throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
+                    continue;
+                }
+                return result;
+            /* Ignore pragmas */
+            } else if(control == 0xff) {
+                parseValue(fp);
+                continue;
+            }
         }
         throw JKSNDecodeError("cannot encode unrecognizable type of value");
     }
@@ -723,14 +1029,14 @@ uintmax_t JKSNDecoderPrivate::decodeInt(std::istream &fp, size_t size) {
         {
             char buffer;
             if(!fp.get(buffer))
-                throw "JKSN stream may be truncated or corrupted";
+                throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
             return uintmax_t(uint8_t(buffer));
         }
     case 2:
         {
             char buffer[2];
             if(!fp.read(buffer, 2))
-                throw "JKSN stream may be truncated or corrupted";
+                throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
             return uintmax_t(uint8_t(buffer[0])) << 8 |
                    uintmax_t(uint8_t(buffer[1]));
         }
@@ -738,7 +1044,7 @@ uintmax_t JKSNDecoderPrivate::decodeInt(std::istream &fp, size_t size) {
         {
             char buffer[4];
             if(!fp.read(buffer, 4))
-                throw "JKSN stream may be truncated or corrupted";
+                throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
             return uintmax_t(uint8_t(buffer[0])) << 24 |
                    uintmax_t(uint8_t(buffer[1])) << 16 |
                    uintmax_t(uint8_t(buffer[2])) << 8 |
@@ -752,7 +1058,7 @@ uintmax_t JKSNDecoderPrivate::decodeInt(std::istream &fp, size_t size) {
                 if(result & ~(~ uintmax_t(0) >> 7))
                     throw JKSNDecodeError("this build of JKSN decoder does not support variable length integers");
                 if(!fp.get(thisbyte))
-                    throw "JKSN stream may be truncated or corrupted";
+                    throw JKSNDecodeError("JKSN stream may be truncated or corrupted");
                 result = (result << 7) | (uint8_t(thisbyte) & 0x7f);
             } while(uint8_t(thisbyte) & 0x80);
             return result;

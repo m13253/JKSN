@@ -568,7 +568,7 @@ public:
     JKSNEncoder &operator=(const JKSNEncoder &that);
     JKSNEncoder &operator=(JKSNEncoder &&that);
     ~JKSNEncoder();
-    std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool header = true);
+    std::ostream &dump(const JKSNValue &obj, std::ostream &result, bool header = true);
     std::string dumps(const JKSNValue &obj, bool header = true);
 private:
     class JKSNEncoderPrivate *p = nullptr;
@@ -588,8 +588,8 @@ private:
     class JKSNDecoderPrivate *p = nullptr;
 };
 
-inline std::ostream &dump(std::ostream &result, const JKSNValue &obj, bool header = true) {
-    return JKSNEncoder().dump(result, obj, header);
+inline std::ostream &dump(const JKSNValue &obj, std::ostream &result, bool header = true) {
+    return JKSNEncoder().dump(obj, result, header);
 }
 inline std::string dumps(const JKSNValue &obj, bool header = true) {
     return JKSNEncoder().dumps(obj, header);

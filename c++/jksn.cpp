@@ -191,7 +191,7 @@ JKSNEncoder::~JKSNEncoder() {
     delete p;
 }
 
-std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool header) {
+std::ostream &JKSNEncoder::dump(const JKSNValue &obj, std::ostream &result, bool header) {
     JKSNProxy proxy = this->p->dumpToProxy(obj);
     if(header && !result.write("jk!", 3))
         return result;
@@ -201,7 +201,7 @@ std::ostream &JKSNEncoder::dump(std::ostream &result, const JKSNValue &obj, bool
 
 std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header) {
     std::ostringstream result;
-    if(!this->dump(result, obj, header))
+    if(!this->dump(obj, result, header))
         throw JKSNEncodeError("no enough memory");
     return result.str();
 }

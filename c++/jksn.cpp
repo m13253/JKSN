@@ -1771,6 +1771,7 @@ JKSNValue &JKSNValue::operator=(JKSNValue &&that) {
         default:
             break;
         }
+        this->data_type = that.data_type;
         that.data_type = JKSN_UNDEFINED;
     }
     return *this;

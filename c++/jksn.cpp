@@ -549,7 +549,7 @@ JKSNProxy &JKSNEncoderPrivate::optimize(JKSNProxy &obj) {
                 }
             }
             this->cache.haslastint = true;
-            this->cache.lastint = obj.origin->toInt();
+            this->cache.lastint = obj.origin_int;
             break;
         case 0x30:
         case 0x40:

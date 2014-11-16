@@ -1,8 +1,6 @@
 JKSN C++ reference implementation
 =================================
 
-# This version of implementation is unstable at present. Please head to other versions.
-
 This is the C++ implementation of JKSN.
 
 It is not the one which produces the smallest JKSN stream, neither the one which does the fastest processing.

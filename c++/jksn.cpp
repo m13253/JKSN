@@ -1245,7 +1245,7 @@ static std::string UTF8ToUTF16LE(const std::string &utf8str, bool strict) {
                 if(ucs4 >= 0x80) {
                     utf16str.append({
                         char(ucs4),
-                        char(ucs4 >> 16)
+                        char(ucs4 >> 8)
                     });
                     i += 2;
                     continue;
@@ -1257,7 +1257,7 @@ static std::string UTF8ToUTF16LE(const std::string &utf8str, bool strict) {
                 if(ucs4 >= 0x800 && (ucs4 & 0xf800) != 0xd800) {
                     utf16str.append({
                         char(ucs4),
-                        char(ucs4 >> 16)
+                        char(ucs4 >> 8)
                     });
                     i += 3;
                     continue;
@@ -1272,7 +1272,7 @@ static std::string UTF8ToUTF16LE(const std::string &utf8str, bool strict) {
                         char(ucs4 >> 10),
                         char((ucs4 >> 18) | 0xd8),
                         char(ucs4),
-                        char((ucs4 & 0x3f) | 0xdc)
+                        char(((ucs4 >> 8) & 0x3) | 0xdc)
                     });
                     i += 4;
                     continue;

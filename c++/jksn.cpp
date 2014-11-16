@@ -152,7 +152,7 @@ private:
     static JKSNValue parseFloat(std::istream &fp);
     static JKSNValue parseDouble(std::istream &fp);
     static JKSNValue parseLongDouble(std::istream &fp);
-    static JKSNValue parseSwappedList(std::istream &fp, size_t column_length);
+    JKSNValue parseSwappedArray(std::istream &fp, size_t column_length);
 };
 
 static inline bool isLittleEndian();
@@ -896,7 +896,7 @@ JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
                 default:
                     collen = control & 0xf;
                 }
-                return this->parseSwappedList(fp, collen);
+                return this->parseSwappedArray(fp, collen);
             }
         /* Delta encoded integers */
         case 0xb0:
@@ -1192,8 +1192,22 @@ JKSNValue JKSNDecoderPrivate::parseLongDouble(std::istream &fp) {
         throw JKSNEncodeError("this build of JKSN decoder does not support long double numbers");
 }
 
-JKSNValue JKSNDecoderPrivate::parseSwappedList(std::istream &fp, size_t column_length) {
-
+JKSNValue JKSNDecoderPrivate::parseSwappedArray(std::istream &fp, size_t column_length) {
+    std::vector<JKSNValue> result;
+    while(column_length--) {
+        JKSNValue column_name = this->parseValue(fp);
+        JKSNValue column_values = this->parseValue(fp);
+        if(!column_values.isArray())
+            throw JKSNDecodeError("JKSN row-col swapped array requires an array but not found");
+        std::vector<JKSNValue> &column_values_vector = column_values.toVector();
+        for(size_t i = 0; i < column_values_vector.size(); ++i) {
+            if(i == result.size())
+                result.push_back(JKSNValue::fromMap(std::map<JKSNValue, JKSNValue>()));
+            if(!column_values_vector[i].isUnspecified())
+                result[i].toMap()[column_name] = std::move(column_values_vector[i]);
+        }
+    }
+    return JKSNValue(std::move(result));
 }
 
 

@@ -104,7 +104,7 @@ static int jksn_compare(const jksn_t *obj1, const jksn_t *obj2);
 static jksn_t *jksn_duplicate(const jksn_t *object);
 static uint8_t jksn_djbhash(const char *buf, size_t size);
 static inline int jksn_is_little_endian(void);
-static inline uintmax_t jksn_intmaxabs(intmax_t x) { return x >= 0 ? (uintmax_t) x : (uintmax_t) -x; };
+static inline uintmax_t jksn_intmaxabs(intmax_t x) { return x >= 0 ? (uintmax_t) x : (uintmax_t) -x; }
 
 static inline void *jksn_malloc(size_t size) {
     return malloc(size != 0 ? size : 1);

@@ -155,10 +155,10 @@ private:
     JKSNValue parseSwappedArray(std::istream &fp, size_t column_length);
 };
 
-static inline bool isLittleEndian();
 static std::string UTF8ToUTF16LE(const std::string &utf8str, bool strict = false);
 static std::string UTF16ToUTF8(const std::u16string &utf16str);
 static uint8_t DJBHash(const std::string &obj, uint8_t iv = 0);
+static inline bool isLittleEndian();
 
 JKSNEncoder::JKSNEncoder() :
     p(new JKSNEncoderPrivate) {
@@ -502,7 +502,7 @@ JKSNProxy &JKSNEncoderPrivate::optimize(JKSNProxy &obj) {
         case 0x10:
             if (this->cache.haslastint) {
                 intmax_t delta = obj.origin->toInt() - this->cache.lastint;
-                if(abs(delta) < abs(obj.origin->toInt())) {
+                if(std::abs(delta) < std::abs(obj.origin->toInt())) {
                     uint8_t new_control;
                     std::string new_data;
                     if(delta >= 0 && delta <= 0x5)

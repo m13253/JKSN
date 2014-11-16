@@ -621,9 +621,8 @@ public:
         case JKSN::JKSN_FLOAT:
             return hasher_float(value.toFloat());
         case JKSN::JKSN_DOUBLE:
-            return hasher_double(value.toDouble());
         case JKSN::JKSN_LONG_DOUBLE:
-            return hasher_long_double(value.toLongDouble());
+            return hasher_double(value.toDouble());
         case JKSN::JKSN_STRING:
         case JKSN::JKSN_BLOB:
             return hasher_string_blob(value.toString());
@@ -652,7 +651,6 @@ private:
     static hash<intmax_t> hasher_int;
     static hash<float> hasher_float;
     static hash<double> hasher_double;
-    static hash<long double> hasher_long_double;
     static hash<string> hasher_string_blob;
 };
 

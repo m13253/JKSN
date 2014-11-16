@@ -49,24 +49,36 @@ public:
         control(control),
         data(data),
         buf(buf) {
+        /* During row-col swapped array construction,
+           temporary JKSNValue objects may be created.
+           The integer value will be preserved here
+           for the delta encoding process. */
+        if(origin && origin->isInt())
+            this->origin_int = origin->toInt();
     }
     JKSNProxy(const JKSNValue *origin, uint8_t control, const std::string &data, std::string &&buf = std::string()) :
         origin(origin),
         control(control),
         data(data),
         buf(std::move(buf)) {
+        if(origin && origin->isInt())
+            this->origin_int = origin->toInt();
     }
     JKSNProxy(const JKSNValue *origin, uint8_t control, std::string &&data = std::string(), std::string &&buf = std::string()) :
         origin(origin),
         control(control),
         data(std::move(data)),
         buf(std::move(buf)) {
+        if(origin && origin->isInt())
+            this->origin_int = origin->toInt();
     }
     JKSNProxy(const JKSNValue *origin, uint8_t control, std::string &&data, const std::string &buf) :
         origin(origin),
         control(control),
         data(std::move(data)),
         buf(buf) {
+        if(origin && origin->isInt())
+            this->origin_int = origin->toInt();
     }
     std::ostream &output(std::ostream &stream, bool recursive = true) const {
         if(!stream.put(char(this->control)))
@@ -108,6 +120,7 @@ public:
     std::string buf;
     std::list<JKSNProxy> children;
     uint16_t hash = 0;
+    intmax_t origin_int;
 };
 
 class JKSNCache {
@@ -454,10 +467,13 @@ JKSNProxy JKSNEncoderPrivate::encodeSwappedArray(const JKSNValue &obj) {
         result.reset(new JKSNProxy(&obj, 0xaf, encodeInt(collen, 0)));
     for(const JKSNValue &column : columns) {
         result->children.push_back(dumpValue(column));
+        std::vector<JKSNValue> columns_value;
+        columns_value.reserve(obj.toVector().size());
         for(const JKSNValue &row : obj.toVector()) {
             std::map<JKSNValue, JKSNValue>::const_iterator it = row.toMap().find(column);
-            result->children.push_back(dumpValue(it != row.toMap().end() ? it->first : JKSNValue::fromUnspecified()));
+            columns_value.push_back(it != row.toMap().end() ? it->second : JKSNValue::fromUnspecified());
         }
+        result->children.push_back(dumpArray(JKSNValue(std::move(columns_value))));
     }
     assert(result->children.size() == collen*2);
     return *result;
@@ -501,8 +517,8 @@ JKSNProxy &JKSNEncoderPrivate::optimize(JKSNProxy &obj) {
     switch(control) {
         case 0x10:
             if (this->cache.haslastint) {
-                intmax_t delta = obj.origin->toInt() - this->cache.lastint;
-                if(std::abs(delta) < std::abs(obj.origin->toInt())) {
+                intmax_t delta = obj.origin_int - this->cache.lastint;
+                if(std::abs(delta) < std::abs(obj.origin_int)) {
                     uint8_t new_control;
                     std::string new_data;
                     if(delta >= 0 && delta <= 0x5)

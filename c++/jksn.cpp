@@ -1295,20 +1295,20 @@ static std::string UTF16ToUTF8(const std::u16string &utf16str) {
     size_t i = 0;
     utf8str.reserve(utf16str.size()*2);
     while(i < utf16str.size()) {
-        if(uint32_t(utf16str[i]) < 0x80) {
+        if(uint16_t(utf16str[i]) < 0x80) {
             utf8str.push_back(char(utf16str[i]));
             ++i;
-        } else if(uint32_t(utf16str[i]) < 0x800) {
+        } else if(uint16_t(utf16str[i]) < 0x800) {
             utf8str.append({
-                char(utf16str[i] >> 6 | 0xc0),
-                char((utf16str[i] & 0x3f) | 0x80)
+                char(uint16_t(utf16str[i]) >> 6 | 0xc0),
+                char((uint16_t(utf16str[i]) & 0x3f) | 0x80)
             });
             ++i;
-        } else if((uint32_t(utf16str[i]) & 0xf800) != 0xd800) {
+        } else if((uint16_t(utf16str[i]) & 0xf800) != 0xd800) {
                 utf8str.append({
-                    char(utf16str[i] >> 12 | 0xe0),
-                    char(((utf16str[i] >> 6) & 0x3f) | 0x80),
-                    char((utf16str[i] & 0x3f) | 0x80)
+                    char(uint16_t(utf16str[i]) >> 12 | 0xe0),
+                    char(((uint16_t(utf16str[i]) >> 6) & 0x3f) | 0x80),
+                    char((uint16_t(utf16str[i]) & 0x3f) | 0x80)
                 });
                 ++i;
         } else if(i+1 < utf16str.size() && uint32_t(utf16str[i] & 0xfc00) == 0xd800 && uint32_t(utf16str[i+1] & 0xfc00) == 0xdc00) {

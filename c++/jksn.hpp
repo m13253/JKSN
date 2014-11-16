@@ -607,7 +607,7 @@ namespace std {
 
 template<>
 struct hash<JKSN::JKSNValue> {
-    size_t hash(const JKSN::JKSNValue &value) const {
+    size_t operator()(const JKSN::JKSNValue &value) const {
         size_t result = 0;
         switch(value.getType()) {
         case JKSN::JKSN_UNDEFINED:
@@ -642,7 +642,7 @@ struct hash<JKSN::JKSNValue> {
         case JKSN::JKSN_OBJECT:
             for(const pair<JKSN::JKSNValue, JKSN::JKSNValue> &i : value.toMap()) {
                 result ^= (*this)(i.first);
-                result ^= (*this)(i.second):
+                result ^= (*this)(i.second);
             }
             break;
         case JKSN::JKSN_UNSPECIFIED:

@@ -148,9 +148,10 @@ private:
     static JKSNProxy dumpString(const JKSNValue &obj);
     static JKSNProxy dumpBlob(const JKSNValue &obj);
     static JKSNProxy dumpArray(const JKSNValue &obj);
-    static bool testSwapAvailability(const JKSNValue &obj);
-    static JKSNProxy encodeStraightArray(const JKSNValue &obj);
-    static JKSNProxy encodeSwappedArray(const JKSNValue &obj);
+    static JKSNProxy dumpArray(const std::vector<const JKSNValue *> &obj, const JKSNValue *origin = nullptr);
+    static bool testSwapAvailability(const std::vector<const JKSNValue *> &obj);
+    static JKSNProxy encodeStraightArray(const std::vector<const JKSNValue *> &obj, const JKSNValue *origin = nullptr);
+    static JKSNProxy encodeSwappedArray(const std::vector<const JKSNValue *> &obj, const JKSNValue *origin = nullptr);
     static JKSNProxy dumpObject(const JKSNValue &obj);
     static JKSNProxy dumpUnspecified(const JKSNValue &obj);
     JKSNProxy &optimize(JKSNProxy &obj);
@@ -419,38 +420,38 @@ JKSNProxy JKSNEncoderPrivate::dumpBlob(const JKSNValue &obj) {
     return *result;
 }
 
-bool JKSNEncoderPrivate::testSwapAvailability(const JKSNValue &obj) {
+bool JKSNEncoderPrivate::testSwapAvailability(const std::vector<const JKSNValue *> &obj) {
     bool columns = false;
-    for(const JKSNValue &row : obj.toVector())
-        if(!row.isObject())
+    for(const JKSNValue *const &row : obj)
+        if(!row->isObject())
             return false;
         else
-            columns = columns || !row.toMap().empty();
+            columns = columns || !row->toMap().empty();
     return columns;
 }
 
-JKSNProxy JKSNEncoderPrivate::encodeStraightArray(const JKSNValue &obj) {
-    size_t length = obj.toVector().size();
+JKSNProxy JKSNEncoderPrivate::encodeStraightArray(const std::vector<const JKSNValue *> &obj, const JKSNValue *origin) {
+    size_t length = obj.size();
     std::unique_ptr<JKSNProxy> result;
     if(length <= 0xc)
-        result.reset(new JKSNProxy(&obj, 0x80 | uint8_t(length)));
+        result.reset(new JKSNProxy(origin, 0x80 | uint8_t(length)));
     else if(length <= 0xff)
-        result.reset(new JKSNProxy(&obj, 0x8e, encodeInt(length, 1)));
+        result.reset(new JKSNProxy(origin, 0x8e, encodeInt(length, 1)));
     else if(length <= 0xffff)
-        result.reset(new JKSNProxy(&obj, 0x8d, encodeInt(length, 2)));
+        result.reset(new JKSNProxy(origin, 0x8d, encodeInt(length, 2)));
     else
-        result.reset(new JKSNProxy(&obj, 0x8f, encodeInt(length, 0)));
-    for(const JKSNValue &i : obj.toVector())
-        result->children.push_back(dumpValue(i));
+        result.reset(new JKSNProxy(origin, 0x8f, encodeInt(length, 0)));
+    for(const JKSNValue *const &i : obj)
+        result->children.push_back(dumpValue(*i));
     assert(result->children.size() == length);
     return *result;
 }
 
-JKSNProxy JKSNEncoderPrivate::encodeSwappedArray(const JKSNValue &obj) {
+JKSNProxy JKSNEncoderPrivate::encodeSwappedArray(const std::vector<const JKSNValue *> &obj, const JKSNValue *origin) {
     std::list<JKSNValue> columns;
     std::unordered_set<JKSNValue> columns_set;
-    for(const JKSNValue &row : obj.toVector())
-        for(const std::pair<JKSNValue, JKSNValue> &column : row.toMap())
+    for(const JKSNValue *const &row : obj)
+        for(const std::pair<JKSNValue, JKSNValue> &column : row->toMap())
             if(columns_set.find(column.first) == columns_set.end()) {
                 columns.push_back(column.first);
                 columns_set.insert(column.first);
@@ -458,29 +459,38 @@ JKSNProxy JKSNEncoderPrivate::encodeSwappedArray(const JKSNValue &obj) {
     size_t collen = columns.size();
     std::unique_ptr<JKSNProxy> result;
     if(collen <= 0xc)
-        result.reset(new JKSNProxy(&obj, 0xa0 | uint8_t(collen)));
+        result.reset(new JKSNProxy(origin, 0xa0 | uint8_t(collen)));
     else if(collen <= 0xff)
-        result.reset(new JKSNProxy(&obj, 0xae, encodeInt(collen, 1)));
+        result.reset(new JKSNProxy(origin, 0xae, encodeInt(collen, 1)));
     else if(collen <= 0xffff)
-        result.reset(new JKSNProxy(&obj, 0xad, encodeInt(collen, 2)));
+        result.reset(new JKSNProxy(origin, 0xad, encodeInt(collen, 2)));
     else
-        result.reset(new JKSNProxy(&obj, 0xaf, encodeInt(collen, 0)));
+        result.reset(new JKSNProxy(origin, 0xaf, encodeInt(collen, 0)));
     for(const JKSNValue &column : columns) {
         result->children.push_back(dumpValue(column));
-        std::vector<JKSNValue> columns_value;
-        columns_value.reserve(obj.toVector().size());
-        for(const JKSNValue &row : obj.toVector()) {
-            std::map<JKSNValue, JKSNValue>::const_iterator it = row.toMap().find(column);
-            columns_value.push_back(it != row.toMap().end() ? it->second : JKSNValue::fromUnspecified());
+        std::vector<const JKSNValue *> columns_value;
+        columns_value.reserve(obj.size());
+        for(const JKSNValue *const &row : obj) {
+            static JKSNValue unspecified_value = JKSNValue::fromUnspecified();
+            std::map<JKSNValue, JKSNValue>::const_iterator it = row->toMap().find(column);
+            columns_value.push_back(it != row->toMap().end() ? &it->second : &unspecified_value);
         }
-        result->children.push_back(dumpArray(JKSNValue(std::move(columns_value))));
+        result->children.push_back(dumpArray(std::move(columns_value)));
     }
     assert(result->children.size() == collen*2);
     return *result;
 }
 
 JKSNProxy JKSNEncoderPrivate::dumpArray(const JKSNValue &obj) {
-    JKSNProxy result = encodeStraightArray(obj);
+    std::vector<const JKSNValue *> obj_vector;
+    obj_vector.reserve(obj.toVector().size());
+    for(const JKSNValue &i : obj.toVector())
+        obj_vector.push_back(&i);
+    return dumpArray(obj_vector, &obj);
+}
+
+JKSNProxy JKSNEncoderPrivate::dumpArray(const std::vector<const JKSNValue *> &obj, const JKSNValue *origin) {
+    JKSNProxy result = encodeStraightArray(obj, origin);
     if(testSwapAvailability(obj)) {
         JKSNProxy result_swapped = encodeSwappedArray(obj);
         if(result_swapped.size(3) < result.size(3))

@@ -277,6 +277,16 @@ There is a Python reference implementation in the `python` directory in this rep
 
 There are other implementations in other languages as well. Some of them implemented a part of the functionality.
 
+#### Why reference implementation?
+
+Although there is a detailed specification file, it is unable to be avoided that there is something not stated clearly.
+
+Reference implementations are designed by the designer of JKSN so that you can regard the behavior of the reference implementation as the de facto standard unless the behavior is related to a bug.
+
+In addition, though the reference implementations are not the ones which produce the smallest JKSN streams, neither the ones which do the fastest processing, we want you to have a chance to try JKSN easily.
+
+If you enjoy JKSN, you can contribute to JKSN by write up a new implementation. We will fork you at GitHub, or even include your code as a reference implementation if the conditions above are met.
+
 ### License of this document
 
 This document, as well as JKSN specification, is licensed under BSD license.

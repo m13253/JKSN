@@ -14,7 +14,7 @@ File formats
 
 One JSON stream must only produce one value. So once a complete value is parsed, the JKSN stream must be terminated.
 
-MIME type `application/x-jksn` and filename extension `.jksn` are preferred.
+MIME type `application/x-jksn` and filename extension `.jksn` are preferred. (It may change in the future.)
 
 ### Magic header
 

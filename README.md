@@ -18,7 +18,7 @@ MIME type `application/x-jksn` and filename extension `.jksn` are preferred.
 
 ### Magic header
 
-This part contains four bytes `jk!`, it is used for safe Internet transmission and data type recognition. If the network bandwidth is limited, magic header may be omitted.
+This part contains three bytes `jk!`, it is used for safe Internet transmission and data type recognition. If the network bandwidth is limited, magic header may be omitted.
 
 ### Control byte
 

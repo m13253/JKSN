@@ -277,13 +277,13 @@ What about BSON, MessagePack, BJSON, ubJSON?
 | BJSON with builtin adaptive huffman encoding | 115 bytes | [Node.JS](https://github.com/asterick/BJSON)         |
 | **JKSN**                                     | 109 bytes | [Python 3](https://github.com/m13253/JKSN)           |
 
-### Reference implementation
+### Reference implementations
 
 There is a Python reference implementation in the `python` directory in this repository.
 
 There are other implementations in other languages as well. Some of them implemented a part of the functionality.
 
-#### Why reference implementation?
+#### Why reference implementations?
 
 Although there is a detailed specification file, it is unable to be avoided that there is something not stated clearly.
 

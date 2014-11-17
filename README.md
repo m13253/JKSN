@@ -81,7 +81,7 @@ The JKSN encoder should try to use the character encoding that takes the least s
 
 #### Blob strings:
 
-Blob strings are those strings not being tried to convert into different character encodings during the encoding of the JKSN stream, that is, the JKSN encoder will not touch the content of blob strings.
+Blob strings are those strings not being tried to convert into different character encodings during the encoding of the JKSN stream, that is, the JKSN encoder will not touch the contents of blob strings.
 
     0x5n (where 0<=n<=b): a blob string containing n bytes is followed
     0x5c: an unsigned 8-bit integer is followed, representing the nearest previous blob string with this DJB Hash value.

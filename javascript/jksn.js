@@ -16,10 +16,10 @@
   IMPLIED WARRANTIES, INCLUDING, WITHOUT LIMITATION, THE IMPLIED
   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 */
-/*!
+/*
   JKSN JavaScript reference implementation
   https://github.com/m13253/JKSN
-  Licensed under BSD license
+  @license BSD license
 */
 (function(window) {
 "use strict";

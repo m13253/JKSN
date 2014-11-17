@@ -199,7 +199,7 @@ std::ostream &JKSNEncoder::dump(const JKSNValue &obj, std::ostream &result, bool
     return result;
 }
 
-std::string JKSNEncoder::dumps(const JKSNValue &obj, bool header) {
+std::string JKSNEncoder::dump(const JKSNValue &obj, bool header) {
     std::ostringstream result;
     if(!this->dump(obj, result, header))
         throw JKSNEncodeError("no enough memory");

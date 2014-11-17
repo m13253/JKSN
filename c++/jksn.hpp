@@ -561,6 +561,7 @@ private:
 };
 
 class JKSNEncoder {
+    /* Note: With a certain JKSN encoder, the hashtable is preserved during each dump */
 public:
     JKSNEncoder();
     JKSNEncoder(const JKSNEncoder &that);
@@ -569,12 +570,13 @@ public:
     JKSNEncoder &operator=(JKSNEncoder &&that);
     ~JKSNEncoder();
     std::ostream &dump(const JKSNValue &obj, std::ostream &result, bool header = true);
-    std::string dumps(const JKSNValue &obj, bool header = true);
+    std::string dump(const JKSNValue &obj, bool header = true);
 private:
     class JKSNEncoderPrivate *p = nullptr;
 };
 
 class JKSNDecoder {
+    /* Note: With a certain JKSN decoder, the hashtable is preserved during each parse */
 public:
     JKSNDecoder();
     JKSNDecoder(const JKSNDecoder &that);
@@ -591,8 +593,8 @@ private:
 inline std::ostream &dump(const JKSNValue &obj, std::ostream &result, bool header = true) {
     return JKSNEncoder().dump(obj, result, header);
 }
-inline std::string dumps(const JKSNValue &obj, bool header = true) {
-    return JKSNEncoder().dumps(obj, header);
+inline std::string dump(const JKSNValue &obj, bool header = true) {
+    return JKSNEncoder().dump(obj, header);
 }
 inline JKSNValue parse(std::istream &fp, bool header = true) {
     return JKSNDecoder().parse(fp, header);

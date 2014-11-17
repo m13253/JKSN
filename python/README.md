@@ -7,6 +7,14 @@ It is not the one which produces the smallest JKSN stream, neither the one which
 
 Currently there may be some bugs. Feel free to report them.
 
+### Usage
+
+`jksn.py` can be invoked by command line. Use the option `--help` to see available arguments.
+
+Or you can use `jksn.py` as a Python module. `dump`, `dumps`, `load`, `loads` are the most common methods.
+
+You can read the source code to understand how it works.
+
 ### License
 
 This program is licensed under BSD license.

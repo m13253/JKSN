@@ -9,6 +9,12 @@ It does not provide the full functionality of JKSN since JavaScript does not sup
 
 Currently there may be some bugs. Feel free to report them.
 
+### Usage
+
+You can use `libjksn` as a JavaScript module. `JKSN.stringifyToArrayBuffer`, `JKSN.stringifyToString`, `JKSN.parseFromArrayBuffer`, `JKSN.parseFromString` are the most common methods.
+
+You can read the source code to understand how it works.
+
 ### License
 
 This program is licensed under BSD license.

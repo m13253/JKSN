@@ -9,6 +9,12 @@ It does not provide the full functionality of JKSN. See the Python implementatio
 
 Currently there may be some bugs. Feel free to report them.
 
+### Usage
+
+You can use `libjksn++` as a library. `dump` and `parse` are the most common methods.
+
+You can read the source code to understand how it works.
+
 ### License
 
 This program is licensed under BSD license.

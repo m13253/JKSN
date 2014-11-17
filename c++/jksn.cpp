@@ -25,7 +25,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <initializer_list>
 #include <list>
 #include <map>
 #include <memory>
@@ -388,7 +387,7 @@ JKSNProxy JKSNEncoderPrivate::dumpString(const JKSNValue &obj) {
     else
         result.reset(new JKSNProxy(&obj, control | 0xf, encodeInt(length, 0), std::move(obj_short)));
     result->hash = DJBHash(result->buf);
-    return *result;
+    return std::move(*result);
 }
 
 JKSNProxy JKSNEncoderPrivate::dumpBlob(const JKSNValue &obj) {
@@ -404,7 +403,7 @@ JKSNProxy JKSNEncoderPrivate::dumpBlob(const JKSNValue &obj) {
     else
         result.reset(new JKSNProxy(&obj, 0x5f, encodeInt(length, 0), std::move(blob)));
     result->hash = DJBHash(result->buf);
-    return *result;
+    return std::move(*result);
 }
 
 bool JKSNEncoderPrivate::testSwapAvailability(const std::vector<const JKSNValue *> &obj) {
@@ -431,7 +430,7 @@ JKSNProxy JKSNEncoderPrivate::encodeStraightArray(const std::vector<const JKSNVa
     for(const JKSNValue *const i : obj)
         result->children.push_back(dumpValue(*i));
     assert(result->children.size() == length);
-    return *result;
+    return std::move(*result);
 }
 
 JKSNProxy JKSNEncoderPrivate::encodeSwappedArray(const std::vector<const JKSNValue *> &obj, const JKSNValue *origin) {
@@ -465,7 +464,7 @@ JKSNProxy JKSNEncoderPrivate::encodeSwappedArray(const std::vector<const JKSNVal
         result->children.push_back(dumpArray(columns_value));
     }
     assert(result->children.size() == collen*2);
-    return *result;
+    return std::move(*result);
 }
 
 JKSNProxy JKSNEncoderPrivate::dumpArray(const JKSNValue &obj) {
@@ -502,7 +501,7 @@ JKSNProxy JKSNEncoderPrivate::dumpObject(const JKSNValue &obj) {
         result->children.push_back(dumpValue(item.second));
     }
     assert(result->children.size() == length*2);
-    return *result;
+    return std::move(*result);
 }
 
 JKSNProxy JKSNEncoderPrivate::dumpUnspecified(const JKSNValue &obj) {

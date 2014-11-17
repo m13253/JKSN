@@ -70,12 +70,18 @@ All UTF-16 strings are little endian, that is for ASCII characters, the second b
 
 #### UTF-8 strings:
 
+Some strings (such as East Asian languages) takes less space with UTF-16, while others (such as European languages) with UTF-8.
+
+The JKSN encoder should try to use the character encoding that takes the least space.
+
     0x4n (where 0<=n<=c): a UTF-8 string containing n bytes is followed
     0x4d: an unsigned 16-bit integer and a UTF-8 string containing that amount of bytes is followed
     0x4e: an unsigned 8-bit integer and a UTF-8 string containing that amount of bytes is followed
     0x4f: a positive variable length integer and a UTF-8 string containing that amount of bytes is followed
 
 #### Blob strings:
+
+Blob strings are those strings not being tried to convert into different character encodings during the encoding of the JKSN stream, that is, the JKSN encoder will not touch the content of blob strings.
 
     0x5n (where 0<=n<=b): a blob string containing n bytes is followed
     0x5c: an unsigned 8-bit integer is followed, representing the nearest previous blob string with this DJB Hash value.

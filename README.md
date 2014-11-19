@@ -140,6 +140,14 @@ An Integer is followed after `0xbb` `0xbc` `0xbd` `0xbe` `0xbf`, representing an
     0xbe: a negative variable length integer is followed
     0xbf: a positive variable length integer is followed
 
+#### Lengthless arrays:
+
+A lengthless array can be used when the length of the array is unknown before transmission.
+
+    0xc8: an unlimited number of items is followed, with a terminating 0xa0
+
+The use of lengthless array is discouraged, since it reduces the robustness and burdens the JKSN decoder.
+
 #### Checksums:
 
     0xf0: a DJBHash checksum will be immediately followed

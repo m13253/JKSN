@@ -87,7 +87,7 @@ function JKSNEncoder() {
             return dumpString(obj);
         else if(obj instanceof ArrayBuffer)
             return dumpBuffer(obj);
-        else if(Array.isArray ? Array.isArray(obj) : (typeof obj !== "function" && obj.length !== undefined))
+        else if(Array.isArray(obj))
             return dumpArray(obj);
         else
             return dumpObject(obj);

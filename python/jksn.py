@@ -562,6 +562,16 @@ class JKSNDecoder:
                     return self.lastint
                 else:
                     raise JKSNDecodeError('JKSN stream contains an invalid delta encoded integer')
+            # Lengthless arrays
+            elif ctrlhi == 0xc0:
+                if control == 0xc8:
+                    result = []
+                    while True:
+                        item = self._load_value(fp)
+                        if item is not _unspecified_value:
+                            result.append(item);
+                        else:
+                            return result
             elif ctrlhi == 0xf0:
                 # Checksums
                 if control <= 0xf5:

@@ -23,6 +23,8 @@
 */
 (function(window) {
 "use strict";
+function unspecifiedValue() {
+}
 function JKSNEncoder() {
     var lastint = null;
     var texthash = new Array(256);
@@ -65,8 +67,6 @@ function JKSNEncoder() {
             }
         };
     }
-    function unspecifiedValue() {
-    }
     function dumpToProxy(obj) {
         return optimize(dumpValue(obj));
     }
@@ -87,7 +87,7 @@ function JKSNEncoder() {
             return dumpString(obj);
         else if(obj instanceof ArrayBuffer)
             return dumpBuffer(obj);
-        else if(typeof obj !== "function" && obj.length !== undefined)
+        else if(Array.isArray ? Array.isArray(obj) : (typeof obj !== "function" && obj.length !== undefined))
             return dumpArray(obj);
         else
             return dumpObject(obj);
@@ -567,7 +567,7 @@ function JKSNDecoder() {
                 var collen;
                 switch(control) {
                 case 0xa0:
-                    return undefined;
+                    return new unspecifiedValue();
                 case 0xad:
                     collen = buf.getUint16(offset, false);
                     offset += 2;
@@ -590,7 +590,7 @@ function JKSNDecoder() {
                     for(var row = 0; row < column_values.length; row++) {
                         if(row == result.length)
                             result.push({});
-                        if(column_values[row] !== undefined)
+                        if(!(column_values[row] instanceof unspecifiedValue))
                             result[row][column_name] = column_values[row];
                     }
                 }
@@ -627,6 +627,19 @@ function JKSNDecoder() {
                     return (lastint += delta);
                 else
                     throw "JKSNDecodeError: JKSN stream contains an invalid delta encoded integer"
+            /* Lengthless arrays */
+            case 0xc0:
+                switch(control) {
+                case 0xc8:
+                    var result = new Array();
+                    for(;;) {
+                        var item = loadValue(buf);
+                        if(!(item instanceof unspecifiedValue))
+                            result.push(item);
+                        else
+                            return result;
+                    }
+                }
             case 0xf0:
                 /* Ignore checksums */
                 if(control <= 0xf5 || (control >= 0xf8 && control <= 0xfd)) {

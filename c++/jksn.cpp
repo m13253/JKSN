@@ -947,6 +947,21 @@ JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
                 this->cache.lastint += delta;
                 return JKSNValue(this->cache.lastint);
             }
+        /* Lengthless arrays */
+        case 0xc0:
+            switch(control) {
+                case 0xc8:
+                    {
+                        std::vector<JKSNValue> result;
+                        for(;;) {
+                            JKSNValue item = this->parseValue(fp);
+                            if(!item.isUnspecified())
+                                result.push_back(std::move(item));
+                            else
+                                return JKSNValue(std::move(result));
+                        }
+                    }
+            }
         case 0xf0:
             /* Ignore checksums */
             if(control <= 0xf5) {

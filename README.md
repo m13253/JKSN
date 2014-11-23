@@ -58,6 +58,8 @@ The most significant bit, that is the IEEE 754 sign bit, is transferred first.
     0x2e: -Infinity
     0x2f: Infinity
 
+IEEE 754 long double (80-bit) numbers may be unavailable on some platform. In most situations, float point numbers are encouraged to be encoded as double (64-bit).
+
 #### UTF-16 strings:
 
 All UTF-16 strings are little endian, that is for ASCII characters, the second byte is zero.

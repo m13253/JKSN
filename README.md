@@ -47,7 +47,7 @@ All integers are big endian.
 
 #### Float point numbers:
 
-An IEEE 754 float point number is followed after `0x2b` `0x2c` `0x2d`.
+An IEEE 754 floating point number is followed after `0x2b` `0x2c` `0x2d`.
 
 The most significant bit, that is the IEEE 754 sign bit, is transferred first.
 
@@ -58,7 +58,7 @@ The most significant bit, that is the IEEE 754 sign bit, is transferred first.
     0x2e: -Infinity
     0x2f: Infinity
 
-IEEE 754 long double (80-bit) numbers may be unavailable on some platform. In most situations, float point numbers are encouraged to be encoded as double (64-bit).
+IEEE 754 long double (80-bit) numbers may be unavailable on some platform. In most situations, floating point numbers are encouraged to be encoded as double (64-bit).
 
 #### UTF-16 strings:
 

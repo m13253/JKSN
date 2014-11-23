@@ -400,7 +400,7 @@ function JKSNDecoder() {
                     lastint = control & 0xf;
                 }
                 return lastint;
-            /* Float point numbers */
+            /* Floating point numbers */
             case 0x20:
                 switch(control) {
                 case 0x20:

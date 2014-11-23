@@ -435,7 +435,7 @@ class JKSNDecoder:
                 elif control == 0x1f:
                     self.lastint = self._decode_int(fp, 0)
                 return self.lastint
-            # Float point numbers
+            # Floating point numbers
             elif ctrlhi == 0x20:
                 if control == 0x20:
                     return float('nan')

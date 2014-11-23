@@ -1135,7 +1135,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 cache->haslastint = 1;
                 return JKSN_EOK;
             }
-        /* Float point numbers */
+        /* Floating point numbers */
         case 0x20:
             switch(control) {
             case 0x20:

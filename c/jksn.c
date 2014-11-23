@@ -117,7 +117,7 @@ static inline void *jksn_calloc(size_t nmemb, size_t size) {
         return malloc(1);
 }
 
-static inline void* jksn_realloc(void *ptr, size_t size) {
+static inline void *jksn_realloc(void *ptr, size_t size) {
     return realloc(ptr, size != 0 ? size : 1);
 }
 
@@ -1791,6 +1791,54 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 (*result)->data_type = JKSN_INT;
                 (*result)->data_int = cache->lastint;
                 return JKSN_EOK;
+            }
+        /* Lengthless arrays */
+        case 0xc0:
+            switch(control) {
+                case 0xc8:
+                {
+                    jksn_error_message_no retval;
+                    size_t capacity = 2;
+                    *result = jksn_malloc(sizeof (jksn_t));
+                    if(!*result)
+                        return JKSN_ENOMEM;
+                    (*result)->data_type = JKSN_ARRAY;
+                    (*result)->data_array.size = 0;
+                    (*result)->data_array.children = jksn_calloc(2, sizeof (jksn_t *));
+                    for(;;) {
+                        size_t child_size = 0;
+                        if((*result)->data_array.size == capacity) {
+                            capacity += capacity/2;
+                            jksn_t **tmpptr = jksn_realloc((*result)->data_array.children, capacity * sizeof (jksn_t *));
+                            if(tmpptr)
+                                (*result)->data_array.children = tmpptr;
+                            else {
+                                *result = jksn_free(*result);
+                                return JKSN_ENOMEM;
+                            }
+                        }
+                        assert(capacity > (*result)->data_array.size);
+                        retval = jksn_parse_value(&(*result)->data_array.children[(*result)->data_array.size], buffer, size, &child_size, cache);
+                        if(retval != JKSN_EOK) {
+                            *result = jksn_free(*result);
+                            return retval;
+                        }
+                        buffer += child_size;
+                        size -= child_size;
+                        if(bytes_parsed)
+                            *bytes_parsed += child_size;
+                        if((*result)->data_array.children[(*result)->data_array.size]->data_type != JKSN_UNSPECIFIED)
+                            (*result)->data_array.size++;
+                        else
+                            break;
+                    }
+                    if(capacity > (*result)->data_array.size) {
+                        jksn_t **tmpptr = jksn_realloc((*result)->data_array.children, (*result)->data_array.size * sizeof (jksn_t *));
+                        if(tmpptr)
+                            (*result)->data_array.children = tmpptr;
+                    }
+                    return JKSN_EOK;
+                }
             }
         case 0xf0:
             {

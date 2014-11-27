@@ -37,7 +37,8 @@
 namespace JKSN {
 
 class JKSNUnicodeError : public JKSNError {
-    using JKSNError::JKSNError;
+public:
+    JKSNUnicodeError(const char *what) : JKSNError(what) {}
 };
 
 class JKSNProxy {

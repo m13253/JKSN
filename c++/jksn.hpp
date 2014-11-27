@@ -36,22 +36,25 @@
 namespace JKSN {
 
 class JKSNError : public std::runtime_error {
-    using std::runtime_error::runtime_error;
+public:
+    JKSNError(const char *what) : std::runtime_error(what) {}
 };
 class JKSNEncodeError : public JKSNError {
-    using JKSNError::JKSNError;
+public:
+    JKSNEncodeError(const char *what) : JKSNError(what) {}
 };
 class JKSNDecodeError : public JKSNError {
-    using JKSNError::JKSNError;
+public:
+    JKSNDecodeError(const char *what) : JKSNError(what) {}
 };
 class JKSNChecksumError : public JKSNDecodeError {
-    using JKSNDecodeError::JKSNDecodeError;
 public:
+    JKSNChecksumError(const char *what) : JKSNDecodeError(what) {}
     JKSNChecksumError() : JKSNDecodeError("JKSN stream corrupted") {}
 };
 class JKSNTypeError : public JKSNDecodeError {
-    using JKSNDecodeError::JKSNDecodeError;
 public:
+    JKSNTypeError(const char *what) : JKSNDecodeError(what) {}
     JKSNTypeError() : JKSNDecodeError("invalid JKSN data type") {}
 };
 

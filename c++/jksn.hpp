@@ -625,7 +625,7 @@ struct hash<JKSN::JKSNValue> {
             result = hash<bool>()(value.toBool());
             break;
         case JKSN::JKSN_INT:
-            result = hash<int>()(value.toInt());
+            result = hash<intmax_t>()(value.toInt());
             break;
         case JKSN::JKSN_FLOAT:
             result = hash<float>()(value.toFloat());
@@ -654,7 +654,7 @@ struct hash<JKSN::JKSNValue> {
             result = 0xa0;
             break;
         default:
-            result = size_t(ssize_t(-1));
+            result = ~ size_t(0);
         }
         return result;
     }

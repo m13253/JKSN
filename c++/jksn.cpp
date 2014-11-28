@@ -264,7 +264,7 @@ JKSNProxy JKSNEncoderPrivate::dumpInt(const JKSNValue &obj) {
         return JKSNProxy(&obj, 0x1d, encodeInt(uintmax_t(number), 1));
     else if(number >= -0x8000 && number <= 0x7fff)
         return JKSNProxy(&obj, 0x1c, encodeInt(uintmax_t(number), 2));
-    else if((number >= -0x80000000 && number <= -0x200000) ||
+    else if((number >= -0x80000000LL && number <= -0x200000) ||
             (number >= 0x200000 && number <= 0x7fffffff))
         return JKSNProxy(&obj, 0x1b, encodeInt(uintmax_t(number), 4));
     else if(number >= 0)
@@ -528,7 +528,7 @@ JKSNProxy &JKSNEncoderPrivate::optimize(JKSNProxy &obj) {
                     } else if(delta >= -0x8000 && delta <= 0x7fff) {
                         new_control = 0xbc;
                         new_data = encodeInt(uintmax_t(delta), 2);
-                    } else if((delta >= -0x80000000 && delta <= -0x200000) ||
+                    } else if((delta >= -0x80000000LL && delta <= -0x200000) ||
                               (delta >= 0x200000 && delta <= 0x7fffffff)) {
                         new_control = 0xbb;
                         new_data = encodeInt(uintmax_t(delta), 4);
@@ -932,7 +932,7 @@ JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
                     delta = intmax_t(int8_t(this->decodeInt(fp, 1)));
                     break;
                 case 0xbe:
-                    delta = intmax_t(-this->decodeInt(fp, 0));
+                    delta = -intmax_t(this->decodeInt(fp, 0));
                     if(delta >= 0)
                         throw JKSNDecodeError("this build of JKSN decoder does not support variable length integers");
                     break;

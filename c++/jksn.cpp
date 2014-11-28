@@ -114,8 +114,8 @@ class JKSNCache {
 public:
     bool haslastint = false;
     intmax_t lastint;
-    std::array<std::shared_ptr<std::string>, 256> texthash = {{nullptr}};
-    std::array<std::shared_ptr<std::string>, 256> blobhash = {{nullptr}};
+    std::array<std::shared_ptr<std::string>, 256> texthash {{nullptr}};
+    std::array<std::shared_ptr<std::string>, 256> blobhash {{nullptr}};
 };
 
 class JKSNEncoderPrivate {

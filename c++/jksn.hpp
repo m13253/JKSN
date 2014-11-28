@@ -167,7 +167,7 @@ public:
         return JKSNValue();
     }
     static JKSNValue fromNull(std::nullptr_t data = nullptr) {
-        if(!data)
+        if(data == nullptr)
             return JKSNValue(nullptr);
         else
             throw JKSNTypeError();

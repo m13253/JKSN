@@ -264,8 +264,8 @@ JKSNProxy JKSNEncoderPrivate::dumpInt(const JKSNValue &obj) {
         return JKSNProxy(&obj, 0x1d, encodeInt(uintmax_t(number), 1));
     else if(number >= -0x8000 && number <= 0x7fff)
         return JKSNProxy(&obj, 0x1c, encodeInt(uintmax_t(number), 2));
-    else if((number >= -0x80000000L && number <= -0x200000L) ||
-            (number >= 0x200000L && number <= 0x7fffffffL))
+    else if((number >= -0x80000000 && number <= -0x200000) ||
+            (number >= 0x200000 && number <= 0x7fffffff))
         return JKSNProxy(&obj, 0x1b, encodeInt(uintmax_t(number), 4));
     else if(number >= 0)
         return JKSNProxy(&obj, 0x1f, encodeInt(uintmax_t(number), 0));

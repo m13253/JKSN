@@ -235,11 +235,11 @@ public:
     static JKSNValue fromMap(std::initializer_list<std::pair<const JKSNValue, JKSNValue> > data) {
         return JKSNValue(data);
     }
-    static JKSNValue fromUnspecified(Unspecified &data) {
+    static JKSNValue fromUnspecified(const Unspecified &data) {
         return JKSNValue(data);
     }
     static JKSNValue fromUnspecified() {
-        static Unspecified data;
+        static const Unspecified data;
         return JKSNValue(data);
     }
     ~JKSNValue() {
@@ -368,7 +368,10 @@ public:
             throw JKSNTypeError();
     }
     Unspecified toUnspecified() const {
-        return Unspecified();
+        if(this->isUnspecified())
+            return Unspecified();
+        else
+            throw JKSNTypeError();
     }
 
     explicit operator std::nullptr_t() const {

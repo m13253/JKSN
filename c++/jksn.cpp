@@ -1381,11 +1381,11 @@ bool JKSNValue::toBool() const {
         return this->data_long_double != 0.0L;
     case JKSN_STRING:
     case JKSN_BLOB:
-        return this->data_string->size() != 0;
+        return !this->data_string->empty();
     case JKSN_ARRAY:
-        return this->data_array->size() != 0;
+        return !this->data_array->empty();
     case JKSN_OBJECT:
-        return this->data_object->size() != 0;
+        return !this->data_object->empty();
     default:
         throw JKSNTypeError();
     }

@@ -264,7 +264,8 @@ static char *jksn_proxy_output(char output[], const jksn_proxy *object) {
 }
 
 int jksn_dump(const jksn_t *object, jksn_blobstring **result, /*bool*/ int header, jksn_cache *cache_) {
-    *result = NULL;
+    if(result)
+        *result = NULL;
     if(!object)
         return JKSN_ETYPE;
     else {
@@ -1797,7 +1798,6 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
             switch(control) {
                 case 0xc8:
                 {
-                    jksn_error_message_no retval;
                     size_t capacity = 2;
                     *result = jksn_malloc(sizeof (jksn_t));
                     if(!*result)
@@ -1806,6 +1806,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     (*result)->data_array.size = 0;
                     (*result)->data_array.children = jksn_calloc(2, sizeof (jksn_t *));
                     for(;;) {
+                        jksn_error_message_no retval;
                         size_t child_size = 0;
                         if((*result)->data_array.size == capacity) {
                             capacity += capacity/2;
@@ -2104,7 +2105,6 @@ static jksn_error_message_no jksn_parse_longdouble(jksn_t **result, const char *
         union {
             uint8_t data_int[16];
             long double data_long_double;
-            uint8_t endiantest;
         } conv;
         *result = jksn_malloc(sizeof (jksn_t));
         if(!*result)

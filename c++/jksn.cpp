@@ -929,7 +929,7 @@ JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
         /* Delta encoded integers */
         case 0xd0:
             {
-                intmax_t delta;
+                intmax_t delta = 0;
                 switch(control) {
                 case 0xd0: case 0xd1: case 0xd2: case 0xd3: case 0xd4: case 0xd5:
                     delta = control & 0xf;

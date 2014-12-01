@@ -608,6 +608,7 @@ function JKSNDecoder() {
                             return result;
                     }
                 }
+                break;
             /* Delta encoded integers */
             case 0xd0:
                 var delta;

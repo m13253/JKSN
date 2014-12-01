@@ -1772,6 +1772,7 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     return JKSN_EOK;
                 }
             }
+            break;
         /* Delta encoded integers */
         case 0xd0:
             {

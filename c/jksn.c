@@ -863,21 +863,21 @@ static void jksn_optimize(jksn_proxy *object, jksn_cache *cache) {
                     uint8_t new_control = 0;
                     jksn_blobstring new_data = {0, NULL};
                     if(delta >= 0 && delta <= 0x5)
-                        new_control = 0xb0 | delta;
+                        new_control = 0xd0 | delta;
                     else if(delta >= -0x5 && delta <= -0x1)
-                        new_control = 0xb0 | (delta + 11);
+                        new_control = 0xd0 | (delta + 11);
                     else if(delta >= -0x80 && delta <= 0x7f) {
                         new_data.size = 1;
                         new_data.buf = jksn_malloc(1);
                         if(new_data.buf) {
-                            new_control = 0xbd;
+                            new_control = 0xdd;
                             jksn_encode_int(new_data.buf, (uintmax_t) delta, 1);
                         }
                     } else if(delta >= -0x8000 && delta <= 0x7fff) {
                         new_data.size = 2;
                         new_data.buf = jksn_malloc(2);
                         if(new_data.buf) {
-                            new_control = 0xbc;
+                            new_control = 0xdc;
                             jksn_encode_int(new_data.buf, (uintmax_t) delta, 2);
                         }
                     } else if((delta >= -0x80000000LL && delta <= -0x200000) ||
@@ -885,19 +885,19 @@ static void jksn_optimize(jksn_proxy *object, jksn_cache *cache) {
                         new_data.size = 4;
                         new_data.buf = jksn_malloc(4);
                         if(new_data.buf) {
-                            new_control = 0xbb;
+                            new_control = 0xdb;
                             jksn_encode_int(new_data.buf, (uintmax_t) delta, 4);
                         }
                     } else if(delta >= 0) {
                         new_data.buf = jksn_malloc(jksn_varint_size);
                         if(new_data.buf) {
-                            new_control = 0xbf;
+                            new_control = 0xdf;
                             new_data.size = jksn_encode_int(new_data.buf, (uintmax_t) delta, 0);
                         }
                     } else {
                         new_data.buf = jksn_malloc(jksn_varint_size);
                         if(new_data.buf) {
-                            new_control = 0xbe;
+                            new_control = 0xde;
                             new_data.size = jksn_encode_int(new_data.buf, (uintmax_t) -delta, 0);
                         }
                     }
@@ -1724,75 +1724,6 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 }
                 return JKSN_EOK;
             }
-        /* Delta encoded integers */
-        case 0xb0:
-            {
-                jksn_error_message_no retval;
-                uintmax_t delta;
-                switch(control) {
-                case 0xb0: case 0xb1: case 0xb2: case 0xb3: case 0xb4: case 0xb5:
-                    if(!cache->haslastint)
-                        return JKSN_EDELTA;
-                    cache->lastint += (intmax_t) (control & 0xf);
-                    break;
-                case 0xb6: case 0xb7: case 0xb8: case 0xb9: case 0xba:
-                    if(!cache->haslastint)
-                        return JKSN_EDELTA;
-                    cache->lastint += ((intmax_t) (control & 0xf)) - 11;
-                    break;
-                case 0xbb:
-                    retval = jksn_decode_int(&delta, buffer, size, 4, bytes_parsed);
-                    if(retval != JKSN_EOK)
-                        return retval;
-                    if(!cache->haslastint)
-                        return JKSN_EDELTA;
-                    cache->lastint += (int32_t) delta;
-                    break;
-                case 0xbc:
-                    retval = jksn_decode_int(&delta, buffer, size, 2, bytes_parsed);
-                    if(retval != JKSN_EOK)
-                        return retval;
-                    if(!cache->haslastint)
-                        return JKSN_EDELTA;
-                    cache->lastint += (int16_t) delta;
-                    break;
-                case 0xbd:
-                    retval = jksn_decode_int(&delta, buffer, size, 1, bytes_parsed);
-                    if(retval != JKSN_EOK)
-                        return retval;
-                    if(!cache->haslastint)
-                        return JKSN_EDELTA;
-                    cache->lastint += (int8_t) delta;
-                    break;
-                case 0xbe:
-                    retval = jksn_decode_int(&delta, buffer, size, 0, bytes_parsed);
-                    if(retval != JKSN_EOK)
-                        return retval;
-                    if((intmax_t) delta < 0)
-                        return JKSN_EVARINT;
-                    if(!cache->haslastint)
-                        return JKSN_EDELTA;
-                    cache->lastint -= (intmax_t) delta;
-                    break;
-                case 0xbf:
-                    retval = jksn_decode_int(&delta, buffer, size, 0, bytes_parsed);
-                    if(retval != JKSN_EOK)
-                        return retval;
-                    if((intmax_t) delta < 0)
-                        return JKSN_EVARINT;
-                    if(!cache->haslastint)
-                        return JKSN_EDELTA;
-                    cache->lastint += (intmax_t) delta;
-                    break;
-                }
-                cache->haslastint = 1;
-                *result = jksn_malloc(sizeof (jksn_t));
-                if(!*result)
-                    return JKSN_ENOMEM;
-                (*result)->data_type = JKSN_INT;
-                (*result)->data_int = cache->lastint;
-                return JKSN_EOK;
-            }
         /* Lengthless arrays */
         case 0xc0:
             switch(control) {
@@ -1840,6 +1771,75 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     }
                     return JKSN_EOK;
                 }
+            }
+        /* Delta encoded integers */
+        case 0xd0:
+            {
+                jksn_error_message_no retval;
+                uintmax_t delta;
+                switch(control) {
+                case 0xd0: case 0xd1: case 0xd2: case 0xd3: case 0xd4: case 0xd5:
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint += (intmax_t) (control & 0xf);
+                    break;
+                case 0xd6: case 0xd7: case 0xd8: case 0xd9: case 0xda:
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint += ((intmax_t) (control & 0xf)) - 11;
+                    break;
+                case 0xdb:
+                    retval = jksn_decode_int(&delta, buffer, size, 4, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint += (int32_t) delta;
+                    break;
+                case 0xdc:
+                    retval = jksn_decode_int(&delta, buffer, size, 2, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint += (int16_t) delta;
+                    break;
+                case 0xdd:
+                    retval = jksn_decode_int(&delta, buffer, size, 1, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint += (int8_t) delta;
+                    break;
+                case 0xde:
+                    retval = jksn_decode_int(&delta, buffer, size, 0, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if((intmax_t) delta < 0)
+                        return JKSN_EVARINT;
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint -= (intmax_t) delta;
+                    break;
+                case 0xdf:
+                    retval = jksn_decode_int(&delta, buffer, size, 0, bytes_parsed);
+                    if(retval != JKSN_EOK)
+                        return retval;
+                    if((intmax_t) delta < 0)
+                        return JKSN_EVARINT;
+                    if(!cache->haslastint)
+                        return JKSN_EDELTA;
+                    cache->lastint += (intmax_t) delta;
+                    break;
+                }
+                cache->haslastint = 1;
+                *result = jksn_malloc(sizeof (jksn_t));
+                if(!*result)
+                    return JKSN_ENOMEM;
+                (*result)->data_type = JKSN_INT;
+                (*result)->data_int = cache->lastint;
+                return JKSN_EOK;
             }
         case 0xf0:
             {

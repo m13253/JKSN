@@ -519,24 +519,24 @@ JKSNProxy &JKSNEncoderPrivate::optimize(JKSNProxy &obj) {
                     uint8_t new_control;
                     std::string new_data;
                     if(delta >= 0 && delta <= 0x5)
-                        new_control = 0xb0 | uint8_t(delta);
+                        new_control = 0xd0 | uint8_t(delta);
                     else if(delta >= -0x5 && delta <= -0x1)
-                        new_control = 0xb0 | uint8_t(delta+11);
+                        new_control = 0xd0 | uint8_t(delta+11);
                     else if(delta >= -0x80 && delta <= 0x7f) {
-                        new_control = 0xbd;
+                        new_control = 0xdd;
                         new_data = encodeInt(uintmax_t(delta), 1);
                     } else if(delta >= -0x8000 && delta <= 0x7fff) {
-                        new_control = 0xbc;
+                        new_control = 0xdc;
                         new_data = encodeInt(uintmax_t(delta), 2);
                     } else if((delta >= -0x80000000LL && delta <= -0x200000) ||
                               (delta >= 0x200000 && delta <= 0x7fffffff)) {
-                        new_control = 0xbb;
+                        new_control = 0xdb;
                         new_data = encodeInt(uintmax_t(delta), 4);
                     } else if(delta >= 0) {
-                        new_control = 0xbf;
+                        new_control = 0xdf;
                         new_data = encodeInt(uintmax_t(delta), 0);
                     } else {
-                        new_control = 0xbe;
+                        new_control = 0xde;
                         new_data = encodeInt(uintmax_t(-delta), 0);
                     }
                     if(new_data.size() < obj.data.size()) {
@@ -911,43 +911,6 @@ JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
                 }
                 return this->parseSwappedArray(fp, collen);
             }
-        /* Delta encoded integers */
-        case 0xb0:
-            {
-                intmax_t delta;
-                switch(control) {
-                case 0xb0: case 0xb1: case 0xb2: case 0xb3: case 0xb4: case 0xb5:
-                    delta = control & 0xf;
-                    break;
-                case 0xb6: case 0xb7: case 0xb8: case 0xb9: case 0xba:
-                    delta = intmax_t(control & 0xf)-11;
-                    break;
-                case 0xbb:
-                    delta = intmax_t(int32_t(this->decodeInt(fp, 4)));
-                    break;
-                case 0xbc:
-                    delta = intmax_t(int16_t(this->decodeInt(fp, 2)));
-                    break;
-                case 0xbd:
-                    delta = intmax_t(int8_t(this->decodeInt(fp, 1)));
-                    break;
-                case 0xbe:
-                    delta = -intmax_t(this->decodeInt(fp, 0));
-                    if(delta >= 0)
-                        throw JKSNDecodeError("this build of JKSN decoder does not support variable length integers");
-                    break;
-                case 0xbf:
-                    delta = intmax_t(this->decodeInt(fp, 0));
-                    if(delta < 0)
-                        throw JKSNDecodeError("this build of JKSN decoder does not support variable length integers");
-                    break;
-                }
-                if(!this->cache.haslastint)
-                    throw JKSNDecodeError("JKSN stream contains an invalid delta encoded integer");
-                this->cache.haslastint = true;
-                this->cache.lastint += delta;
-                return JKSNValue(this->cache.lastint);
-            }
         /* Lengthless arrays */
         case 0xc0:
             switch(control) {
@@ -962,6 +925,43 @@ JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
                                 return JKSNValue(std::move(result));
                         }
                     }
+            }
+        /* Delta encoded integers */
+        case 0xd0:
+            {
+                intmax_t delta;
+                switch(control) {
+                case 0xd0: case 0xd1: case 0xd2: case 0xd3: case 0xd4: case 0xd5:
+                    delta = control & 0xf;
+                    break;
+                case 0xd6: case 0xd7: case 0xd8: case 0xd9: case 0xda:
+                    delta = intmax_t(control & 0xf)-11;
+                    break;
+                case 0xdb:
+                    delta = intmax_t(int32_t(this->decodeInt(fp, 4)));
+                    break;
+                case 0xdc:
+                    delta = intmax_t(int16_t(this->decodeInt(fp, 2)));
+                    break;
+                case 0xdd:
+                    delta = intmax_t(int8_t(this->decodeInt(fp, 1)));
+                    break;
+                case 0xde:
+                    delta = -intmax_t(this->decodeInt(fp, 0));
+                    if(delta >= 0)
+                        throw JKSNDecodeError("this build of JKSN decoder does not support variable length integers");
+                    break;
+                case 0xdf:
+                    delta = intmax_t(this->decodeInt(fp, 0));
+                    if(delta < 0)
+                        throw JKSNDecodeError("this build of JKSN decoder does not support variable length integers");
+                    break;
+                }
+                if(!this->cache.haslastint)
+                    throw JKSNDecodeError("JKSN stream contains an invalid delta encoded integer");
+                this->cache.haslastint = true;
+                this->cache.lastint += delta;
+                return JKSNValue(this->cache.lastint);
             }
         case 0xf0:
             /* Ignore checksums */

@@ -250,25 +250,25 @@ function JKSNEncoder() {
                 var delta = obj.origin - lastint;
                 if(Math.abs(delta) < Math.abs(obj.origin)) {
                     if(delta >= 0 && delta <= 0x5) {
-                        var newControl = 0xb0 | delta;
+                        var newControl = 0xd0 | delta;
                         var newData = "";
                     } else if(delta >= -0x5 && delta <= -0x1) {
-                        var newControl = 0xb0 | (delta+11);
+                        var newControl = 0xd0 | (delta+11);
                         var newData = "";
                     } else if(delta >= -0x80 && delta <= 0x7f) {
-                        var newControl = 0xbd;
+                        var newControl = 0xdd;
                         var newData = encodeInt(delta, 1);
                     } else if(delta >= -0x8000 && delta <= 0x7fff) {
-                        var newControl = 0xbc;
+                        var newControl = 0xdc;
                         var newData = encodeInt(delta, 2);
                     } else if((delta >= -0x80000000 && delta <= -0x200000) || (delta >= 0x200000 && delta <= 0x7fffffff)) {
-                        var newControl = 0xbb;
+                        var newControl = 0xdb;
                         var newData = encodeInt(delta, 4);
                     } else if(delta >= 0) {
-                        var newControl = 0xbf;
+                        var newControl = 0xdf;
                         var newData = encodeInt(delta, 0);
                     } else {
-                        var newControl = 0xbe;
+                        var newControl = 0xde;
                         var newData = encodeInt(-delta, 0);
                     }
                     if(newData.length < obj.data.length) {
@@ -595,38 +595,6 @@ function JKSNDecoder() {
                     }
                 }
                 return result;
-            /* Delta encoded integers */
-            case 0xb0:
-                var delta;
-                switch(control) {
-                case 0xb0: case 0xb1: case 0xb2: case 0xb3: case 0xb4: case 0xb5:
-                    delta = control & 0xf;
-                    break;
-                case 0xb6: case 0xb7: case 0xb8: case 0xb9: case 0xba:
-                    delta = (control & 0xf)-11;
-                    break;
-                case 0xbb:
-                    delta = buf.getInt32(offset, false);
-                    offset += 4;
-                    break;
-                case 0xbc:
-                    delta = buf.getInt16(offset, false);
-                    offset += 2;
-                    break;
-                case 0xbd:
-                    delta = buf.getInt8(offset++);
-                    break;
-                case 0xbe:
-                    delta = -decodeInt(buf);
-                    break;
-                case 0xbf:
-                    delta = decodeInt(buf);
-                    break;
-                }
-                if(lastint !== null)
-                    return (lastint += delta);
-                else
-                    throw "JKSNDecodeError: JKSN stream contains an invalid delta encoded integer"
             /* Lengthless arrays */
             case 0xc0:
                 switch(control) {
@@ -640,6 +608,38 @@ function JKSNDecoder() {
                             return result;
                     }
                 }
+            /* Delta encoded integers */
+            case 0xd0:
+                var delta;
+                switch(control) {
+                case 0xd0: case 0xd1: case 0xd2: case 0xd3: case 0xd4: case 0xd5:
+                    delta = control & 0xf;
+                    break;
+                case 0xd6: case 0xd7: case 0xd8: case 0xd9: case 0xda:
+                    delta = (control & 0xf)-11;
+                    break;
+                case 0xdb:
+                    delta = buf.getInt32(offset, false);
+                    offset += 4;
+                    break;
+                case 0xdc:
+                    delta = buf.getInt16(offset, false);
+                    offset += 2;
+                    break;
+                case 0xdd:
+                    delta = buf.getInt8(offset++);
+                    break;
+                case 0xde:
+                    delta = -decodeInt(buf);
+                    break;
+                case 0xdf:
+                    delta = decodeInt(buf);
+                    break;
+                }
+                if(lastint !== null)
+                    return (lastint += delta);
+                else
+                    throw "JKSNDecodeError: JKSN stream contains an invalid delta encoded integer"
             case 0xf0:
                 /* Ignore checksums */
                 if(control <= 0xf5 || (control >= 0xf8 && control <= 0xfd)) {

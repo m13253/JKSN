@@ -129,19 +129,6 @@ Items are nested layers of control bytes and data bytes.
     0xae: an unsigned 8-bit integer and a row-col swapped array containing that amount of columns is followed
     0xaf: a positive variable length integer and a row-col swapped array containing that amount of columns is followed
 
-#### Delta encoded integers:
-
-An Integer is followed after `0xbb` `0xbc` `0xbd` `0xbe` `0xbf`, representing an integer that is larger than the previous occurred integer by n.
-
-    0xb0: represents the same previous occurred integer
-    0xbn (where 1<=n<=5): represents an integer that is larger than the previous occurred integer by n
-    0xbn (where 6<=n<=a): represents an integer that is larger than the previous occurred integer by n-11
-    0xbb: a signed 32-bit integer is followed
-    0xbc: a signed 16-bit integer is followed
-    0xbd: a signed 8-bit integer is followed
-    0xbe: a negative variable length integer is followed
-    0xbf: a positive variable length integer is followed
-
 #### Lengthless arrays:
 
 A lengthless array can be used when the length of the array is unknown before transmission.
@@ -149,6 +136,19 @@ A lengthless array can be used when the length of the array is unknown before tr
     0xc8: an unlimited number of items is followed, with a terminating 0xa0
 
 The use of lengthless array is discouraged, since it reduces the robustness and burdens the JKSN decoder.
+
+#### Delta encoded integers:
+
+An Integer is followed after `0xdb` `0xdc` `0xdd` `0xde` `0xdf`, representing an integer that is larger than the previous occurred integer by n.
+
+    0xd0: represents the same previous occurred integer
+    0xdn (where 1<=n<=5): represents an integer that is larger than the previous occurred integer by n
+    0xdn (where 6<=n<=a): represents an integer that is larger than the previous occurred integer by n-11
+    0xdb: a signed 32-bit integer is followed
+    0xdc: a signed 16-bit integer is followed
+    0xdd: a signed 8-bit integer is followed
+    0xde: a negative variable length integer is followed
+    0xdf: a positive variable length integer is followed
 
 #### Checksums:
 

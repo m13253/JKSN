@@ -323,19 +323,19 @@ class JKSNEncoder:
                 delta = obj.origin - self.lastint
                 if abs(delta) < abs(obj.origin):
                     if 0 <= delta <= 0x5:
-                        new_control, new_data = 0xb0 | delta, b''
+                        new_control, new_data = 0xd0 | delta, b''
                     elif -0x5 <= delta <= -0x1:
-                        new_control, new_data = 0xb0 | (delta + 11), b''
+                        new_control, new_data = 0xd0 | (delta + 11), b''
                     elif -0x80 <= delta <= 0x7f:
-                        new_control, new_data = 0xbd, self._encode_int(delta, 1)
+                        new_control, new_data = 0xdd, self._encode_int(delta, 1)
                     elif -0x8000 <= delta <= 0x7fff:
-                        new_control, new_data = 0xbc, self._encode_int(delta, 2)
+                        new_control, new_data = 0xdc, self._encode_int(delta, 2)
                     elif -0x80000000 <= delta <= -0x200000 or 0x200000 <= delta <= 0x7fffffff:
-                        new_control, new_data = 0xbb, self._encode_int(delta, 4)
+                        new_control, new_data = 0xdb, self._encode_int(delta, 4)
                     elif delta >= 0:
-                        new_control, new_data = 0xbf, self._encode_int(delta, 0)
+                        new_control, new_data = 0xdf, self._encode_int(delta, 0)
                     else:
-                        new_control, new_data = 0xbe, self._encode_int(-delta, 0)
+                        new_control, new_data = 0xde, self._encode_int(-delta, 0)
                     if len(new_data) < len(obj.data):
                         obj.control, obj.data = new_control, new_data
             self.lastint = obj.origin
@@ -541,27 +541,6 @@ class JKSNDecoder:
                     return self._load_swapped_list(fp, self._decode_int(fp, 1))
                 elif control == 0xaf:
                     return self._load_swapped_list(fp, self._decode_int(fp, 0))
-            # Delta encoded integers
-            elif ctrlhi == 0xb0:
-                if control <= 0xb5:
-                    delta = control & 0xf
-                elif control <= 0xba:
-                    delta = (control & 0xf) - 11
-                elif control == 0xbb:
-                    delta = self._decode_int(fp, 4)
-                elif control == 0xbc:
-                    delta = self._decode_int(fp, 2)
-                elif control == 0xbd:
-                    delta = self._decode_int(fp, 1)
-                elif control == 0xbe:
-                    delta = -self._decode_int(fp, 0)
-                elif control == 0xbf:
-                    delta = self._decode_int(fp, 0)
-                if self.lastint is not None:
-                    self.lastint += delta
-                    return self.lastint
-                else:
-                    raise JKSNDecodeError('JKSN stream contains an invalid delta encoded integer')
             # Lengthless arrays
             elif ctrlhi == 0xc0:
                 if control == 0xc8:
@@ -572,6 +551,27 @@ class JKSNDecoder:
                             result.append(item);
                         else:
                             return result
+            # Delta encoded integers
+            elif ctrlhi == 0xd0:
+                if control <= 0xd5:
+                    delta = control & 0xf
+                elif control <= 0xda:
+                    delta = (control & 0xf) - 11
+                elif control == 0xdb:
+                    delta = self._decode_int(fp, 4)
+                elif control == 0xdc:
+                    delta = self._decode_int(fp, 2)
+                elif control == 0xdd:
+                    delta = self._decode_int(fp, 1)
+                elif control == 0xde:
+                    delta = -self._decode_int(fp, 0)
+                elif control == 0xdf:
+                    delta = self._decode_int(fp, 0)
+                if self.lastint is not None:
+                    self.lastint += delta
+                    return self.lastint
+                else:
+                    raise JKSNDecodeError('JKSN stream contains an invalid delta encoded integer')
             elif ctrlhi == 0xf0:
                 # Checksums
                 if control <= 0xf5:

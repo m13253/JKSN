@@ -27,6 +27,7 @@
 #include <initializer_list>
 #include <istream>
 #include <map>
+#include <memory>
 #include <ostream>
 #include <stdexcept>
 #include <string>
@@ -578,7 +579,7 @@ public:
     std::ostream &dump(const JKSNValue &obj, std::ostream &result, bool header = true);
     std::string dump(const JKSNValue &obj, bool header = true);
 private:
-    class JKSNEncoderPrivate *p = nullptr;
+    std::unique_ptr<class JKSNEncoderPrivate> p;
 };
 
 class JKSNDecoder {
@@ -593,7 +594,7 @@ public:
     JKSNValue parse(std::istream &fp, bool header = true);
     JKSNValue parse(const std::string &str, bool header = true);
 private:
-    class JKSNDecoderPrivate *p = nullptr;
+    std::unique_ptr<class JKSNDecoderPrivate> p;
 };
 
 inline std::ostream &dump(const JKSNValue &obj, std::ostream &result, bool header = true) {

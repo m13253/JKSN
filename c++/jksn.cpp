@@ -169,8 +169,8 @@ JKSNEncoder::JKSNEncoder(const JKSNEncoder &that) :
     p(new JKSNEncoderPrivate(*that.p)) {
 }
 
-JKSNEncoder::JKSNEncoder(JKSNEncoder &&that) : p(that.p) {
-    that.p = nullptr;
+JKSNEncoder::JKSNEncoder(JKSNEncoder &&that) :
+    p(std::move(that.p)) {
 }
 
 JKSNEncoder &JKSNEncoder::operator=(const JKSNEncoder &that) {
@@ -180,16 +180,12 @@ JKSNEncoder &JKSNEncoder::operator=(const JKSNEncoder &that) {
 }
 
 JKSNEncoder &JKSNEncoder::operator=(JKSNEncoder &&that) {
-    if(this != &that) {
-        delete this->p;
-        this->p = that.p;
-        that.p = nullptr;
-    }
+    if(this != &that)
+        this->p = std::move(that.p);
     return *this;
 }
 
 JKSNEncoder::~JKSNEncoder() {
-    delete p;
 }
 
 std::ostream &JKSNEncoder::dump(const JKSNValue &obj, std::ostream &result, bool header) {
@@ -619,8 +615,7 @@ JKSNDecoder::JKSNDecoder(const JKSNDecoder &that) :
 }
 
 JKSNDecoder::JKSNDecoder(JKSNDecoder &&that) :
-    p(that.p) {
-    that.p = nullptr;
+    p(std::move(that.p)) {
 }
 
 JKSNDecoder &JKSNDecoder::operator=(const JKSNDecoder &that) {
@@ -630,16 +625,12 @@ JKSNDecoder &JKSNDecoder::operator=(const JKSNDecoder &that) {
 }
 
 JKSNDecoder &JKSNDecoder::operator=(JKSNDecoder &&that) {
-    if(this != &that) {
-        delete this->p;
-        this->p = that.p;
-        that.p = nullptr;
-    }
+    if(this != &that)
+        this->p = std::move(that.p);
     return *this;
 }
 
 JKSNDecoder::~JKSNDecoder() {
-    delete p;
 }
 
 JKSNValue JKSNDecoder::parse(std::istream &fp, bool header) {

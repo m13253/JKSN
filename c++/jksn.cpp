@@ -902,20 +902,24 @@ JKSNValue JKSNDecoderPrivate::parseValue(std::istream &fp) {
                 }
                 return this->parseSwappedArray(fp, collen);
             }
-        /* Lengthless arrays */
         case 0xc0:
             switch(control) {
-                case 0xc8:
-                    {
-                        std::vector<JKSNValue> result;
-                        for(;;) {
-                            JKSNValue item = this->parseValue(fp);
-                            if(!item.isUnspecified())
-                                result.push_back(std::move(item));
-                            else
-                                return JKSNValue(std::move(result));
-                        }
+            /* Lengthless arrays */
+            case 0xc8:
+                {
+                    std::vector<JKSNValue> result;
+                    for(;;) {
+                        JKSNValue item = this->parseValue(fp);
+                        if(!item.isUnspecified())
+                            result.push_back(std::move(item));
+                        else
+                            return JKSNValue(std::move(result));
                     }
+                    break;
+                }
+            /* Padding byte */
+            case 0xca:
+                continue;
             }
             break;
         /* Delta encoded integers */

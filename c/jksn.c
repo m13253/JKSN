@@ -1724,10 +1724,10 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                 }
                 return JKSN_EOK;
             }
-        /* Lengthless arrays */
         case 0xc0:
             switch(control) {
-                case 0xc8:
+            /* Lengthless arrays */
+            case 0xc8:
                 {
                     size_t capacity = 2;
                     *result = jksn_malloc(sizeof (jksn_t));
@@ -1771,6 +1771,9 @@ static jksn_error_message_no jksn_parse_value(jksn_t **result, const char *buffe
                     }
                     return JKSN_EOK;
                 }
+            /* Padding byte */
+            case 0xca:
+                return jksn_parse_value(result, buffer, size, bytes_parsed, cache);
             }
             break;
         /* Delta encoded integers */

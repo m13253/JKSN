@@ -595,9 +595,9 @@ function JKSNDecoder() {
                     }
                 }
                 return result;
-            /* Lengthless arrays */
             case 0xc0:
                 switch(control) {
+                /* Lengthless arrays */
                 case 0xc8:
                     var result = new Array();
                     for(;;) {
@@ -607,6 +607,10 @@ function JKSNDecoder() {
                         else
                             return result;
                     }
+                    break;
+                /* Padding byte */
+                case 0xca:
+                    continue;
                 }
                 break;
             /* Delta encoded integers */

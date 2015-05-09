@@ -156,6 +156,12 @@ An Integer is followed after `0xdb` `0xdc` `0xdd` `0xde` `0xdf`, representing an
     0xde: a negative variable length integer is followed
     0xdf: a positive variable length integer is followed
 
+#### Implementation defined extensions:
+
+    0xen: application can define it or extend it
+
+Implementations can do anything with `0xen`. Make sure that both sender and receiver understand the same extensions.
+
 #### Checksums:
 
     0xf0: a DJBHash checksum will be immediately followed

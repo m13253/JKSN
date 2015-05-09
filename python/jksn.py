@@ -541,8 +541,8 @@ class JKSNDecoder:
                     return self._load_swapped_list(fp, self._decode_int(fp, 1))
                 elif control == 0xaf:
                     return self._load_swapped_list(fp, self._decode_int(fp, 0))
-            # Lengthless arrays
             elif ctrlhi == 0xc0:
+                # Lengthless arrays
                 if control == 0xc8:
                     result = []
                     while True:
@@ -551,6 +551,9 @@ class JKSNDecoder:
                             result.append(item);
                         else:
                             return result
+                # Padding byte
+                elif control == 0xca:
+                    continue
             # Delta encoded integers
             elif ctrlhi == 0xd0:
                 if control <= 0xd5:

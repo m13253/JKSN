@@ -137,6 +137,12 @@ A lengthless array can be used when the length of the array is unknown before tr
 
 The use of lengthless array is discouraged, since it reduces the robustness and burdens the JKSN decoder.
 
+#### Padding byte:
+
+    0xca: another control byte is followed
+
+Padding byte does nothing. It can be used when the transport requires some padding.
+
 #### Delta encoded integers:
 
 An Integer is followed after `0xdb` `0xdc` `0xdd` `0xde` `0xdf`, representing an integer that is larger than the previous occurred integer by n.

@@ -225,8 +225,8 @@ class JKSNEncoder:
             return JKSNProxy(obj, 0x2c, struct.pack('>d', obj))
 
     def _dump_str(self, obj):
-        obj_utf16 = str.encode(obj, 'utf-16-le')
-        obj_utf8 = str.encode(obj, 'utf-8')
+        obj_utf16 = str.encode(obj, 'utf-16-le', 'replace')
+        obj_utf8 = str.encode(obj, 'utf-8', 'replace')
         obj_short, control, length = (obj_utf16, 0x30, len(obj_utf16) >> 1) if len(obj_utf16) < len(obj_utf8) else (obj_utf8, 0x40, len(obj_utf8))
         if length <= (0xc if control == 0x40 else 0xb):
             result = JKSNProxy(obj, control | length, b'', obj_short)
@@ -639,7 +639,7 @@ class JKSNDecoder:
     def _load_str(self, fp, length, encoding=None):
         buf = fp.read(length)
         if encoding is not None:
-            result = buf.decode(encoding)
+            result = buf.decode(encoding, 'replace')
             self.texthash[_djb_hash(buf)] = result
         else:
             result = buf
